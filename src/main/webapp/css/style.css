@@ -49,10 +49,15 @@ body {
     box-sizing: border-box;
 }
 
-.login-form button[type="cadastro"] {
+.login-form button[type="button"] {
     background-color: #2196F3;
 }
 
 .login-form button:hover {
     opacity: 0.9;
+}
+
+/* Pro botão com link não ficar com texto sublinhado */
+.login-form a {
+	text-decoration: none;
 }
