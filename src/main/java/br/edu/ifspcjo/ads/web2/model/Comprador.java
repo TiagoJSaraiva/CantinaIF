@@ -5,6 +5,12 @@ public class Comprador {
 	private String email;
 	private String senha;
 	
+	public Comprador(String prontuario, String email, String senha) {
+        this.prontuario = prontuario;
+        this.email = email;
+        this.senha = senha;
+    }
+	
 	public String getProntuario() {
 		return prontuario;
 	}
