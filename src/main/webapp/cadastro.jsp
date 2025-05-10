@@ -4,14 +4,14 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Cadastro</title>
-    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
     <section class="login-page">
         <h1>Cadastro</h1>
-        <form class="login-form" action="cadastroServlet" method="post">
-            <label for="matricula">Matrícula</label>
-            <input type="text" id="matricula" name="matricula" required>
+        <form class="login-form" action="register" method="post">
+            <label for="prontuario">Prontuário</label>
+            <input type="text" id="prontuario" name="prontuario" required>
 
             <label for="email">E-mail institucional</label>
             <input type="email" id="email" name="email" required>
