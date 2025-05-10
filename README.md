@@ -1,1 +1,9 @@
 # CantinaIF
+## Projeto Final de Web 2 - IF-CJO 2025
+
+  Este projeto visa desenvolver uma aplicação web para auxiliar o acesso a cantinas em instituições de ensino superior, onde muitas vezes as cantinas se encontram congestionadas em horário de intervalo ou troca de aulas. Esse projeto utiliza como principal ferramenta o acesso dos alunos a seus celulares ou computadores durante a aula, pois assim, eles podem acessar um site onde o responsável pela cantina coloca os salgados, doces e bebidas disponíveis no dia; com esse sistema, os alunos e colaboradores da instituição podem mandar um pedido informando ao vendedor que possuem interesse em comprar determinado item.
+  Um sistema como esse oferece várias vantagens. Um exemplo é que o vendedor pode começar a preparar os alimentos enquanto os potenciais compradores ainda estão em suas aulas, e isso ajuda o vendedor a entender quantos e quais produtos deixar prontos. Os meios de pagamento são de escolha do gerenciador da cantina. A aplicação NÃO tem relação com entrega delivery de pedidos!
+
+  O funcionamento está baseado em um tipo de usuário que se refere ao vendedor. Usuários desse tipo têm acesso a uma página onde podem editar as características dos produtos disponíveis para pedido, assim como uma página de vizualização geral dos produtos disponíveis em seu estabelecimento. Cada produto deve ter um campo de nome, descrição (onde pode conter os ingredientes ou outras informações), foto do produto, se está disponível ou não e valor do produto. Também há uma página onde ele pode monitorar de fomra rápida e prática o que as pessoas estão pedindo, com o objetivo de facilitar o monitoramento dos pedidos.
+
+  Cada usuário pode adicionar quantos itens desejar no carrinho, ao fechar o pedido é mostrado o valor total do pedido... [continua]
