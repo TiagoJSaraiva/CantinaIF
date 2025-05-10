@@ -1,0 +1,63 @@
+/* Centraliza o corpo da página */
+body {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh; /* 100% da altura da tela */
+    margin: 0;
+    font-family: Arial, sans-serif;
+    background-color: #f0f0f0;
+    text-align: center;
+}
+
+/* Estiliza a seção de login */
+.login-page {
+    background-color: white;
+    padding: 30px;
+    border-radius: 10px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+    width: 300px;
+}
+
+/* Espaçamento entre os elementos do formulário */
+.login-form label,
+.login-form input,
+.login-form button {
+    display: block;
+    width: 100%;
+    margin-bottom: 15px;
+}
+
+/* Estilo dos inputs */
+.login-form input {
+    padding: 8px;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+/* Estilo dos botões */
+.login-form button {
+    padding: 12px;
+    border: none;
+    border-radius: 5px;
+    background-color: #4CAF50;
+    color: white;
+    cursor: pointer;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+.login-form button[type="button"] {
+    background-color: #2196F3;
+}
+
+.login-form button:hover {
+    opacity: 0.9;
+}
+
+/* Pro botão com link não ficar com texto sublinhado */
+.login-form a {
+	text-decoration: none;
+}
