@@ -8,7 +8,7 @@ import java.sql.*;
 public class UserDao {
 
     public void create(Comprador comprador) {
-        String sql = "INSERT INTO usuarios (prontuario, email, senha) VALUES (?, ?, ?)";
+        String sql = "INSERT INTO usuarios (prontuario, email, senha, nome) VALUES (?, ?, ?, ?)";
 
         try (Connection conn = DataSourceManager.getConnection();
             PreparedStatement stmt = conn.prepareStatement(sql)) {
@@ -16,6 +16,7 @@ public class UserDao {
             stmt.setString(1, comprador.getProntuario());
             stmt.setString(2, comprador.getEmail());
             stmt.setString(3, comprador.getSenha());
+            stmt.setString(4, comprador.getNome());
             stmt.executeUpdate();
 
         } catch (Exception e) {
@@ -37,7 +38,8 @@ public class UserDao {
                 return new Comprador(
                     rs.getString("prontuario"),
                     rs.getString("email"),
-                    rs.getString("senha")
+                    rs.getString("senha"),
+                    rs.getString("nome")
                 );
             }
 

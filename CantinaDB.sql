@@ -5,7 +5,8 @@ USE todoapp;
 CREATE TABLE usuarios (
     prontuario VARCHAR(10) PRIMARY KEY,
     email VARCHAR(100) UNIQUE,
-    senha VARCHAR(100)
+    senha VARCHAR(100),
+    nome VARCHAR(75)
 );
 
 SELECT * FROM usuarios;

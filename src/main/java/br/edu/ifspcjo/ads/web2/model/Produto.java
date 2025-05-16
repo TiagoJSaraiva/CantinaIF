@@ -5,12 +5,14 @@ public class Produto {
 	private String descricao;
 	private float preco;
 	private int estoque;
+	private bool disponivel;
 	
-	public Produto(String nome, String descricao, float preco, int estoque) {
+	public Produto(String nome, String descricao, float preco, int estoque, bool disponivel) {
         this.nome = nome;
         this.descricao = descricao;
         this.preco = preco;
         this.estoque = estoque;
+	this.disponivel = disponivel;
     }
 	
 	public String getNome() {
@@ -44,4 +46,12 @@ public class Produto {
 	public void setEstoque(int estoque) {
 		this.estoque = estoque;
 	}
+
+	public boolean isDisponivel() {
+        	return this.disponivel;
+    	}
+
+    	public void setDisponivel(boolean disponivel) {
+        	this.disponivel = disponivel;
+    	}
 }

@@ -4,11 +4,13 @@ public class Comprador {
 	private String prontuario;
 	private String email;
 	private String senha;
+	private String nome;
 	
-	public Comprador(String prontuario, String email, String senha) {
+	public Comprador(String prontuario, String email, String senha, String nome) {
         this.prontuario = prontuario;
         this.email = email;
         this.senha = senha;
+	this.nome = nome;
     }
 	
 	public String getProntuario() {
@@ -33,5 +35,13 @@ public class Comprador {
 	
 	public void setSenha(String senha) {
 		this.senha = senha;
+	}
+	
+	public String getNome() {
+		return nome;
+	}
+	
+	public void setNome(String nome) {
+		this.nome = senha;
 	}
 }

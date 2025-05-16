@@ -13,6 +13,9 @@
             <label for="prontuario">Prontuário</label>
             <input type="text" id="prontuario" name="prontuario" required>
 
+            <label for="nome">Seu nome</label>
+            <input type="text" id="nome" name="nome" required>
+
             <label for="email">E-mail institucional</label>
             <input type="email" id="email" name="email" required>
 
