@@ -1,11 +1,23 @@
 package model;
 
+// Exemplo de como invocar a função construtora Produto: Produto p = new Produto("Coxinha", "Frango com catupiry", 5.00f, 100, Produto.Categoria.SALGADO);
+
 public class Produto {
+
+    // Classe ENUM para o atributo categoria.
+    public enum Categoria {
+	SALGADO,
+	DOCE,
+	LANCHE,
+	BEBIDA
+    }
+	
     private int id;
     private String nome;
     private String descricao;
     private float preco;
     private int estoque;
+    private Categoria categoria;
 	
     public Produto(String nome, String descricao, float preco, int estoque) {
         this.nome = nome;
@@ -52,5 +64,13 @@ public class Produto {
 
     public void setEstoque(int estoque) {
         this.estoque = estoque;
+    }
+
+    public Categoria getCategoria() {
+        return categoria;
+    }
+
+    public void setCategoria(Categoria categoria) {
+        this.categoria = categoria;
     }
 }
