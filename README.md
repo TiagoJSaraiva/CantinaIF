@@ -12,6 +12,4 @@
 
   - Usuários do tipo **Vendedor** têm acesso a uma página onde podem editar as características dos produtos disponíveis para pedido, uma página de vizualização geral dos produtos disponíveis em seu estabelecimento e uma página onde ele pode monitorar de fomra rápida e prática os pedidos, com o objetivo de facilitar o monitoramento.
 
-  - Cada produto deve ter um nome, uma descrição (onde pode conter os ingredientes ou outras informações), quantidade em estoque, se está disponível ou não e valor do produto.
-
-  
+  - Cada produto deve ter um nome, uma descrição (onde pode conter os ingredientes ou outras informações), quantidade em estoque e valor do produto.
