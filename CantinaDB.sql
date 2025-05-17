@@ -1,6 +1,7 @@
 CREATE DATABASE todoapp CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 USE todoapp;
 
+-- Tabela do comprador (O usuário que realiza os pedidos)
 CREATE TABLE Comprador (
     prontuario VARCHAR(10) PRIMARY KEY,
     email VARCHAR(100) UNIQUE,
@@ -8,12 +9,14 @@ CREATE TABLE Comprador (
     nome VARCHAR(75)
 );
 
+-- Tabela do vendedor (O usuário que insere os pedidos no sistema)
 CREATE TABLE Vendedor (
     prontuario VARCHAR(10) PRIMARY KEY,
     email VARCHAR(100) UNIQUE,
     senha VARCHAR(100)
 );
 
+-- Tabela do produto (Os alimentos a venda)
 CREATE TABLE Produto (
     id INT PRIMARY KEY AUTO_INCREMENT,
     nome VARCHAR(100),
@@ -22,6 +25,7 @@ CREATE TABLE Produto (
     estoque INT
 );
 
+-- Tabela do pedido realizado pelo Comprador
 CREATE TABLE Pedido (
     id INT PRIMARY KEY AUTO_INCREMENT,
     comprador_prontuario VARCHAR(10),
