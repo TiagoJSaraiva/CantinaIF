@@ -3,13 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Document</title>
+    <title>Página inicial</title>
     <link rel="stylesheet" href="css/home.css">
 </head>
 <body>
     <header class="top-bar">
         <div class="top-bar-left">
-            <img src="img/logoCantinaIF.png" alt="Logo" class="logo">
+            <img src="img/Logo.png" alt="Logo" class="logo">
             <a href="salgados.jsp">Salgados</a>
             <a href="bebidas.jsp">Bebidas</a>
             <a href="lanches.jsp">Lanches</a>
