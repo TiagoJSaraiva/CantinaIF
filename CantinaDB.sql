@@ -22,7 +22,8 @@ CREATE TABLE Produto (
     nome VARCHAR(100),
     descricao VARCHAR(400),
     preco DECIMAL(10,2),
-    estoque INT
+    estoque INT,
+    categoria ENUM('salgado', 'doce', 'lanche', 'bebida')
 );
 
 -- Tabela do vendedor (O usuário que insere os pedidos no sistema)
