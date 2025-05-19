@@ -42,5 +42,3 @@ CREATE TABLE Pedido_Produto (
     FOREIGN KEY (pedido_id) REFERENCES Pedido(id),
     FOREIGN KEY (produto_id) REFERENCES Produto(id)
 );
-
-SELECT * FROM usuarios;
