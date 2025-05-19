@@ -6,7 +6,7 @@
 <head>
     <meta charset="UTF-8">
     <title>Home - Cantina Universitária</title>
-    <link rel="stylesheet" href="styles.css"> <!--Link para o arquivo de estilização Styles.css-->
+    <link rel="stylesheet" href="css/home.css"> <!--Link para o arquivo de estilização home.css-->
 </head>
 <body>
 
