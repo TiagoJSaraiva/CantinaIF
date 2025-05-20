@@ -4,7 +4,10 @@ import dao.ProductDao;
 import model.Produto;
 import util.DataSourceManager.java;
 
-//importar as acoisas do jakarta
+import jakarta.servlet.*;
+import jakarta.servlet.annotation.WebServlet;
+import jakarta.servlet.http.*;
+import java.io.IOException;
 
 @WebServlet("/home")
 public class HomeServlet extends HttpServlet {
