@@ -32,8 +32,8 @@
 <!-- OBSERVAÇÃO: TRECHO DE CÓDIGO BUGADO, FAVOR RESOLVER. -->
 <!-- O código abaixo percorre a lista de produtos disponíveis e cria um div para cada no padrão presente entre as linhas 31 e 44 -->
 <div class="container" id="productContainer">
-    <c:forEach var="produto" items="${Produtos}"><!-- Recebe a lista de produtos enviada pelo servlet e exibe na estrutura abaixo -->
-        <div class="product" data-type="${Produto.tipo}">
+    <c:forEach var="Produto" items="${Produtos}"><!-- Recebe a lista de produtos enviada pelo servlet e exibe na estrutura abaixo -->
+        <div class="product" data-type="${Produto.categoria}">
             <img src="${Produto.imagemURL}" alt="${Produto.nome}">
             <h3>${Produto.nome}</h3>
             <p>${Produto.descricao}</p>
