@@ -1,26 +1,26 @@
-<%@ page contentType="text/html;charset=UTF-8"%>
-<%@ page import="model.Comprador"%> <!--Para pegar os dados do usuário-->
-<%@ page import="model.Produto%>    <!--Para pegar os dados dos produtos-->
+<%@ page contentType="text/html;charset=UTF-8" %>
+<%@ page import="model.Comprador" %> <!-- Para pegar os dados do usuário -->
+<%@ page import="model.Produto" %> <!-- Para pegar os dados dos produtos -->
 <!DOCTYPE html>
 <html lang="pt-br">
 <head>
     <meta charset="UTF-8">
     <title>Home - Cantina Universitária</title>
-    <link rel="stylesheet" href="css/home.css"> <!--Link para o arquivo de estilização home.css-->
+    <link rel="stylesheet" href="css/home.css"> <!-- Link para o arquivo de estilização home.css -->
 </head>
 <body>
 
-<!--Barra superior do aplicativo-->
+<!-- Barra superior do aplicativo -->
 <div class="navbar">
     <div class="logo">IF</div>
     <div class="info">
-        <span>Prontuário: ${sessionScope.Compador.prontuario}</span> <!--pega o prontuário do Comprador ativo na seção-->
+        <span>Prontuário: ${sessionScope.Comprador.prontuario}</span> <!-- Pega o prontuário do Comprador ativo na seção -->
         <a href="carrinho.jsp">Carrinho</a>
         <a href="logout">Logout</a>
     </div>
 </div>
 
-<!--Menu de filtragem por tipo de produto-->
+<!-- Menu de filtragem por tipo de produto -->
 <div class="filters">
     <button class="filter-btn active" data-filter="todos">Todos</button>
     <button class="filter-btn" data-filter="salgado">Salgados</button>
@@ -29,21 +29,25 @@
     <button class="filter-btn" data-filter="bebida">Bebidas</button>
 </div>
 
-<!--O código abaixo percorre a lista de produtos disponíveis e cria um div para cada no padrão presente entre as linhas 31 e 44-->
+<!-- OBSERVAÇÃO: TRECHO DE CÓDIGO BUGADO, FAVOR RESOLVER. -->
+<!-- O código abaixo percorre a lista de produtos disponíveis e cria um div para cada no padrão presente entre as linhas 31 e 44 -->
 <div class="container" id="productContainer">
-    <c:forEach var="produto" items="${produtos}"><!--Recebe a lista de produtos enviada pelo servlet e exibe na estrutura abaixo-->
-        <div class="product" data-type="${produto.tipo}">
-            <img src="${produto.imagemURL}" alt="${Produto.nome}">
+    <c:forEach var="produto" items="${Produtos}"><!-- Recebe a lista de produtos enviada pelo servlet e exibe na estrutura abaixo -->
+        <div class="product" data-type="${Produto.tipo}">
+            <img src="${Produto.imagemURL}" alt="${Produto.nome}">
             <h3>${Produto.nome}</h3>
             <p>${Produto.descricao}</p>
             <p>R$ ${Produto.preco}</p>
-            <form method="post" action="CarrinhoServlet"><!--Esse formulário é feito para enviar ao carrinho o item desejado ao clicar no botão para adicionar-->
-                <input type="hidden" name="idProduto" value="${Produto.id}"><!--***DEVEMOS COLOCAR UM ID GERADO AUTOMATICAMENTE E UNIQUE PARA CADA PRODUTO E PARA MELHOR INTEGRIDADE DO SISTEMA***-->
+            <form method="post" action="CarrinhoServlet"><!-- Esse formulário é feito para enviar ao carrinho o item desejado ao clicar no botão para adicionar -->
+                <input type="hidden" name="idProduto" value="${Produto.id}"><!-- ***DEVEMOS COLOCAR UM ID GERADO AUTOMATICAMENTE E UNIQUE PARA CADA PRODUTO E PARA MELHOR INTEGRIDADE DO SISTEMA*** -->
                 <button type="submit">Adicionar</button>
             </form>
         </div>
     </c:forEach>
 </div>
+
+<!-- PROVISÓRIO PARA TESTES! -->
+<a href="registroProdutos.jsp"><button type="button">Registrar produtos</button></a>
 
 <!-- Script para fazer a filtragem -->
 <script>
@@ -69,7 +73,7 @@
     });
 </script>
 
-<!--Observações:
+<!-- Observações:
 
     A variável ${produtos} deve ser uma List<Produto> passada como atributo da request no servlet/controller.
         (tipo fazer um método/função no ProdutoDAO para listar todos os produtos (com quantidade > 0) 
