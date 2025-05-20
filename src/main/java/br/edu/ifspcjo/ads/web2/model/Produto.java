@@ -2,9 +2,9 @@ package model;
 
 // Exemplo de como invocar a função construtora Produto: Produto p = new Produto("Coxinha", "Frango com catupiry", 5.00f, 100, Produto.Categoria.SALGADO);
 
-public class Produto {
-
-    // Classe ENUM para o atributo categoria.
+public class Produto 
+{
+    // Classe do tipo enum para o atributo Categoria
     public enum Categoria {
 	SALGADO,
 	DOCE,
