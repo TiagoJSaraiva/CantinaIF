@@ -21,19 +21,19 @@
             <label for="preco">Preço</label>
             <input type="number" id="preco" name="preco" required min="0.05" max="999.99">
 
-			<%-- Provavelmente não será incluído no registro na versão final. --%>
+	    <%-- Provavelmente não será incluído no registro na versão final. --%>
             <label for="estoque">Estoque</label>
             <input type="number" id="estoque" name="estoque" required min="1" max="99">
 
-			<p>Categoria:</p>
-				<input type="radio" id="salgado" name="categoria" value="SALGADO">
-	  			<label for="salgado">Salgado</label><br>
-	  			<input type="radio" id="doce" name="categoria" value="DOCE">
-	  			<label for="doce">Doce</label><br>
-	  			<input type="radio" id="lanche" name="categoria" value="LANCHE">
-	  			<label for="lanche">Lanche</label>
-	  			<input type="radio" id="bebida" name="categoria" value="BEBIDA">
-	  			<label for="bebida">Bebida</label>
+	    <p>Categoria:</p>
+		<input type="radio" id="salgado" name="categoria" value="SALGADO">
+	  	<label for="salgado">Salgado</label><br>
+	  	<input type="radio" id="doce" name="categoria" value="DOCE">
+	  	<label for="doce">Doce</label><br>
+	  	<input type="radio" id="lanche" name="categoria" value="LANCHE">
+	  	<label for="lanche">Lanche</label>
+	  	<input type="radio" id="bebida" name="categoria" value="BEBIDA">
+	  	<label for="bebida">Bebida</label>
   			
             <button type="submit">Registro</button>
             <a href="home.jsp"><button type="button">Voltar pra home</button></a>
