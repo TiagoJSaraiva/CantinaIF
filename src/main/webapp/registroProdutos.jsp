@@ -54,7 +54,7 @@
     
     <!-- Novo produto -->
     <div id="new-product-form" class="new-product-form">
-        <form action="criarProduto" method="post">
+        <form action="registrar-produto" method="post">
             <h3>Novo Produto</h3>
             <input type="text" name="nome" placeholder="Nome do produto" required><br><br>
             <textarea name="descricao" placeholder="Descrição" required></textarea><br><br>
