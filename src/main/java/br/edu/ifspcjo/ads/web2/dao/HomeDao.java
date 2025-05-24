@@ -6,8 +6,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class HomeDao {
-
-    private Connection connection;
+    public Connection connection;
 
     public HomeDao(Connection connection) {
         this.connection = connection;
@@ -20,7 +19,7 @@ public class HomeDao {
     public List<Produto> listarProdutosDisponiveis() throws SQLException {
         List<Produto> produtos = new ArrayList<>();
 
-        String sql = "SELECT * FROM produtos WHERE estoque > 0";
+        String sql = "SELECT * FROM Produto WHERE estoque > 0";
 
         try (PreparedStatement stmt = connection.prepareStatement(sql);
              ResultSet rs = stmt.executeQuery()) {
@@ -37,8 +36,8 @@ public class HomeDao {
                 // Converte a string do banco para o enum Categoria
                 produto.setCategoria(Produto.Categoria.valueOf(rs.getString("categoria")));
 
-                // Se você tiver o campo de imagemURL no banco:
-                produto.setImagemURL(rs.getString("imagemURL"));
+                // Se tiver o campo de imagemURL no banco:
+                // produto.setImagemURL(rs.getString("imagemURL"));
 
                 produtos.add(produto);
             }

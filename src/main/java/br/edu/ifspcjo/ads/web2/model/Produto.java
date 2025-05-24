@@ -1,5 +1,4 @@
 package model;
-import model.Vendedor;
 
 public class Produto 
 {
@@ -17,14 +16,12 @@ public class Produto
     private float preco;
     private int estoque;
     private Categoria categoria;
-    private Vendedor vendedor; //Associação com o vendedor (se refere diretamente ao vendedor.prontuario)
 	
     public Produto(String nome, String descricao, float preco, int estoque) {
         this.nome = nome;
         this.descricao = descricao;
         this.preco = preco;
         this.estoque = estoque;
-	this.vendedor = vendedor;
     }
 
     public int getId() {
@@ -74,12 +71,4 @@ public class Produto
     public void setCategoria(Categoria categoria) {
         this.categoria = categoria;
     }
-
-   public Vendedor getVendedor() {
-        return vendedor;
-   }
-
-   public void setVendedor(Vendedor vendedor) {
-        this.vendedor = vendedor;
-   }
 }

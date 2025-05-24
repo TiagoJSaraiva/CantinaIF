@@ -12,4 +12,8 @@ public class DataSourceManager {
         DataSource ds = (DataSource) envCtx.lookup("jdbc/TodoDB");
         return ds.getConnection();
     }
+
+	public static ConnectionFactory getDataSource() {
+		return null;
+	}
 }
