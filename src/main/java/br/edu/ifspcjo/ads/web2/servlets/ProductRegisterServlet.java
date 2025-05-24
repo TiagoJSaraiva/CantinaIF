@@ -12,8 +12,9 @@ import java.sql.PreparedStatement;
 
 @WebServlet("/registrar-produto")
 public class ProductRegisterServlet extends HttpServlet {
-
-    private static final String URL = "jdbc:mysql://localhost:3306/todoapp";
+	private static final long serialVersionUID = 1L;
+	
+	private static final String URL = "jdbc:mysql://localhost:3306/todoapp";
     private static final String USER = "root";
     private static final String PASSWORD = "";
 
@@ -58,11 +59,11 @@ public class ProductRegisterServlet extends HttpServlet {
             stmt.close();
             conn.close();
 
-            response.sendRedirect("registroProdutos.jsp");//INTERESSANTE CRIAR UMA PÁGINA DE SUCESSO COM 1 BOTÃO QUE LEVA DEVOLTA A PAGINA DE ADM
+            response.sendRedirect("registroProdutos.jsp"); // INTERESSANTE CRIAR UMA PÁGINA DE SUCESSO COM 1 BOTÃO QUE LEVA DE VOLTA A PÁGINA DE ADM
 
         } catch (Exception e) {
             e.printStackTrace();
-            response.sendRedirect("erro.jsp");//NAO TEMOS PAGINA DE ERRO AINDA
+            response.sendRedirect("erro.jsp"); // NÃO TEMOS PÁGINA DE ERRO AINDA
         }
     }
 }
