@@ -13,7 +13,7 @@ import java.sql.PreparedStatement;
 @WebServlet("/registrar-produto")
 public class ProductRegisterServlet extends HttpServlet {
 
-    private static final String URL = "jdbc:mysql://localhost:3306/NOME DO BDD"; //LINKAR O BDD CORRETAMENTE
+    private static final String URL = "jdbc:mysql://localhost:3306/todoapp";
     private static final String USER = "root";
     private static final String PASSWORD = "";
 
@@ -30,7 +30,7 @@ public class ProductRegisterServlet extends HttpServlet {
         String categoriaStr = request.getParameter("categoria");
 
         if (nome == null || precoStr == null || categoriaStr == null || nome.isEmpty() || precoStr.isEmpty() || categoriaStr.isEmpty()) {
-            response.sendRedirect("erro.jsp"); //TEMOS QUE CRIAR UMA PAGINA DE ERRO
+            response.sendRedirect("erro.jsp"); // TEMOS QUE CRIAR UMA PÁGINA DE ERRO
             return;
         }
 
