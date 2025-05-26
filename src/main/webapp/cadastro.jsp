@@ -14,7 +14,7 @@
             <input type="text" id="prontuario" name="prontuario" required maxlength="10">
             
             <label for="nome">Seu nome</label>
-            <input type="text" id="nome" name="nome" required maxlength="75">
+            <input type="text" id="nome" name="nome" maxlength="75">
 
             <label for="email">E-mail institucional</label>
             <input type="email" id="email" name="email" required maxlength="100">
