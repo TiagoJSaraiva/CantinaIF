@@ -15,13 +15,21 @@ public class LoginServlet extends HttpServlet
 	
     private final UserDao userDao = new UserDao();
 
+    private static final String prontuarioVendedor = "REMOVIDO";
+    private static final String senhaVendedor = "REMOVIDO";
+    
     @Override
     protected void doPost(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
-
         String prontuario = request.getParameter("prontuario");
         String senha = request.getParameter("senha");
-
+        
+        
+        if (prontuarioVendedor.equals(prontuario) && senhaVendedor.equals(senha)) {
+            response.sendRedirect("registroProdutos.jsp");
+            return;
+        }
+        
         Comprador comprador = userDao.encontrarPorProntuarioESenha(prontuario, senha);
 
         if (comprador != null) {
