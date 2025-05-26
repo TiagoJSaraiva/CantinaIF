@@ -44,3 +44,6 @@ CREATE TABLE Pedido_Produto (
     FOREIGN KEY (pedido_id) REFERENCES Pedido(id),
     FOREIGN KEY (produto_id) REFERENCES Produto(id)
 );
+
+-- Inserção de dados de um vendedor fictício para poder testar o cadastro de produtos
+INSERT INTO Vendedor VALUES ('REMOVIDO', 'vendedor@gmail.com', 'REMOVIDO');
