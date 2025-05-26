@@ -1,6 +1,14 @@
 <%@ page contentType="text/html;charset=UTF-8" %>
 <%@ taglib uri="http://java.sun.com/jsp/jstl/core" prefix="c" %> <!-- JSTL com Jakarta EE -->
 <%@ page import="model.Comprador" %> <!-- Importa classe Comprador para uso na sessão -->
+<%
+    Comprador comprador = (Comprador) session.getAttribute("comprador");
+    if (comprador != null) {
+        out.println("Bem-vindo, " + comprador.getNome() + "!");
+    } else {
+        response.sendRedirect("login.jsp");
+    }
+%>
 
 <!DOCTYPE html>
 <html lang="pt-br">
