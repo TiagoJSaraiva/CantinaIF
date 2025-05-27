@@ -6,7 +6,7 @@
 <head>
     <meta charset="UTF-8">
     <title>Painel do Vendedor</title>
-    <link rel="stylesheet" href="css/adm.css"> <!-- Link para o arquivo de estilização adm.css -->
+    <link rel="stylesheet" href="css/user.css"> <!-- Link para o arquivo de estilização adm.css -->
     <script>
         // Formulário de edição
         function toggleEditForm(id) {
