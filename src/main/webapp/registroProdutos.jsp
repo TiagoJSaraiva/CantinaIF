@@ -28,7 +28,7 @@
 
             input.value = value;
 
-            fetch('atualizarQuantidade?id=' + id + '&quantidade=' + value, { method: 'POST' });
+            fetch('atualizarEstoque?id=' + id + '&estoque=' + value, { method: 'POST' });
         }
     </script>
 </head>
@@ -61,9 +61,9 @@
 	
 	        <textarea name="descricao" placeholder="Descrição" required></textarea><br><br>
 	
-	        <input type="number" name="valor" step="0.01" placeholder="Valor" required><br><br>
+	        <input type="number" name="preco" step="0.01" placeholder="Valor" required><br><br>
 	
-	        <input type="number" name="quantidade" placeholder="Quantidade inicial" required><br><br>
+	        <input type="number" name="estoque" placeholder="Quantidade inicial" required><br><br>
 	
 	        <select name="categoria" required>
 	            <option value="" disabled selected>Selecione uma categoria</option>
@@ -104,7 +104,7 @@
                     <input type="hidden" name="id" value="${produto.id}">
                     <input type="text" name="nome" value="${produto.nome}" required><br><br>
                     <textarea name="descricao" required>${produto.descricao}</textarea><br><br>
-                    <input type="number" name="valor" step="0.01" value="${produto.valor}" required><br><br>
+                    <input type="number" name="valor" step="0.01" value="${produto.preco}" required><br><br>
                     <button type="submit">Salvar Alterações</button>
                 </form>
             </div>
