@@ -1,11 +1,13 @@
 // AVISO: Ainda não testado por prolemas com a página home.
 
-package dao;
+package Dao;
 
 import model.Produto;
 import java.sql.*;
 import java.util.ArrayList;
 import java.util.List;
+
+import jakarta.servlet.annotation.WebServlet;
 
 public class ProductDao {
     private Connection connection;
@@ -14,8 +16,9 @@ public class ProductDao {
         this.connection = connection;
     }
 
+    //para criação de produtos
     public void create(Produto produto) throws SQLException {
-        String sql = "INSERT INTO Produto (nome, descricao, preco, estoque, categoria) VALUES (?, ?, ?, ?, ?)";
+        String sql = "INSERT INTO produtos (nome, descricao, preco, estoque, categoria) VALUES (?, ?, ?, ?, ?)";
         try (PreparedStatement stmt = connection.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
             stmt.setString(1, produto.getNome());
             stmt.setString(2, produto.getDescricao());
@@ -32,24 +35,70 @@ public class ProductDao {
         }
     }
 
-    public List<Produto> listarProdutos() throws SQLException {
-        List<Produto> produtos = new ArrayList<>();
-        String sql = "SELECT * FROM Produto";
-        try (PreparedStatement stmt = connection.prepareStatement(sql);
+    //para os filtros
+    public List<Produto> listarTodos() {
+        List<Produto> lista = new ArrayList<>();
+        String sql = "SELECT * FROM produto";
+
+        try (Connection conn = getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql);
              ResultSet rs = stmt.executeQuery()) {
 
             while (rs.next()) {
-                Produto produto = new Produto(
-                        rs.getString("nome"),
-                        rs.getString("descricao"),
-                        rs.getFloat("preco"),
-                        rs.getInt("estoque")
+                Produto p = new Produto(
+                    rs.getString("nome"),
+                    rs.getString("descricao"),
+                    rs.getFloat("preco"),
+                    rs.getInt("estoque")
+                );
+                p.setId(rs.getInt("id"));
+                p.setCategoria(Produto.Categoria.valueOf(rs.getString("categoria")));
+                lista.add(p);
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+
+        return lista;
+    }
+
+    
+    //para o carrinho
+    public void reservarEstoque(int produtoId, int quantidade) throws SQLException {
+        String sql = "UPDATE produtos SET estoque = estoque - ? WHERE id = ? AND estoque >= ?";
+        try (Connection conn = getConnection(); PreparedStatement stmt = conn.prepareStatement(sql)) {
+            stmt.setInt(1, quantidade);
+            stmt.setInt(2, produtoId);
+            stmt.setInt(3, quantidade);
+            stmt.executeUpdate();
+        }
+    }
+
+    private Connection getConnection() {
+		// TODO Auto-generated method stub
+		return null;
+	}
+
+	public Produto buscarPorId(int id) {
+        Produto produto = null;
+        String sql = "SELECT * FROM produtos WHERE id = ?";
+        try (Connection conn = getConnection(); PreparedStatement stmt = conn.prepareStatement(sql)) {
+            stmt.setInt(1, id);
+            ResultSet rs = stmt.executeQuery();
+            if (rs.next()) {
+                produto = new Produto(
+                    rs.getString("nome"),
+                    rs.getString("descricao"),
+                    rs.getFloat("preco"),
+                    rs.getInt("estoque")
                 );
                 produto.setId(rs.getInt("id"));
                 produto.setCategoria(Produto.Categoria.valueOf(rs.getString("categoria")));
-                produtos.add(produto);
             }
+        } catch (Exception e) {
+            e.printStackTrace();
         }
-        return produtos;
+        return produto;
     }
+
 }
