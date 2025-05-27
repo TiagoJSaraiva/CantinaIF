@@ -6,7 +6,7 @@
 <head>
     <meta charset="UTF-8">
     <title>Painel do Vendedor</title>
-    <link rel="stylesheet" href="css/user.css"> <!-- Link para o arquivo de estilização adm.css -->
+    <link rel="stylesheet" href="css/adm.css"> <!-- Link para o arquivo de estilização adm.css -->
     <script>
         // Formulário de edição
         function toggleEditForm(id) {
@@ -39,8 +39,7 @@
         <div>Painel do Vendedor</div>
         <div>
             <button class="new-product-btn" onclick="toggleNewProductForm()">+ Novo Produto</button>
-            <a href="logout" style="color: white; margin-left: 20px; font-weight: bold;
-		text-decoration: none;">Logout</a>
+            <a href="logout" style="color: white; margin-left: 20px;">Logout</a>
         </div>
     </div>
     
@@ -136,6 +135,17 @@
                 });
             });
         });
+    </script>
+    
+    <!-- Bloco JavaScript para exibir mensagens de erro/sucesso -->
+    <script type="text/javascript">
+        <c:if test="${not empty errorMessage}">
+            alert("${errorMessage}");
+        </c:if>
+
+        <c:if test="${not empty successMessage}">
+            alert("${successMessage}");
+        </c:if>
     </script>
 </body>
 </html>
