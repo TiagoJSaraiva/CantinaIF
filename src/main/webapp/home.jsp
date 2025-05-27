@@ -15,7 +15,7 @@
 <head>
     <meta charset="UTF-8">
     <title>Home - Cantina Universitária</title>
-    <link rel="stylesheet" href="css/home.css"> <!-- Link do CSS -->
+    <link rel="stylesheet" href="css/user.css"> <!-- Link do CSS -->
 </head>
 <body>
     <!-- Barra superior com logo, prontuário do usuário e links -->
@@ -24,8 +24,18 @@
         <div class="info">
             <!-- Mostra o prontuário do comprador salvo na sessão -->
             <span>Prontuário: ${sessionScope.comprador.prontuario}</span>
-            <a href="carrinho.jsp">Carrinho</a>
-            <a href="login.jsp">Logout</a>
+            <a href="carrinho.jsp"
+            style="
+                font-weight: bold;
+		        text-decoration: none;
+                color: white;"
+            >Carrinho</a>
+            <a href="login.jsp"
+            style="
+                font-weight: bold;
+		        text-decoration: none;
+                color: white;"
+            >Logout</a>
         </div>
     </div>
     
