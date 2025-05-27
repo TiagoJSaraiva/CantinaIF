@@ -12,9 +12,9 @@ import java.sql.PreparedStatement;
 
 @WebServlet("/registrar-produto")
 public class ProductRegisterServlet extends HttpServlet {
-	private static final long serialVersionUID = 1L;
-	
-	private static final String URL = "jdbc:mysql://localhost:3306/todoapp";
+    private static final long serialVersionUID = 1L;
+
+    private static final String URL = "jdbc:mysql://localhost:3306/todoapp";
     private static final String USER = "root";
     private static final String PASSWORD = "";
 
@@ -31,19 +31,30 @@ public class ProductRegisterServlet extends HttpServlet {
         String categoriaStr = request.getParameter("categoria");
 
         if (nome == null || precoStr == null || categoriaStr == null || nome.isEmpty() || precoStr.isEmpty() || categoriaStr.isEmpty()) {
-            response.sendRedirect("erro.jsp"); // TEMOS QUE CRIAR UMA PÁGINA DE ERRO
+            request.setAttribute("errorMessage", "Por favor, preencha todos os campos obrigatórios (nome, preço e categoria).");
+            request.getRequestDispatcher("registroProdutos.jsp").forward(request, response);
             return;
         }
 
         try {
             float preco = Float.parseFloat(precoStr);
-            int estoque = Integer.parseInt(estoqueStr);
-            Produto.Categoria categoria = Produto.Categoria.valueOf(categoriaStr.toUpperCase());
+            int estoque = 0;
+            if (estoqueStr != null && !estoqueStr.isEmpty()) {
+                estoque = Integer.parseInt(estoqueStr);
+            }
+
+            Produto.Categoria categoria = null;
+            try {
+                categoria = Produto.Categoria.valueOf(categoriaStr.toUpperCase());
+            } catch (IllegalArgumentException e) {
+                request.setAttribute("errorMessage", "Categoria inválida. Por favor, escolha uma categoria existente.");
+                request.getRequestDispatcher("registroProdutos.jsp").forward(request, response);
+                return;
+            }
 
             Produto produto = new Produto(nome, descricao, preco, estoque);
             produto.setCategoria(categoria);
 
-            // Salvar no banco de dados
             Class.forName("com.mysql.cj.jdbc.Driver");
             Connection conn = DriverManager.getConnection(URL, USER, PASSWORD);
 
@@ -59,11 +70,15 @@ public class ProductRegisterServlet extends HttpServlet {
             stmt.close();
             conn.close();
 
-            response.sendRedirect("registroProdutos.jsp"); // INTERESSANTE CRIAR UMA PÁGINA DE SUCESSO COM 1 BOTÃO QUE LEVA DE VOLTA A PÁGINA DE ADM
-
+            request.setAttribute("successMessage", "Produto registrado com sucesso!");
+            response.sendRedirect("registroProdutos.jsp"); 
+        } catch (NumberFormatException e) {
+            request.setAttribute("errorMessage", "Valores de preço ou estoque inválidos. Use apenas números.");
+            request.getRequestDispatcher("registroProdutos.jsp").forward(request, response);
         } catch (Exception e) {
             e.printStackTrace();
-            response.sendRedirect("erro.jsp"); // NÃO TEMOS PÁGINA DE ERRO AINDA
+            request.setAttribute("errorMessage", "Ocorreu um erro inesperado ao registrar o produto. Tente novamente.");
+            request.getRequestDispatcher("registroProdutos.jsp").forward(request, response);
         }
     }
 }
