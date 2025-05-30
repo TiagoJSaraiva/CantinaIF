@@ -15,18 +15,13 @@ public class Produto
     private String descricao;
     private float preco;
     private int estoque;
-    private model.Produto.Categoria categoria;
-    
-    public Produto() {
-        // Construtor padrão
-    }
+    private Categoria categoria;
 	
-    public Produto(String nome, String descricao, float preco, int estoque, Categoria categoria) {
+    public Produto(String nome, String descricao, float preco, int estoque) {
         this.nome = nome;
         this.descricao = descricao;
         this.preco = preco;
         this.estoque = estoque;
-        this.categoria = categoria;
     }
 
     public int getId() {
@@ -72,20 +67,8 @@ public class Produto
     public Categoria getCategoria() {
         return categoria;
     }
-    
+
     public void setCategoria(Categoria categoria) {
         this.categoria = categoria;
-    }
-    
-    @Override
-    public String toString() {
-        return "Produto{" +
-                "id=" + id +
-                ", nome='" + nome + '\'' +
-                ", descricao='" + descricao + '\'' +
-                ", preco=" + preco +
-                ", estoque=" + estoque +
-                ", categoria=" + categoria +
-                '}';
     }
 }
