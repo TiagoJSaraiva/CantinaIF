@@ -10,8 +10,8 @@ public class Comprador {
         this.prontuario = prontuario;
         this.email = email;
         this.senha = senha;
-	this.nome = nome;
-    }
+        this.nome = nome;
+    	}
 	
 	public String getProntuario() {
 		return prontuario;
