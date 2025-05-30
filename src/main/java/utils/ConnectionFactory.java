@@ -1,19 +1,23 @@
 package utils;
 
 import java.sql.Connection;
-import java.sql.DriverManager;
+import java.sql.SQLException;
+import javax.sql.DataSource;
 
 public class ConnectionFactory {
-    private static final String URL = "jdbc:mysql://localhost:3306/todoapp";
-    private static final String USER = "root";
-    private static final String PASSWORD = "";
+    private static DataSource dataSource;
 
-    public static Connection getConnection() {
+    static {
         try {
-            Class.forName("com.mysql.cj.jdbc.Driver");
-            return DriverManager.getConnection(URL, USER, PASSWORD);
+            javax.naming.Context initContext = new javax.naming.InitialContext();
+            javax.naming.Context envContext = (javax.naming.Context) initContext.lookup("java:/comp/env");
+            dataSource = (DataSource) envContext.lookup("jdbc/TodoDB");
         } catch (Exception e) {
-            throw new RuntimeException("Erro ao conectar ao banco de dados", e);
+            throw new RuntimeException("Erro ao configurar DataSource", e);
         }
+    }
+
+    public static Connection getConnection() throws SQLException {
+        return dataSource.getConnection();
     }
 }
