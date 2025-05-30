@@ -1,10 +1,10 @@
 package servlets;
 
+import model.Produto;
+
 import jakarta.servlet.ServletException;
 import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.*;
-import model.Produto;
-
 import java.io.IOException;
 import java.sql.Connection;
 import java.sql.DriverManager;
