@@ -6,7 +6,7 @@
 <head>
     <meta charset="UTF-8">
     <title>Painel do Vendedor</title>
-    <link rel="stylesheet" href="css/user.css"> <!-- Link para o arquivo de estilização adm.css -->
+    <link rel="stylesheet" href="css/adm.css"> <!-- Link para o arquivo de estilização adm.css -->
     <script>
         // Formulário de edição
         function toggleEditForm(id) {
@@ -78,11 +78,74 @@
 	</div>
     
     <!-- Lista de produtos renderizados dinamicamente -->
-    <div id="productContainer" class="produtosPai">
-    <!-- Produtos serão inseridos aqui via JavaScript -->
-	</div>
-</body>
-<footer style="background-color: black; margin: 0;"><span>DIREITOS RESERVADOS</span></footer>
-<script src="js/mostruario.js"></script>
+    <div id="productContainer">
+        <c:forEach var="produto" items="${produtos}">
+            <!-- O data-type será usado no JavaScript para filtrar os produtos por categoria -->
+            <div class="product" data-type="${produto.categoria.name().toLowerCase()}">
+                <!-- Imagem do produto -->
+                <img src="${produto.imagemURL}" alt="${produto.nome}">
+                
+                <!-- Informações do produto -->
+                <div class="product-info">
+                    <h3>${produto.nome}</h3>
+                    <p>${produto.descricao}</p>
+                    <p>R$ ${produto.preco}</p>
+                </div>
+    
+                <!-- Formulário para adicionar produto ao carrinho -->
+                <form method="post" action="CarrinhoServlet">
+                    <input type="hidden" name="idProduto" value="${produto.id}">
+                    <button type="submit" class="add-to-cart">Adicionar</button>
+                </form>
+            </div>
+            <!-- Formulário de edição -->
+            <div id="edit-form-${produto.id}" class="edit-form">
+                <form action="editarProduto" method="post">
+                    <input type="hidden" name="id" value="${produto.id}">
+                    <input type="text" name="nome" value="${produto.nome}" required><br><br>
+                    <textarea name="descricao" required>${produto.descricao}</textarea><br><br>
+                    <input type="number" name="valor" step="0.01" value="${produto.preco}" required><br><br>
+                    <button type="submit">Salvar Alterações</button>
+                </form>
+            </div>
+        </c:forEach>
+    </div>
+    
     <!-- Script JS para controlar o filtro por categoria -->
+    <script>
+        const filterButtons = document.querySelectorAll('.filter-btn');
+        const products = document.querySelectorAll('.product');
+    
+        filterButtons.forEach(button => {
+            button.addEventListener('click', () => {
+                // Marca o botão ativo
+                filterButtons.forEach(btn => btn.classList.remove('active'));
+                button.classList.add('active');
+    
+                const filter = button.getAttribute('data-filter');
+    
+                // Mostra ou oculta produtos com base no filtro
+                products.forEach(product => {
+                    const type = product.getAttribute('data-type');
+                    if (filter === 'todos' || filter === type) {
+                        product.style.display = 'inline-block';
+                    } else {
+                        product.style.display = 'none';
+                    }
+                });
+            });
+        });
+    </script>
+    
+    <!-- Bloco JavaScript para exibir mensagens de erro/sucesso -->
+    <script type="text/javascript">
+        <c:if test="${not empty errorMessage}">
+            alert("${errorMessage}");
+        </c:if>
+
+        <c:if test="${not empty successMessage}">
+            alert("${successMessage}");
+        </c:if>
+    </script>
+</body>
 </html>
