@@ -1,3 +1,4 @@
+
 CREATE DATABASE todoapp CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 USE todoapp;
 
@@ -24,6 +25,8 @@ CREATE TABLE Produto (
     preco DECIMAL(10,2),
     estoque INT,
     categoria ENUM('salgado', 'doce', 'lanche', 'bebida'),
+    vendedor_prontuario VARCHAR(10),
+    FOREIGN KEY (vendedor_prontuario) REFERENCES Vendedor(prontuario)
 );
 
 -- Tabela do vendedor (O usuário que insere os pedidos no sistema)
