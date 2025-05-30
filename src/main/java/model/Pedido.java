@@ -6,10 +6,10 @@ public class Pedido {
 	private Produto produto;
 	
 	public Pedido(int id, Comprador comprador, Produto produto) {
-        this.id = id;
-        this.comprador = comprador;
-        this.produto = produto;
-    }
+	        this.id = id;
+	        this.comprador = comprador;
+	        this.produto = produto;
+    	}
 	
 	public int getId() {
 		return id;
