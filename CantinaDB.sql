@@ -24,8 +24,6 @@ CREATE TABLE Produto (
     preco DECIMAL(10,2),
     estoque INT,
     categoria ENUM('salgado', 'doce', 'lanche', 'bebida'),
-    vendedor_prontuario VARCHAR(10),
-    FOREIGN KEY (vendedor_prontuario) REFERENCES Vendedor(prontuario)
 );
 
 -- Tabela do vendedor (O usuário que insere os pedidos no sistema)

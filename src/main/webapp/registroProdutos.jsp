@@ -78,41 +78,49 @@
 	</div>
     
     <!-- Lista de produtos renderizados dinamicamente -->
-    <div id="productContainer">
-        <c:forEach var="produto" items="${produtos}">
-            <!-- O data-type será usado no JavaScript para filtrar os produtos por categoria -->
-            <div class="product" data-type="${produto.categoria.name().toLowerCase()}">
-                <!-- Imagem do produto -->
-                <img src="${produto.imagemURL}" alt="${produto.nome}">
-                
-                <!-- Informações do produto -->
-                <div class="product-info">
-                    <h3>${produto.nome}</h3>
-                    <p>${produto.descricao}</p>
-                    <p>R$ ${produto.preco}</p>
-                </div>
-    
-                <!-- Formulário para adicionar produto ao carrinho -->
-                <form method="post" action="CarrinhoServlet">
-                    <input type="hidden" name="idProduto" value="${produto.id}">
-                    <button type="submit" class="add-to-cart">Adicionar</button>
-                </form>
-            </div>
-            <!-- Formulário de edição -->
-            <div id="edit-form-${produto.id}" class="edit-form">
-                <form action="editarProduto" method="post">
-                    <input type="hidden" name="id" value="${produto.id}">
-                    <input type="text" name="nome" value="${produto.nome}" required><br><br>
-                    <textarea name="descricao" required>${produto.descricao}</textarea><br><br>
-                    <input type="number" name="valor" step="0.01" value="${produto.preco}" required><br><br>
-                    <button type="submit">Salvar Alterações</button>
-                </form>
-            </div>
-        </c:forEach>
-    </div>
+    <div id="productContainer" class="produtosPai">
+    <!-- Produtos serão inseridos aqui via JavaScript -->
+</div>
     
     <!-- Script JS para controlar o filtro por categoria -->
     <script>
+        //exibição de produtos
+        document.addEventListener("DOMContentLoaded", function () {
+        fetch('home') // ou ajuste para '/CantinaIF/home' se necessário
+            .then(response => response.json())
+            .then(produtos => {
+                const container = document.getElementById('productContainer');
+
+                produtos.forEach(produto => {
+                    const produtoDiv = document.createElement('div');
+                    produtoDiv.className = 'produto';
+                    produtoDiv.setAttribute('data-type', produto.categoria.toLowerCase());
+
+                    produtoDiv.innerHTML = `
+                        <!-- Imagem se quiser ativar -->
+                        <!-- <img src="${produto.imageURL || '#'}" alt="${produto.nome}"> -->
+
+                        <div class="product-info">
+                            <h3>${produto.nome}</h3>
+                            <p>${produto.descricao}</p>
+                            <p>R$ ${produto.preco.toFixed(2)}</p>
+                        </div>
+
+                        <form method="post" action="registrar-produto" class="adicionar-ao-carrinho">
+                            <input type="hidden" name="idProduto" value="${produto.id}">
+                            <button type="submit" class="add-to-cart">Editar</button>
+                        </form>
+                    `;
+
+                    container.appendChild(produtoDiv);
+                });
+            })
+            .catch(error => {
+                console.error('Erro ao buscar produtos:', error);
+            });
+    });
+        
+        //filtros
         const filterButtons = document.querySelectorAll('.filter-btn');
         const products = document.querySelectorAll('.product');
     
@@ -135,17 +143,7 @@
                 });
             });
         });
-    </script>
-    
-    <!-- Bloco JavaScript para exibir mensagens de erro/sucesso -->
-    <script type="text/javascript">
-        <c:if test="${not empty errorMessage}">
-            alert("${errorMessage}");
-        </c:if>
-
-        <c:if test="${not empty successMessage}">
-            alert("${successMessage}");
-        </c:if>
+        
     </script>
 </body>
 </html>
