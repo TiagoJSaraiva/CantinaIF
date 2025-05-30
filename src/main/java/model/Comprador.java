@@ -7,10 +7,10 @@ public class Comprador {
 	private String nome;
 	
 	public Comprador(String prontuario, String email, String senha, String nome) {
-        this.prontuario = prontuario;
-        this.email = email;
-        this.senha = senha;
-        this.nome = nome;
+	        this.prontuario = prontuario;
+	        this.email = email;
+	        this.senha = senha;
+	        this.nome = nome;
     	}
 	
 	public String getProntuario() {
