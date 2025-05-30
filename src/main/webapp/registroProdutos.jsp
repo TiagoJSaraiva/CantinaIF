@@ -1,5 +1,7 @@
 <%@ page contentType="text/html;charset=UTF-8"%>
 <%@ taglib uri="http://java.sun.com/jsp/jstl/core" prefix="c" %> <!-- JSTL com Jakarta EE -->
+<%@ page import="model.Produto" %>
+<%@ page import="servlets.APIProdutosServlet" %>
 
 <!DOCTYPE html>
 <html lang="pt-br">
@@ -81,69 +83,6 @@
     <div id="productContainer" class="produtosPai">
     <!-- Produtos serão inseridos aqui via JavaScript -->
 </div>
-    
-    <!-- Script JS para controlar o filtro por categoria -->
-    <script>
-        //exibição de produtos
-        document.addEventListener("DOMContentLoaded", function () {
-        fetch('home') // ou ajuste para '/CantinaIF/home' se necessário
-            .then(response => response.json())
-            .then(produtos => {
-                const container = document.getElementById('productContainer');
-
-                produtos.forEach(produto => {
-                    const produtoDiv = document.createElement('div');
-                    produtoDiv.className = 'produto';
-                    produtoDiv.setAttribute('data-type', produto.categoria.toLowerCase());
-
-                    produtoDiv.innerHTML = `
-                        <!-- Imagem se quiser ativar -->
-                        <!-- <img src="${produto.imageURL || '#'}" alt="${produto.nome}"> -->
-
-                        <div class="product-info">
-                            <h3>${produto.nome}</h3>
-                            <p>${produto.descricao}</p>
-                            <p>R$ ${produto.preco.toFixed(2)}</p>
-                        </div>
-
-                        <form method="post" action="registrar-produto" class="adicionar-ao-carrinho">
-                            <input type="hidden" name="idProduto" value="${produto.id}">
-                            <button type="submit" class="add-to-cart">Editar</button>
-                        </form>
-                    `;
-
-                    container.appendChild(produtoDiv);
-                });
-            })
-            .catch(error => {
-                console.error('Erro ao buscar produtos:', error);
-            });
-    });
-        
-        //filtros
-        const filterButtons = document.querySelectorAll('.filter-btn');
-        const products = document.querySelectorAll('.product');
-    
-        filterButtons.forEach(button => {
-            button.addEventListener('click', () => {
-                // Marca o botão ativo
-                filterButtons.forEach(btn => btn.classList.remove('active'));
-                button.classList.add('active');
-    
-                const filter = button.getAttribute('data-filter');
-    
-                // Mostra ou oculta produtos com base no filtro
-                products.forEach(product => {
-                    const type = product.getAttribute('data-type');
-                    if (filter === 'todos' || filter === type) {
-                        product.style.display = 'inline-block';
-                    } else {
-                        product.style.display = 'none';
-                    }
-                });
-            });
-        });
-        
-    </script>
+    <script src="js/mostruario.js"></script>
 </body>
 </html>

@@ -1,6 +1,7 @@
 <%@ page contentType="text/html;charset=UTF-8" %>
 <%@ taglib uri="http://java.sun.com/jsp/jstl/core" prefix="c" %> <!-- JSTL com Jakarta EE -->
 <%@ page import="model.Comprador" %> <!-- Importa classe Comprador para uso na sessão -->
+<%@ page import="model.Produto" %>
 
 <!DOCTYPE html>
 <html lang="pt-br">
@@ -39,7 +40,6 @@
 
 <!-- Lista de produtos renderizados dinamicamente -->
 <div id="productContainer" class="produtosPai">
-    <c:forEach var="home" items="${produtos}">
         <!-- O data-type será usado no JavaScript para filtrar os produtos por categoria -->
         <div class="product" data-type="${produto.categoria.name().toLowerCase()}">
             <!-- Imagem do produto 
@@ -58,7 +58,6 @@
                 <button type="submit" class="add-to-cart">Adicionar</button>
             </form>
         </div>
-   </c:forEach>
 </div>
 
 <!-- Script JS para controlar o filtro por categoria -->

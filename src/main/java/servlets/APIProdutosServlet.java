@@ -11,8 +11,8 @@ import java.io.IOException;
 import java.io.PrintWriter;
 import java.util.List;
 
-@WebServlet("/home")
-public class HomeServlet extends HttpServlet {
+@WebServlet("api/produtos")
+public class APIProdutosServlet extends HttpServlet {
 
 
 	private static final long serialVersionUID = 1L;

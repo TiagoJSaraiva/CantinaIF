@@ -1,6 +1,6 @@
 //exibição de produtos
 document.addEventListener("DOMContentLoaded", function () {
-fetch('home')
+fetch('api/produtos')
     .then(response => response.json())
     .then(produtos => {
         const container = document.getElementById('productContainer');
