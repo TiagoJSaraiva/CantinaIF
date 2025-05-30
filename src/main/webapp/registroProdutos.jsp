@@ -1,49 +1,37 @@
-<%@ page contentType="text/html;charset=UTF-8"%>
+<%@ page contentType="text/html;charset=UTF-8" %>
 <%@ taglib uri="http://java.sun.com/jsp/jstl/core" prefix="c" %> <!-- JSTL com Jakarta EE -->
+<%@ page import="model.Comprador" %> <!-- Importa classe Comprador para uso na sessão -->
+<%
+    Comprador comprador = (Comprador) session.getAttribute("comprador");
+    if (comprador != null) {
+        out.println("Bem-vindo, " + comprador.getNome() + "!");
+    } else {
+        response.sendRedirect("login.jsp");
+    }
+%>
 
 <!DOCTYPE html>
 <html lang="pt-br">
 <head>
     <meta charset="UTF-8">
-    <title>Painel do Vendedor</title>
-    <link rel="stylesheet" href="css/adm.css"> <!-- Link para o arquivo de estilização adm.css -->
-    <script>
-        // Formulário de edição
-        function toggleEditForm(id) {
-            document.getElementById('edit-form-' + id).style.display = 'block';
-        }
-
-        // Formulário de criação de novos produtos
-        function toggleNewProductForm() {
-            const form = document.getElementById('new-product-form');
-            form.style.display = (form.style.display === 'none') ? 'block' : 'none';
-        }
-
-        // Função para atualização manual de quantidade de itens disponíveis
-        function updateQuantity(id, action) {
-            const input = document.getElementById('qty-' + id);
-            let value = parseInt(input.value);
-            if (action === 'up') value++;
-            if (action === 'down' && value > 0) value--;
-
-            input.value = value;
-
-            fetch('atualizarEstoque?id=' + id + '&estoque=' + value, { method: 'POST' });
-        }
-    </script>
+    <title>Home - Cantina Universitária</title>
+    <link rel="stylesheet" href="css/home.css"> <!-- Link do CSS -->
 </head>
 <body>
-    <!-- Barra de navegação -->
+    <!-- Barra superior com logo, prontuário do usuário e links -->
     <div class="navbar">
-        <div class="logo">IF</div>       
-        <div>Painel do Vendedor</div>
-        <div>
-            <button class="new-product-btn" onclick="toggleNewProductForm()">+ Novo Produto</button>
-            <a href="logout" style="color: white; margin-left: 20px;">Logout</a>
+        <div class="logo">
+        	<img src="img/Logo.png" alt="Logo" style="height: 40px;">
+    	</div>  
+        <div class="info">
+            <!-- Mostra o prontuário do comprador salvo na sessão -->
+            <span>Prontuário: ${sessionScope.comprador.prontuario}</span>
+            <a href="carrinho.jsp">Carrinho</a>
+            <a href="login.jsp">Logout</a>
         </div>
     </div>
     
-    <!-- Menu de filtragem por tipo de produto -->
+    <!-- Botões de filtro por categoria -->
     <div class="filters">
         <button class="filter-btn active" data-filter="todos">Todos</button>
         <button class="filter-btn" data-filter="salgado">Salgados</button>
@@ -51,31 +39,6 @@
         <button class="filter-btn" data-filter="lanche">Lanches</button>
         <button class="filter-btn" data-filter="bebida">Bebidas</button>
     </div>
-    
-    <!-- Novo produto -->
-    <div id="new-product-form" class="new-product-form">
-	    <form action="registrar-produto" method="post">
-	        <h3>Novo Produto</h3>
-	
-	        <input type="text" name="nome" placeholder="Nome do produto" required><br><br>
-	
-	        <textarea name="descricao" placeholder="Descrição" required></textarea><br><br>
-	
-	        <input type="number" name="preco" step="0.01" placeholder="Valor" required><br><br>
-	
-	        <input type="number" name="estoque" placeholder="Quantidade inicial" required><br><br>
-	
-	        <select name="categoria" required>
-	            <option value="" disabled selected>Selecione uma categoria</option>
-	            <option value="SALGADO">Salgado</option>
-	            <option value="DOCE">Doce</option>
-	            <option value="LANCHE">Lanche</option>
-	            <option value="BEBIDA">Bebida</option>
-	        </select><br><br>
-	
-	        <button type="submit">Criar</button>
-	    </form>
-	</div>
     
     <!-- Lista de produtos renderizados dinamicamente -->
     <div id="productContainer">
@@ -96,16 +59,6 @@
                 <form method="post" action="CarrinhoServlet">
                     <input type="hidden" name="idProduto" value="${produto.id}">
                     <button type="submit" class="add-to-cart">Adicionar</button>
-                </form>
-            </div>
-            <!-- Formulário de edição -->
-            <div id="edit-form-${produto.id}" class="edit-form">
-                <form action="editarProduto" method="post">
-                    <input type="hidden" name="id" value="${produto.id}">
-                    <input type="text" name="nome" value="${produto.nome}" required><br><br>
-                    <textarea name="descricao" required>${produto.descricao}</textarea><br><br>
-                    <input type="number" name="valor" step="0.01" value="${produto.preco}" required><br><br>
-                    <button type="submit">Salvar Alterações</button>
                 </form>
             </div>
         </c:forEach>
@@ -135,17 +88,6 @@
                 });
             });
         });
-    </script>
-    
-    <!-- Bloco JavaScript para exibir mensagens de erro/sucesso -->
-    <script type="text/javascript">
-        <c:if test="${not empty errorMessage}">
-            alert("${errorMessage}");
-        </c:if>
-
-        <c:if test="${not empty successMessage}">
-            alert("${successMessage}");
-        </c:if>
     </script>
 </body>
 </html>
