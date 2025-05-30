@@ -1,7 +1,5 @@
 <%@ page contentType="text/html;charset=UTF-8"%>
 <%@ taglib uri="http://java.sun.com/jsp/jstl/core" prefix="c" %> <!-- JSTL com Jakarta EE -->
-<%@ page import="model.Produto" %>
-<%@ page import="servlets.APIProdutosServlet" %>
 
 <!DOCTYPE html>
 <html lang="pt-br">
@@ -82,7 +80,9 @@
     <!-- Lista de produtos renderizados dinamicamente -->
     <div id="productContainer" class="produtosPai">
     <!-- Produtos serão inseridos aqui via JavaScript -->
-</div>
-    <script src="js/mostruario.js"></script>
+	</div>
 </body>
+<footer style="background-color: black; margin: 0;"><span>DIREITOS RESERVADOS</span></footer>
+<script src="js/mostruario.js"></script>
+    <!-- Script JS para controlar o filtro por categoria -->
 </html>

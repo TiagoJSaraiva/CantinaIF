@@ -2,13 +2,13 @@
 document.addEventListener("DOMContentLoaded", function () {
 fetch('api/produtos')
     .then(response => response.json())
-    .then(produtos => {
+    .then(produto => {
         const container = document.getElementById('productContainer');
 
-        produtos.forEach(produto => {
+        produto.forEach(produto => {
             const produtoDiv = document.createElement('div');
             produtoDiv.className = 'produto';
-            produtoDiv.setAttribute('data-type', produto.categoria.toLowerCase());
+            produtoDiv.setAttribute('data-type', produto.categoria());
 
             produtoDiv.innerHTML = `
                 <!-- Imagem se quiser ativar -->
