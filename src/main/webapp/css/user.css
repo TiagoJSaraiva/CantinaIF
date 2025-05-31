@@ -1,0 +1,124 @@
+body {
+    font-family: Arial, sans-serif;
+    margin: 0;
+    padding: 0;
+}
+
+.navbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background-color: #004d40;
+    color: white;
+    padding: 10px 20px;
+}
+
+.navbar .logo {
+    font-weight: bold;
+    
+}	
+
+.navbar .info {
+    display: flex;
+    gap: 15px;
+    align-items: center;
+}
+
+.filters { 
+    margin: 20px; 
+    display: flex;
+  	justify-content: center;
+}
+        
+.filters button { 
+    margin: 5px; 
+    padding: 10px 15px; 
+    border: 1px solid #07575b; 
+    background: white; 
+    cursor: pointer;
+    border-radius: 15px;
+  	box-shadow: 0 0 5px #ccc;
+}
+        
+.filters button.active, .filters button:hover { 
+    background-color: #07575b; 
+    color: white; 
+}
+
+.produtosPai {
+	display: flex;
+	flex-direction: column;
+	gap: 10px;
+}
+
+.product {
+    border: 1px solid #ccc;
+    margin: 10px auto;
+    width: 90%;
+    max-width: 600px;
+    display: flex;
+    align-items: center;
+    padding: 10px;
+    border-radius: 15px 0;
+    box-shadow: 0 0 5px #ccc;
+}
+
+.product img {
+    width: 80px;
+    height: 80px;
+    object-fit: cover;
+    margin-right: 15px;
+}
+
+.product-info {
+    flex: 1;
+}
+
+.add-to-cart {
+    padding: 8px 12px;
+    background-color: #00796b;
+    color: white;
+    border: none;
+    cursor: pointer;
+    border-radius: 15px;
+  	box-shadow: 0 0 5px #ccc;
+  	align-content: center;
+}
+
+.edit-form, .new-product-form {
+    display: none;
+    margin: 10px auto;
+    padding: 15px;
+    border: 1px solid #ccc;
+    width: 90%;
+    max-width: 600px;
+    background-color: #f4f4f4;
+}
+
+.edit-btn, .save-qty-btn {
+    background-color: #00796b;
+    color: white;
+    border: none;
+    padding: 8px 12px;
+    cursor: pointer;
+}
+
+.qty-controls {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.qty-controls input {
+    width: 40px;
+    text-align: center;
+}
+
+.new-product-btn {
+    background-color: #33691e;
+    color: white;
+    border: none;
+    padding: 10px 15px;
+    margin-left: 20px;
+    cursor: pointer;
+}

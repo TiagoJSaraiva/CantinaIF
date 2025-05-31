@@ -9,13 +9,13 @@
         <h1>Login</h1>
         <form class="login-form" action="login" method="post">
             <label for="prontuario">Prontuário</label>
-            <input type="text" id="prontuario" name="prontuario" required>
+            <input type="text" id="prontuario" name="prontuario" required maxlength="10">
 
             <label for="senha">Senha</label>
-            <input type="password" id="senha" name="senha" required>
+            <input type="password" id="senha" name="senha" required maxlength="100">
 
             <button type="submit">Login</button>
-            <a href="cadastro.jsp"><button type="button">Cadastro</button></a>
+            <a href="cadastro.jsp"><button type="button">Cadastrar-se</button></a>
         </form>
     </section>
 </body>

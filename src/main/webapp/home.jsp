@@ -1,24 +1,51 @@
+<%@ page contentType="text/html;charset=UTF-8" %>
+<%@ page import="model.Comprador" %> <!-- Importa classe Comprador para uso na sessão -->
+<%@ page import="model.Produto" %>
+
 <!DOCTYPE html>
-<html lang="en">
+<html lang="pt-br">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Document</title>
-    <link rel="stylesheet" href="css/home.css">
+    <title>Home - Cantina Universitária</title>
+    <link rel="stylesheet" href="css/user.css"> <!-- Link do CSS -->
 </head>
 <body>
-    <header class="top-bar">
-        <div class="top-bar-left">
-            <img src="img/logoCantinaIF.png" alt="Logo" class="logo">
-            <a href="salgados.jsp">Salgados</a>
-            <a href="bebidas.jsp">Bebidas</a>
-            <a href="lanches.jsp">Lanches</a>
-            <a href="doces.jsp">Doces</a>
-        </div>
-        <div class="top-bar-right">
-            <!--Parte do JSP em que escreve o cadastro do usuário-->
-            <buttonc class="carrinho-btn">carrinho</button>
-        </div>
-    </header>
+
+<!-- Barra superior com logo, prontuário do usuário e links -->
+<div class="navbar">
+    <div class="logo">
+        	<img src="img/Logo.png" alt="Logo" style="height: 40px;">
+    </div>    
+    <div class="info">
+        <!-- Mostra o prontuário do comprador salvo na sessão -->
+        <span>Prontuário: ${sessionScope.comprador.prontuario}</span>
+        <a href="carrinho.jsp" style="
+        font-weight: bold;
+		text-decoration: none;
+  		color: white;">Carrinho</a>
+        <a href="login.jsp" style="
+        font-weight: bold;
+		text-decoration: none;
+  		color: white;">Logout</a>
+    </div>
+</div>
+
+<!-- Botões de filtro por categoria -->
+<div class="filters">
+    <button class="filter-btn active" data-filter="todos">Todos</button>
+    <button class="filter-btn" data-filter="salgado">Salgados</button>
+    <button class="filter-btn" data-filter="doce">Doces</button>
+    <button class="filter-btn" data-filter="lanche">Lanches</button>
+    <button class="filter-btn" data-filter="bebida">Bebidas</button>
+</div>
+
+<!-- Lista de produtos renderizados dinamicamente -->
+<div id="productContainer" class="produtosPai">
+        
+</div>
+
+<!-- Script JS para controlar o filtro por categoria -->
+<script src="js/mostruario.js"></script>
+
 </body>
 </html>

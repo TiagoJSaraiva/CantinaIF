@@ -11,18 +11,19 @@
         <h1>Cadastro</h1>
         <form class="login-form" action="register" method="post">
             <label for="prontuario">Prontuário</label>
-            <input type="text" id="prontuario" name="prontuario" required>
-
+            <input type="text" id="prontuario" name="prontuario" required maxlength="10">
+            
             <label for="nome">Seu nome</label>
-            <input type="text" id="nome" name="nome" required>
+            <input type="text" id="nome" name="nome" maxlength="75">
 
             <label for="email">E-mail institucional</label>
-            <input type="email" id="email" name="email" required>
+            <input type="email" id="email" name="email" required maxlength="100">
 
             <label for="senha">Senha</label>
-            <input type="password" id="senha" name="senha" required>
+            <input type="password" id="senha" name="senha" required maxlength="100">
 
             <button type="submit">Cadastro</button>
+            <a href="login.jsp"><button type="button">Voltar pro login</button></a>
         </form>
     </section>
 </body>
