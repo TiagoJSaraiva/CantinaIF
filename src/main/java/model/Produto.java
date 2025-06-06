@@ -16,12 +16,24 @@ public class Produto
     private float preco;
     private int estoque;
     private Categoria categoria;
+    private byte[] imagem;
 	
+    // Construtor original
     public Produto(String nome, String descricao, float preco, int estoque) {
         this.nome = nome;
         this.descricao = descricao;
         this.preco = preco;
         this.estoque = estoque;
+        this.imagem = null; // Inicializa imagem como null por padrão neste construtor
+    }
+
+    // Construtor adicional para incluir a imagem
+    public Produto(String nome, String descricao, float preco, int estoque, byte[] imagem) {
+        this.nome = nome;
+        this.descricao = descricao;
+        this.preco = preco;
+        this.estoque = estoque;
+        this.imagem = imagem;
     }
 
     public int getId() {
@@ -70,5 +82,13 @@ public class Produto
 
     public void setCategoria(Categoria categoria) {
         this.categoria = categoria;
+    }
+    
+    public byte[] getImagem() {
+        return imagem;
+    }
+
+    public void setImagem(byte[] imagem) {
+        this.imagem = imagem;
     }
 }
