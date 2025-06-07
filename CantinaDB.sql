@@ -23,7 +23,8 @@ CREATE TABLE Produto (
     descricao VARCHAR(400),
     preco DECIMAL(10,2),
     estoque INT,
-    categoria ENUM('salgado', 'doce', 'lanche', 'bebida')
+    categoria ENUM('salgado', 'doce', 'lanche', 'bebida'),
+    imagem MEDIUMBLOB
 );
 
 -- Tabela do vendedor (O usuário que insere os pedidos no sistema)
