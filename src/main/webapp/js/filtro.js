@@ -1,22 +1,105 @@
-const filterButtons = document.querySelectorAll('.filter-btn');
-    const products = document.querySelectorAll('.product');
+//filtra e carrega as coisas adequadamente
+function carregarProdutosUser(categoria = 'todos') {
+    fetch(`apiUser/produtos?categoria=${categoria}`)
+        .then(response => {
+            if (!response.ok) {
+                throw new Error('Network response was not ok ' + response.statusText);
+            }
+            return response.json();
+        })
+        .then(produtos => {
+            const container = document.getElementById('productContainer');
+            container.innerHTML = '';
 
-    filterButtons.forEach(button => {
-        button.addEventListener('click', () => {
-            // Marca o botão ativo
-            filterButtons.forEach(btn => btn.classList.remove('active'));
-            button.classList.add('active');
+            produtos.forEach(produto => {
+                const produtoDiv = document.createElement('div');
+                produtoDiv.className = 'product';
 
-            const filter = button.getAttribute('data-filter');
+                produtoDiv.setAttribute('data-type', produto.categoria ? produto.categoria.toLowerCase() : 'outros');
 
-            // Mostra ou oculta produtos com base no filtro
-            products.forEach(product => {
-                const type = product.getAttribute('data-type');
-                if (filter === 'todos' || filter === type) {
-                    product.style.display = 'inline-block';
-                } else {
-                    product.style.display = 'none';
-                }
+                const imageUrl = produto.id ? `image?id=${produto.id}` : '#';
+                const imageTag = produto.imagem && produto.imagem.length > 0
+                    ? `<img src="${imageUrl}" alt="${produto.nome}" class="product-image">`
+                    : `<img src="img/placeholder-image.png" alt="Imagem padrão" class="product-image">`;
+
+                produtoDiv.innerHTML = `
+                    <div class="product-image-wrapper">
+                        ${imageTag}
+                    </div>
+					<div>
+						<h3>${produto.nome}</h3>
+					    <p>${produto.descricao}</p>
+					    <p><strong>Preço:</strong> R$ ${produto.preco}</p>
+					    <p><strong>Disponível:</strong> ${produto.estoque}</p>
+
+					    <div class="quantidade-container">
+					          <button onclick="alterarQuantidade(${produto.id}, -1)">-</button>
+					          <input type="text" id="quantidade-${produto.id}" value="1" readonly>
+					          <button onclick="alterarQuantidade(${produto.id}, 1)">+</button>
+						</div>
+					</div>
+                    <button onclick="adicionarAoCarrinho(${produto.id})">Comprar</button>
+                `;
+
+                container.appendChild(produtoDiv);
             });
+        })
+        .catch(error => {
+            console.error('Erro ao buscar produtos:', error);
+            const container = document.getElementById('productContainer');
+            container.innerHTML = '<p>Não foi possível carregar os produtos. Tente novamente mais tarde.</p>';
+        });
+}
+
+//altera a quantidade do pedido
+function alterarQuantidade(produtoId, delta) {
+  const input = document.getElementById(`quantidade-${produtoId}`);
+  let valor = parseInt(input.value);
+  valor = isNaN(valor) ? 1 : valor + delta;
+  if (valor < 1) valor = 1;
+  input.value = valor;
+}
+
+//adiciona os produtos ao carrinho
+function adicionarAoCarrinho(produtoId) {
+  const quantidade = document.getElementById(`quantidade-${produtoId}`).value;
+
+  fetch('carrinho', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({
+      produtoId: produtoId,
+      quantidade: quantidade
+    })
+  })
+  .then(response => {
+    if (response.ok) {
+      alert('Produto adicionado ao carrinho!');
+    } else {
+      alert('Erro ao adicionar produto.');
+    }
+  });
+}
+
+//desenha no html
+document.addEventListener('DOMContentLoaded', function () {
+    const botoesFiltro = document.querySelectorAll('.filter-btn');
+
+    botoesFiltro.forEach(botao => {
+        botao.addEventListener('click', function () {
+            const categoria = this.getAttribute('data-filter');
+
+            // Atualiza visualmente o botão ativo
+            document.querySelectorAll('.filter-btn').forEach(btn => btn.classList.remove('active'));
+            this.classList.add('active');
+
+            // Chama o carregamento AJAX com a categoria selecionada
+            carregarProdutosUser(categoria);
         });
     });
+
+    // Carrega todos os produtos ao abrir a página
+    carregarProdutosUser('todos');
+});

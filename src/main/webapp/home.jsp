@@ -14,12 +14,12 @@
 <!-- Barra superior com logo, prontuário do usuário e links -->
 <div class="navbar">
     <div class="logo">
-        	<img src="img/Logo.png" alt="Logo" style="height: 40px;">
+        	<a href="home.jsp"><img src="img/Logo.png" alt="Logo" style="height: 40px;"></a>
     </div>    
     <div class="info">
         <!-- Mostra o prontuário do comprador salvo na sessão -->
         <span>Prontuário: ${sessionScope.comprador.prontuario}</span>
-        <a href="carrinho.jsp" style="
+        <a href="Carrinho.jsp" style="
         font-weight: bold;
 		text-decoration: none;
   		color: white;">Carrinho</a>
@@ -45,7 +45,7 @@
 </div>
 
 <!-- Script JS para controlar o filtro por categoria -->
-<script src="js/mostruario.js"></script>
+<script src="js/filtro.js"></script>
 
 </body>
 </html>

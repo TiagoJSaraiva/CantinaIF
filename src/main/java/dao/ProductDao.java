@@ -17,6 +17,7 @@ public class ProductDao {
         
     }
 
+    //Para criacao de novos produtos
     public void create(Produto produto) throws SQLException {
         String sql = "INSERT INTO Produto (nome, descricao, preco, estoque, categoria, imagem) VALUES (?, ?, ?, ?, ?, ?)";
         try (Connection conn = ConnectionFactory.getConnection();
@@ -49,7 +50,7 @@ public class ProductDao {
     }
 
     // Listar todos os produtos (para o administrador, inclusive estoque zero)
-    public List<Produto> listarTodosProdutos() {
+    public List<Produto> listarProdutosDisponiveisADM() {
         List<Produto> produtos = new ArrayList<>();
         String sql = "SELECT * FROM Produto";
         try (Connection conn = ConnectionFactory.getConnection();
@@ -68,7 +69,7 @@ public class ProductDao {
     }
 
     // Listar produtos com quantidade disponível > 0 (para o usuário)
-    public List<Produto> listarProdutosDisponiveis() {
+    public List<Produto> listarProdutosDisponiveisUser() {
         List<Produto> produtos = new ArrayList<>();
         String sql = "SELECT * FROM Produto WHERE estoque > 0";
 
@@ -87,13 +88,32 @@ public class ProductDao {
         return produtos;
     }
 
-    // Listar produtos por categoria (com opção de incluir/excluir estoque zero)
-    public List<Produto> listarProdutosPorCategoria(String categoriaNome, boolean incluirEstoqueZero) {
+    // Listar produtos por categoria (com estoque > zero)
+    public List<Produto> listarProdutosPorCategoriaUser(String categoriaNome) {
+        List<Produto> produtos = new ArrayList<>();
+        String sql = "SELECT * FROM Produto WHERE estoque > 0 AND categoria = ?";
+
+        try (Connection conn = ConnectionFactory.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+
+            stmt.setString(1, categoriaNome);
+            try (ResultSet rs = stmt.executeQuery()) {
+                while (rs.next()) {
+                    produtos.add(mapearProduto(rs));
+                }
+            }
+
+        } catch (SQLException e) {
+            System.err.println("Erro ao listar produtos por categoria: " + e.getMessage());
+            e.printStackTrace();
+        }
+        return produtos;
+    }
+    
+    // Listar produtos por categoria (ADM)
+    public List<Produto> listarProdutosPorCategoriaADM(String categoriaNome) {
         List<Produto> produtos = new ArrayList<>();
         String sql = "SELECT * FROM Produto WHERE categoria = ?";
-        if (!incluirEstoqueZero) {
-            sql += " AND estoque > 0";
-        }
 
         try (Connection conn = ConnectionFactory.getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql)) {
@@ -112,6 +132,7 @@ public class ProductDao {
         return produtos;
     }
 
+    //Mapeamento dos produtos para os JSONs
     private Produto mapearProduto(ResultSet rs) throws SQLException {
         Produto produto = new Produto(null, null, 0, 0);
 
@@ -147,6 +168,7 @@ public class ProductDao {
         }
     }
 
+    // Busca produtos exatos para colocar no carrinho
     public Produto buscarPorId(int id) {
         Produto produto = null;
         String sql = "SELECT * FROM Produto WHERE id = ?";
