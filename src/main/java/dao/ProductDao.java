@@ -17,7 +17,7 @@ public class ProductDao {
         
     }
 
-    //Para criacao de novos produtos
+    // Para criação de novos produtos
     public void create(Produto produto) throws SQLException {
         String sql = "INSERT INTO Produto (nome, descricao, preco, estoque, categoria, imagem) VALUES (?, ?, ?, ?, ?, ?)";
         try (Connection conn = ConnectionFactory.getConnection();
@@ -132,7 +132,7 @@ public class ProductDao {
         return produtos;
     }
 
-    //Mapeamento dos produtos para os JSONs
+    // Mapeamento dos produtos para os JSONs
     private Produto mapearProduto(ResultSet rs) throws SQLException {
         Produto produto = new Produto(null, null, 0, 0);
 
