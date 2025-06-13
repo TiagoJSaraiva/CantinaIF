@@ -1,4 +1,4 @@
-//filtra e carrega as coisas adequadamente
+// Filtra e carrega as coisas adequadamente
 function carregarProdutosUser(categoria = 'todos') {
     fetch(`apiUser/produtos?categoria=${categoria}`)
         .then(response => {
