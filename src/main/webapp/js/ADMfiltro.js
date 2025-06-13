@@ -1,4 +1,4 @@
-//filtra e carrega as coisas adequadamente
+// Filtra e carrega as coisas adequadamente
 function carregarProdutosADM(categoria = 'todos') {
     fetch(`apiAdm/produtos?categoria=${categoria}`)
         .then(response => {
@@ -54,7 +54,7 @@ function carregarProdutosADM(categoria = 'todos') {
         });
 }
 
-//altera a quantidade do pedido
+// Altera a quantidade do pedido
 function alterarQuantidade(produtoId, delta) {
   const input = document.getElementById(`quantidade-${produtoId}`);
   let valor = parseInt(input.value);
@@ -63,7 +63,7 @@ function alterarQuantidade(produtoId, delta) {
   input.value = valor;
 }
 
-//desenha no html
+// Desenha no HTML
 document.addEventListener('DOMContentLoaded', function () {
     const botoesFiltro = document.querySelectorAll('.filter-btn');
 
