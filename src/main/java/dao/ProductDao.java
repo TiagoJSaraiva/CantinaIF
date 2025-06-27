@@ -145,7 +145,7 @@ public class ProductDao {
         String categoriaString = rs.getString("categoria");
         if (categoriaString != null && !categoriaString.isEmpty()) {
             try {
-                produto.setCategoria(Produto.Categoria.valueOf(categoriaString));
+            	produto.setCategoria(Produto.Categoria.valueOf(categoriaString.trim().toUpperCase()));
             } catch (IllegalArgumentException e) {
                 System.err.println("Erro: Categoria '" + categoriaString + "' inválida no banco de dados para o produto ID: " + produto.getId());
             }

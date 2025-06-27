@@ -1,154 +1,80 @@
 <%@ page language="java" contentType="text/html; charset=UTF-8" pageEncoding="UTF-8"%>
-
+<%@ taglib uri="jakarta.tags.core" prefix="c" %>
 <!DOCTYPE html>
 <html>
 <head>
     <meta charset="UTF-8">
     <title>Carrinho de Compras</title>
     <style>
-        body {
-            font-family: Arial, sans-serif;
-            margin: 20px;
-        }
-        .carrinho-container {
-            width: auto;
-            margin: 5%;
-            border: 1px solid #aaa;
-            padding: 20px;
-            border-radius: 8px;
-        }
-        h2 {
-            text-align: center;
-        }
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-bottom: 20px;
-        }
-        th, td {
-            border: 1px solid #ddd;
+        /* ... Seus estilos existentes ... */
+        .mensagem-sucesso {
+            background-color: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
             padding: 10px;
-            text-align: left;
-        }
-        th {
-            background-color: #f0f0f0;
-        }
-        .finalizar {
+            margin-bottom: 20px;
             text-align: center;
+            border-radius: 5px;
         }
-        .finalizar button {
-            padding: 10px 20px;
-            font-size: 16px;
-            background-color: #4CAF50;
-            color: white;
-            border: none;
-            cursor: pointer;
-            border-radius: 15px;
+        .mensagem-erro {
+            background-color: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+            padding: 10px;
+            margin-bottom: 20px;
+            text-align: center;
+            border-radius: 5px;
         }
-        .finalizar button:hover {
-            background-color: #45a049;
-        }
-        .item-carrinho {
-      display: flex;
-      align-items: flex-start;
-      border-bottom: 1px solid #ccc;
-      padding: 10px 0;
-    }
-
-    .item-carrinho img {
-      width: 100px;
-      height: auto;
-      margin-right: 15px;
-    }
-
-    .info-produto {
-      flex: 1;
-    }
-
-    .resumo {
-      margin-top: 20px;
-      font-weight: bold;
-      font-size: 18px;
-      text-align: right;
-    }
     </style>
     <meta charset="UTF-8">
     <title>Carrinho - Cantina Universitária</title>
-    <link rel="stylesheet" href="css/user.css"> <!-- Link do CSS -->
+    <link rel="stylesheet" href="css/user.css">
 </head>
 <body>
 
-<!-- Barra superior com logo, prontuário do usuário e links -->
 <div class="navbar">
     <div class="logo">
-        	<a href="home.jsp"><img src="img/Logo.png" alt="Logo" style="height: 40px;"></a>
+        <a href="home.jsp"><img src="img/Logo.png" alt="Logo" style="height: 40px;"></a>
     </div>    
     <div class="info">
-        <!-- Mostra o prontuário do comprador salvo na sessão -->
         <span>Prontuário: ${sessionScope.comprador.prontuario}</span>
-        <a href="Carrinho.jsp" style="
-        font-weight: bold;
-		text-decoration: none;
-  		color: white;">Carrinho</a>
-        <a href="login.jsp" style="
-        font-weight: bold;
-		text-decoration: none;
-  		color: white;">Logout</a>
+        <a href="Carrinho.jsp" style="font-weight: bold; text-decoration: none; color: white;">Carrinho</a>
+        <a href="login.jsp" style="font-weight: bold; text-decoration: none; color: white;">Logout</a>
     </div>
 </div>
 
     <h1>Seu Carrinho</h1>
+
+    <!-- Área para exibir mensagens -->
+    <div id="message-area">
+        <%-- Verifica se há uma mensagem de sucesso na sessão --%>
+        <c:if test="${not empty sessionScope.successMessage}">
+            <div class="mensagem-sucesso">
+                <p>${sessionScope.successMessage}</p>
+            </div>
+            <%-- Remove a mensagem da sessão para que não apareça novamente na próxima visita --%>
+            <c:remove var="successMessage" scope="session"/>
+        </c:if>
+        
+        <%-- Verifica se há uma mensagem de erro na requisição (do forward do Servlet) --%>
+        <c:if test="${not empty requestScope.errorMessage}">
+            <div class="mensagem-erro">
+                <p>${requestScope.errorMessage}</p>
+            </div>
+            <%-- Não é necessário remover, pois requestScope é limpo a cada nova requisição --%>
+        </c:if>
+    </div>
+
   <div id="carrinho-container"></div>
-  <div class="resumo" id="resumo-total"></div>
+  <!-- REMOVA ESTA LINHA: <div class="resumo" id="resumo-total"></div> -->
 
         <div class="finalizar">
-            <p><strong>Total: R$ </strong></p>
+            <p><strong>Total: R$ <span id="display-total">0.00</span></strong></p> <%-- Este é o único total que vamos usar --%>
             <form action="FinalizarCompraServlet" method="post">
                 <button type="submit">FINALIZAR COMPRA</button>
             </form>
         </div>
         
-        <script>
-    fetch('carrinho')
-      .then(res => res.json())
-      .then(itens => {
-        const container = document.getElementById('carrinho-container');
-        const resumo = document.getElementById('resumo-total');
-        let total = 0;
-        let totalItens = 0;
-
-        if (itens.length === 0) {
-          container.innerHTML = '<p>Seu carrinho está vazio.</p>';
-          resumo.innerHTML = '';
-          return;
-        }
-
-        itens.forEach(item => {
-          total += item.subtotal;
-          totalItens += item.quantidade;
-
-          const div = document.createElement('div');
-          div.className = 'item-carrinho';
-
-          div.innerHTML = `
-            <img src="${item.imagemUrl}" alt="${item.nome}">
-            <div class="info-produto">
-              <h3>${item.nome}</h3>
-              <p>${item.descricao}</p>
-              <p>Preço unitário: R$ ${item.preco.toFixed(2)}</p>
-              <p>Quantidade: ${item.quantidade}</p>
-              <p><strong>Subtotal: R$ ${item.subtotal.toFixed(2)}</strong></p>
-            </div>
-          `;
-
-          container.appendChild(div);
-        });
-
-        resumo.innerHTML = `
-          Total de produtos: ${totalItens}<br>
-          Valor total: <strong>R$ ${total.toFixed(2)}</strong>
-        `;
-      });
-  </script>
+        <script src="js/Carrinho.js"></script>
 </body>
 </html>

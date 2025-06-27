@@ -23,7 +23,7 @@ public class ProductRegisterServlet extends HttpServlet {
 
     private static final String URL = "jdbc:mysql://localhost:3306/todoapp";
     private static final String USER = "root";
-    private static final String PASSWORD = "";
+    private static final String PASSWORD = "REMOVIDO";
 
     @Override
     protected void doPost(HttpServletRequest request, HttpServletResponse response)
@@ -67,8 +67,7 @@ public class ProductRegisterServlet extends HttpServlet {
                 }
             }
 
-            Produto produto = new Produto(nome, descricao, preco, estoque, imagemBytes);
-            produto.setCategoria(categoria);
+            Produto produto = new Produto(nome, descricao, preco, estoque, categoria, imagemBytes); 
 
             Class.forName("com.mysql.cj.jdbc.Driver");
             Connection conn = DriverManager.getConnection(URL, USER, PASSWORD);

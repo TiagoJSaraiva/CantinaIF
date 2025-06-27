@@ -1,8 +1,8 @@
 package model;
 
-public class Produto 
+
+public class Produto
 {
-    // Classe do tipo enum para o atributo Categoria
     public enum Categoria {
 	SALGADO,
 	DOCE,
@@ -13,26 +13,32 @@ public class Produto
     private int id;
     private String nome;
     private String descricao;
-    private float preco;
+    private float preco; // Mantido como float, mas considere BigDecimal!
     private int estoque;
     private Categoria categoria;
     private byte[] imagem;
 	
+    // NOVO: Construtor padrão (sem argumentos) - Essencial para o Gson!
+    public Produto() {
+    }
+
     // Construtor original
     public Produto(String nome, String descricao, float preco, int estoque) {
         this.nome = nome;
         this.descricao = descricao;
         this.preco = preco;
         this.estoque = estoque;
-        this.imagem = null; // Inicializa imagem como null por padrão neste construtor
+        this.imagem = null;
     }
 
-    // Construtor adicional para incluir a imagem
-    public Produto(String nome, String descricao, float preco, int estoque, byte[] imagem) {
+    // Construtor adicional para incluir a imagem e a categoria
+    // Adicionei categoria ao construtor, pois é um campo importante
+    public Produto(String nome, String descricao, float preco, int estoque, Categoria categoria, byte[] imagem) {
         this.nome = nome;
         this.descricao = descricao;
         this.preco = preco;
         this.estoque = estoque;
+        this.categoria = categoria; // Atribui a categoria
         this.imagem = imagem;
     }
 

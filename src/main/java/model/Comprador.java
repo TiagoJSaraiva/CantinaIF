@@ -1,4 +1,4 @@
-package model;
+package model; // Certifique-se de que o nome do pacote está correto
 
 public class Comprador {
 	private String prontuario;
@@ -6,6 +6,11 @@ public class Comprador {
 	private String senha;
 	private String nome;
 	
+    // NOVO: Construtor padrão (sem argumentos) - Essencial para o Gson!
+    public Comprador() {
+    }
+
+    // Construtor existente
 	public Comprador(String prontuario, String email, String senha, String nome) {
         this.prontuario = prontuario;
         this.email = email;
@@ -42,6 +47,6 @@ public class Comprador {
 	}
 	
 	public void setNome(String nome) {
-		this.nome = senha;
+		this.nome = nome;
 	}
 }

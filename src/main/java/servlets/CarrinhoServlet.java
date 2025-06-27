@@ -6,6 +6,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Base64;
 
 import com.google.gson.Gson;
 import com.google.gson.JsonObject;
@@ -73,6 +74,11 @@ public class CarrinhoServlet extends HttpServlet {
 	        itemJson.put("preco", item.getProduto().getPreco());
 	        itemJson.put("quantidade", item.getQuantidade());
 	        itemJson.put("subtotal", item.getSubtotal());
+	        
+	        byte[] imagemBytes = item.getProduto().getImagem();
+	        String imageBase64 = imagemBytes != null ? Base64.getEncoder().encodeToString(imagemBytes) : null;
+	        itemJson.put("imagemBase64", imageBase64);
+	        
 	        jsonList.add(itemJson);
 	    }
 
@@ -82,4 +88,3 @@ public class CarrinhoServlet extends HttpServlet {
 	}
 
 }
-

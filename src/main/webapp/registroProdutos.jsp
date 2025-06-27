@@ -7,30 +7,7 @@
 <head>
     <meta charset="UTF-8">
     <title>Painel do Vendedor</title>
-    <link rel="stylesheet" href="css/user.css"> <script>
-        // Formulário de edição
-        function toggleEditForm(id) {
-            document.getElementById('edit-form-' + id).style.display = 'block';
-        }
-
-        // Formulário de criação de novos produtos
-        function toggleNewProductForm() {
-            const form = document.getElementById('new-product-form');
-            form.style.display = (form.style.display === 'none') ? 'block' : 'none';
-        }
-
-        // Função para atualização manual de quantidade de itens disponíveis
-        function updateQuantity(id, action) {
-            const input = document.getElementById('qty-' + id);
-            let value = parseInt(input.value);
-            if (action === 'up') value++;
-            if (action === 'down' && value > 0) value--;
-
-            input.value = value;
-
-            fetch('atualizarEstoque?id=' + id + '&estoque=' + value, { method: 'POST' });
-        }
-    </script>
+    <link rel="stylesheet" href="css/user.css">
 </head>
 <body>
     <div class="navbar">
@@ -41,6 +18,7 @@
         <div>
             <button class="new-product-btn" onclick="toggleNewProductForm()">+ Novo Produto</button>
             <a href="logout" style="color: white; margin-left: 20px;">Logout</a>
+            <a href="pedidos.jsp" style="color: white; margin-left: 20px;">Pedidos</a>
         </div>
     </div>
     
@@ -72,7 +50,7 @@
             </select><br><br>
 
             <label for="imagem">Imagem do Produto:</label>
-            <input type="file" id="imagem" name="imagem" accept="image/*"><br><br>
+            <input type="file" id="imagem" name="imagem" accept="image/*" required><br><br>
         
             <button type="submit">Criar</button>
         </form>
@@ -80,6 +58,30 @@
     
     <div id="productContainer" class="produtosPai">
         </div>
+    <script>
+    // Formulário de edição
+    function toggleEditForm(id) {
+        document.getElementById('edit-form-' + id).style.display = 'block';
+    }
+
+    // Formulário de criação de novos produtos
+    function toggleNewProductForm() {
+        const form = document.getElementById('new-product-form');
+        form.style.display = (form.style.display === 'none') ? 'block' : 'none';
+    }
+
+    // Função para atualização manual de quantidade de itens disponíveis
+    function updateQuantity(id, action) {
+        const input = document.getElementById('qty-' + id);
+        let value = parseInt(input.value);
+        if (action === 'up') value++;
+        if (action === 'down' && value > 0) value--;
+
+        input.value = value;
+
+        fetch('atualizarEstoque?id=' + id + '&estoque=' + value, { method: 'POST' });
+    }
+    </script>
     <script src="js/ADMfiltro.js"></script>
 </body>
 </html>
