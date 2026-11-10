@@ -1,6 +1,6 @@
 package model; 
 
-public class ItemCarrinho {
+public class ItemCarrinho implements java.io.Serializable {
     private Produto produto;
     private int quantidade;
 

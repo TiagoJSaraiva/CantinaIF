@@ -1,6 +1,6 @@
 package model;
 
-public class Vendedor {
+public class Vendedor implements java.io.Serializable {
 	private String prontuario;
 	private String email;
 	private String senha;

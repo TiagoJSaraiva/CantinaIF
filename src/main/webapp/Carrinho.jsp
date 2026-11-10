@@ -39,7 +39,7 @@
     <div class="info">
         <span>Prontuário: ${sessionScope.comprador.prontuario}</span>
         <a href="Carrinho.jsp" style="font-weight: bold; text-decoration: none; color: white;">Carrinho</a>
-        <a href="login.jsp" style="font-weight: bold; text-decoration: none; color: white;">Logout</a>
+        <a href="logout" style="font-weight: bold; text-decoration: none; color: white;">Logout</a>
     </div>
 </div>
 

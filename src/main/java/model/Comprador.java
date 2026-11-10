@@ -1,6 +1,6 @@
 package model; // Certifique-se de que o nome do pacote está correto
 
-public class Comprador {
+public class Comprador implements java.io.Serializable {
 	private String prontuario;
 	private String email;
 	private String senha;

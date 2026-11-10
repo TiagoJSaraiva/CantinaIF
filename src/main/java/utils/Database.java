@@ -31,6 +31,11 @@ public final class Database {
 
     private static final String SCHEMA_RESOURCE = "/db/schema.sql";
 
+    /** Conta de demonstracao (somente modo H2). Documentada em db/schema.sql. */
+    public static final String DEMO_VENDEDOR_PRONTUARIO = "VEND001";
+    public static final String DEMO_VENDEDOR_EMAIL = "vendedor@cantinaif.demo";
+    public static final String DEMO_VENDEDOR_SENHA = "demo1234";
+
     private static HikariDataSource dataSource;
 
     private Database() {
@@ -72,6 +77,7 @@ public final class Database {
         if (isH2(url)) {
             try (Connection conn = dataSource.getConnection()) {
                 applySchema(conn);
+                createDemoVendedor(conn);
             } catch (SQLException | IOException e) {
                 dataSource.close();
                 dataSource = null;
@@ -123,4 +129,21 @@ public final class Database {
         }
     }
 
+    private static void createDemoVendedor(Connection conn) throws SQLException {
+        try (PreparedStatement check = conn.prepareStatement("SELECT 1 FROM Vendedor WHERE prontuario = ?")) {
+            check.setString(1, DEMO_VENDEDOR_PRONTUARIO);
+            try (ResultSet rs = check.executeQuery()) {
+                if (rs.next()) {
+                    return;
+                }
+            }
+        }
+        try (PreparedStatement ins = conn.prepareStatement(
+                "INSERT INTO Vendedor (prontuario, email, senha) VALUES (?, ?, ?)")) {
+            ins.setString(1, DEMO_VENDEDOR_PRONTUARIO);
+            ins.setString(2, DEMO_VENDEDOR_EMAIL);
+            ins.setString(3, Passwords.hash(DEMO_VENDEDOR_SENHA));
+            ins.executeUpdate();
+        }
+    }
 }

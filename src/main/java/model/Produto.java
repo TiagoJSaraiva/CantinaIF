@@ -1,7 +1,7 @@
 package model;
 
 
-public class Produto
+public class Produto implements java.io.Serializable
 {
     public enum Categoria {
 	SALGADO,

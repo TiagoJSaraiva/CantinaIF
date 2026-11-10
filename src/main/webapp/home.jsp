@@ -23,7 +23,7 @@
         font-weight: bold;
 		text-decoration: none;
   		color: white;">Carrinho</a>
-        <a href="login.jsp" style="
+        <a href="logout" style="
         font-weight: bold;
 		text-decoration: none;
   		color: white;">Logout</a>

@@ -3,7 +3,7 @@ package model;
 import java.util.ArrayList;
 import java.util.List;
 
-public class Carrinho {
+public class Carrinho implements java.io.Serializable {
     private List<ItemCarrinho> itens;
 
     public Carrinho() {
