@@ -1,5 +1,6 @@
 package servlets;
 
+import dao.ProductDao;
 import model.Produto;
 
 import jakarta.servlet.ServletException;
@@ -8,9 +9,6 @@ import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.*;
 import java.io.IOException;
 import java.io.InputStream;
-import java.sql.Connection;
-import java.sql.DriverManager;
-import java.sql.PreparedStatement;
 
 @WebServlet("/registrar-produto")
 @MultipartConfig(
@@ -21,9 +19,7 @@ import java.sql.PreparedStatement;
 public class ProductRegisterServlet extends HttpServlet {
     private static final long serialVersionUID = 1L;
 
-    private static final String URL = "jdbc:mysql://localhost:3306/todoapp";
-    private static final String USER = "root";
-    private static final String PASSWORD = "REMOVIDO";
+    private final ProductDao productDao = new ProductDao();
 
     @Override
     protected void doPost(HttpServletRequest request, HttpServletResponse response)
@@ -67,32 +63,11 @@ public class ProductRegisterServlet extends HttpServlet {
                 }
             }
 
-            Produto produto = new Produto(nome, descricao, preco, estoque, categoria, imagemBytes); 
+            Produto produto = new Produto(nome, descricao, preco, estoque, categoria, imagemBytes);
+            productDao.create(produto);
 
-            Class.forName("com.mysql.cj.jdbc.Driver");
-            Connection conn = DriverManager.getConnection(URL, USER, PASSWORD);
-
-            String sql = "INSERT INTO Produto (nome, descricao, preco, estoque, categoria, imagem) VALUES (?, ?, ?, ?, ?, ?)";
-            PreparedStatement stmt = conn.prepareStatement(sql);
-            stmt.setString(1, produto.getNome());
-            stmt.setString(2, produto.getDescricao());
-            stmt.setFloat(3, produto.getPreco());
-            stmt.setInt(4, produto.getEstoque());
-            stmt.setString(5, produto.getCategoria().name());
-            
-            if (produto.getImagem() != null) {
-                stmt.setBytes(6, produto.getImagem());
-            } else {
-                stmt.setNull(6, java.sql.Types.BLOB);
-            }
-            
-            stmt.executeUpdate();
-
-            stmt.close();
-            conn.close();
-
-            request.setAttribute("successMessage", "Produto registrado com sucesso!");
             response.sendRedirect("registroProdutos.jsp");
+
         } catch (NumberFormatException e) {
             request.setAttribute("errorMessage", "Valores de preço ou estoque inválidos. Use apenas números.");
             request.getRequestDispatcher("registroProdutos.jsp").forward(request, response);

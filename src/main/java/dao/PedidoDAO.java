@@ -5,7 +5,7 @@ import model.Pedido;     // Garanta que o pacote model está correto
 import model.Produto;    // Garanta que o pacote model está correto
 import model.ItemCarrinho; // Garanta que o pacote model está correto e que ItemCarrinho é sua classe para itens de pedido
 
-import utils.ConnectionFactory; // Importa sua classe de fábrica de conexão
+import utils.Database;
 
 import java.sql.Connection;
 import java.sql.PreparedStatement;
@@ -49,7 +49,7 @@ public class PedidoDAO {
                      "ORDER BY p.id ASC, prod.nome ASC"; // Ordena para facilitar a agregação
 
         // Usa try-with-resources para garantir que a conexão e os statements sejam fechados automaticamente.
-        try (Connection conn = ConnectionFactory.getConnection(); // Obtém a conexão da sua fábrica
+        try (Connection conn = Database.getConnection(); // Obtém a conexão da sua fábrica
              PreparedStatement stmt = conn.prepareStatement(sql);
              ResultSet rs = stmt.executeQuery()) {
 
@@ -125,7 +125,7 @@ public class PedidoDAO {
         String sqlInsertItemPedido = "INSERT INTO Pedido_Produto (pedido_id, produto_id, quantidade) VALUES (?, ?, ?)";
 
         try {
-            conn = ConnectionFactory.getConnection(); // Obtém a conexão da sua fábrica
+            conn = Database.getConnection(); // Obtém a conexão da sua fábrica
             conn.setAutoCommit(false); // Inicia a transação para garantir que ambas as inserções (pedido e itens) ocorram ou falhem juntas
 
             // 1. Inserir o Pedido principal e obter o ID gerado (AUTO_INCREMENT)
@@ -190,7 +190,7 @@ public class PedidoDAO {
         PreparedStatement stmtPedido = null;
 
         try {
-            conn = ConnectionFactory.getConnection(); // Obtém a conexão da sua fábrica
+            conn = Database.getConnection(); // Obtém a conexão da sua fábrica
             conn.setAutoCommit(false); // Inicia uma transação para garantir atomicidade
 
             // 1. Deleta os itens associados ao pedido na tabela Pedido_Produto

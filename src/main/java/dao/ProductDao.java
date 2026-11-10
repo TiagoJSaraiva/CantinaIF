@@ -1,7 +1,7 @@
 package dao;
 
 import model.Produto;
-import utils.ConnectionFactory;
+import utils.Database;
 
 import java.sql.Connection;
 import java.sql.PreparedStatement;
@@ -20,7 +20,7 @@ public class ProductDao {
     // Para criação de novos produtos
     public void create(Produto produto) throws SQLException {
         String sql = "INSERT INTO Produto (nome, descricao, preco, estoque, categoria, imagem) VALUES (?, ?, ?, ?, ?, ?)";
-        try (Connection conn = ConnectionFactory.getConnection();
+        try (Connection conn = Database.getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
             stmt.setString(1, produto.getNome());
             stmt.setString(2, produto.getDescricao());
@@ -28,7 +28,7 @@ public class ProductDao {
             stmt.setInt(4, produto.getEstoque());
             
             if (produto.getCategoria() != null) {
-                stmt.setString(5, produto.getCategoria().name());
+                stmt.setString(5, produto.getCategoria().name().toLowerCase());
             } else {
                 stmt.setNull(5, Types.VARCHAR);
             }
@@ -53,7 +53,7 @@ public class ProductDao {
     public List<Produto> listarProdutosDisponiveisADM() {
         List<Produto> produtos = new ArrayList<>();
         String sql = "SELECT * FROM Produto";
-        try (Connection conn = ConnectionFactory.getConnection();
+        try (Connection conn = Database.getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql);
              ResultSet rs = stmt.executeQuery()) {
 
@@ -73,7 +73,7 @@ public class ProductDao {
         List<Produto> produtos = new ArrayList<>();
         String sql = "SELECT * FROM Produto WHERE estoque > 0";
 
-        try (Connection conn = ConnectionFactory.getConnection();
+        try (Connection conn = Database.getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql);
              ResultSet rs = stmt.executeQuery()) {
 
@@ -93,10 +93,10 @@ public class ProductDao {
         List<Produto> produtos = new ArrayList<>();
         String sql = "SELECT * FROM Produto WHERE estoque > 0 AND categoria = ?";
 
-        try (Connection conn = ConnectionFactory.getConnection();
+        try (Connection conn = Database.getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql)) {
 
-            stmt.setString(1, categoriaNome);
+            stmt.setString(1, categoriaNome == null ? null : categoriaNome.trim().toLowerCase());
             try (ResultSet rs = stmt.executeQuery()) {
                 while (rs.next()) {
                     produtos.add(mapearProduto(rs));
@@ -115,10 +115,10 @@ public class ProductDao {
         List<Produto> produtos = new ArrayList<>();
         String sql = "SELECT * FROM Produto WHERE categoria = ?";
 
-        try (Connection conn = ConnectionFactory.getConnection();
+        try (Connection conn = Database.getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql)) {
 
-            stmt.setString(1, categoriaNome);
+            stmt.setString(1, categoriaNome == null ? null : categoriaNome.trim().toLowerCase());
             try (ResultSet rs = stmt.executeQuery()) {
                 while (rs.next()) {
                     produtos.add(mapearProduto(rs));
@@ -156,7 +156,7 @@ public class ProductDao {
     // Para o carrinho (reservar estoque)
     public void reservarEstoque(int produtoId, int quantidade) throws SQLException {
         String sql = "UPDATE Produto SET estoque = estoque - ? WHERE id = ? AND estoque >= ?";
-        try (Connection conn = ConnectionFactory.getConnection();
+        try (Connection conn = Database.getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql)) {
             stmt.setInt(1, quantidade);
             stmt.setInt(2, produtoId);
@@ -172,7 +172,7 @@ public class ProductDao {
     public Produto buscarPorId(int id) {
         Produto produto = null;
         String sql = "SELECT * FROM Produto WHERE id = ?";
-        try (Connection conn = ConnectionFactory.getConnection();
+        try (Connection conn = Database.getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql)) {
             stmt.setInt(1, id);
             try (ResultSet rs = stmt.executeQuery()) {
