@@ -17,7 +17,7 @@ document.addEventListener('DOMContentLoaded', function() {
 		noPedidosMessage.style.display = 'none';
 		pedidosContainer.querySelectorAll('.pedido-card').forEach(card => card.remove()); // Remove cards antigos
 
-		fetch("http://localhost:8080/CantinaIF/api/pedidos") // Chama o PedidosJsonServlet
+		fetch("api/pedidos") // Chama o PedidosJsonServlet
 			.then(response => {
 				if (!response.ok) {
 					// Se a resposta não for OK, tenta ler o erro do servidor ou gera um erro genérico
@@ -117,7 +117,7 @@ document.addEventListener('DOMContentLoaded', function() {
 			button.textContent = 'Concluindo...';
 		}
 
-		fetch("http://localhost:8080/CantinaIF/api/deletarPedido", { // Chama o DeletarPedidoServlet
+		fetch("api/deletarPedido", { // Chama o DeletarPedidoServlet
 			method: 'POST',
 			headers: {
 				'Content-Type': 'application/x-www-form-urlencoded',

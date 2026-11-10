@@ -69,12 +69,13 @@
   <!-- REMOVA ESTA LINHA: <div class="resumo" id="resumo-total"></div> -->
 
         <div class="finalizar">
-            <p><strong>Total: R$ <span id="display-total">0.00</span></strong></p> <%-- Este é o único total que vamos usar --%>
+            <p><strong>Total: <span id="display-total">R$ 0,00</span></strong></p> <%-- Este é o único total que vamos usar --%>
             <form action="FinalizarCompraServlet" method="post">
                 <button type="submit">FINALIZAR COMPRA</button>
             </form>
         </div>
         
+        <script src="js/util.js"></script>
         <script src="js/Carrinho.js"></script>
 </body>
 </html>

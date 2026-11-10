@@ -28,8 +28,9 @@ public class APIUserProdutos extends HttpServlet {
         }
 
         response.setContentType("application/json");
+        response.setCharacterEncoding("UTF-8");
         PrintWriter out = response.getWriter();
-        out.print(new Gson().toJson(produtos));
+        out.print(new Gson().toJson(produtos.stream().map(model.ProdutoDto::new).toList()));
         out.flush();
     }
 

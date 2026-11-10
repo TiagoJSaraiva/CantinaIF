@@ -168,6 +168,42 @@ public class ProductDao {
         }
     }
 
+    // Atualiza os dados de um produto (a imagem so e alterada quando informada)
+    public boolean atualizar(Produto produto) throws SQLException {
+        boolean trocaImagem = produto.getImagem() != null;
+        String sql = "UPDATE Produto SET nome = ?, descricao = ?, preco = ?, estoque = ?, categoria = ?"
+                + (trocaImagem ? ", imagem = ?" : "") + " WHERE id = ?";
+        try (Connection conn = Database.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+            int i = 1;
+            stmt.setString(i++, produto.getNome());
+            stmt.setString(i++, produto.getDescricao());
+            stmt.setFloat(i++, produto.getPreco());
+            stmt.setInt(i++, produto.getEstoque());
+            if (produto.getCategoria() != null) {
+                stmt.setString(i++, produto.getCategoria().name().toLowerCase());
+            } else {
+                stmt.setNull(i++, Types.VARCHAR);
+            }
+            if (trocaImagem) {
+                stmt.setBytes(i++, produto.getImagem());
+            }
+            stmt.setInt(i, produto.getId());
+            return stmt.executeUpdate() > 0;
+        }
+    }
+
+    // Ajuste rapido de estoque (valor absoluto)
+    public boolean atualizarEstoque(int produtoId, int estoque) throws SQLException {
+        String sql = "UPDATE Produto SET estoque = ? WHERE id = ?";
+        try (Connection conn = Database.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+            stmt.setInt(1, estoque);
+            stmt.setInt(2, produtoId);
+            return stmt.executeUpdate() > 0;
+        }
+    }
+
     // Busca produtos exatos para colocar no carrinho
     public Produto buscarPorId(int id) {
         Produto produto = null;

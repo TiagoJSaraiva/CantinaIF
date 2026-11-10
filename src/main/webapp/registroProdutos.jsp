@@ -1,6 +1,4 @@
 <%@ page contentType="text/html;charset=UTF-8"%>
-<%@ page import="model.Produto" %>
-<%@ page import="servlets.APIUserProdutos" %>
 
 <!DOCTYPE html>
 <html lang="pt-br">
@@ -56,32 +54,17 @@
         </form>
     </div>
     
+    <div id="mensagem" role="status" style="display: none;"></div>
     <div id="productContainer" class="produtosPai">
         </div>
     <script>
-    // Formulário de edição
-    function toggleEditForm(id) {
-        document.getElementById('edit-form-' + id).style.display = 'block';
-    }
-
     // Formulário de criação de novos produtos
     function toggleNewProductForm() {
         const form = document.getElementById('new-product-form');
-        form.style.display = (form.style.display === 'none') ? 'block' : 'none';
-    }
-
-    // Função para atualização manual de quantidade de itens disponíveis
-    function updateQuantity(id, action) {
-        const input = document.getElementById('qty-' + id);
-        let value = parseInt(input.value);
-        if (action === 'up') value++;
-        if (action === 'down' && value > 0) value--;
-
-        input.value = value;
-
-        fetch('atualizarEstoque?id=' + id + '&estoque=' + value, { method: 'POST' });
+        form.style.display = (form.style.display === 'block') ? 'none' : 'block';
     }
     </script>
+    <script src="js/util.js"></script>
     <script src="js/ADMfiltro.js"></script>
 </body>
 </html>

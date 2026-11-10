@@ -1,101 +1,82 @@
-// Filtra e carrega as coisas adequadamente
+// Vitrine do comprador: lista produtos por categoria e adiciona ao carrinho.
+// Depende de util.js.
+
 function carregarProdutosUser(categoria = 'todos') {
-	fetch(`apiUser/produtos?categoria=${categoria}`)
+	fetch('apiUser/produtos?categoria=' + encodeURIComponent(categoria))
 		.then(response => {
 			if (!response.ok) {
-				throw new Error('Network response was not ok ' + response.statusText);
+				throw new Error('Resposta inesperada do servidor: ' + response.status);
 			}
 			return response.json();
 		})
 		.then(produtos => {
 			const container = document.getElementById('productContainer');
-			container.innerHTML = '';
-
-			produtos.forEach(produto => {
-				const produtoDiv = document.createElement('div');
-				produtoDiv.className = 'product';
-
-				produtoDiv.setAttribute('data-type', produto.categoria ? produto.categoria.toLowerCase() : 'outros');
-
-				const imageUrl = produto.id ? `image?id=${produto.id}` : '#';
-				const imageTag = produto.imagem && produto.imagem.length > 0
-					? `<img src="${imageUrl}" alt="${produto.nome}" class="product-image">`
-					: `<img src="img/placeholder-image.png" alt="Imagem padrão" class="product-image">`;
-
-				produtoDiv.innerHTML = `
-                    <div class="product-image-wrapper">
-                        ${imageTag}
-                    </div>
-					<div>
-						<h3>${produto.nome}</h3>
-					    <p>${produto.descricao}</p>
-					    <p><strong>Preço:</strong> R$ ${produto.preco}</p>
-					    <p><strong>Disponível:</strong> ${produto.estoque}</p>
-
-				
-					</div>
-                    <button onclick="adicionarAoCarrinho(${produto.id})">Comprar</button>
-                `;
-
-				container.appendChild(produtoDiv);
-			});
+			container.replaceChildren();
+			if (produtos.length === 0) {
+				container.appendChild(criar('p', { texto: 'Nenhum produto disponível nesta categoria.' }));
+				return;
+			}
+			produtos.forEach(produto => container.appendChild(criarCartao(produto)));
 		})
 		.catch(error => {
 			console.error('Erro ao buscar produtos:', error);
 			const container = document.getElementById('productContainer');
-			container.innerHTML = '<p>Não foi possível carregar os produtos. Tente novamente mais tarde.</p>';
+			container.replaceChildren(criar('p', { texto: 'Não foi possível carregar os produtos. Tente novamente mais tarde.' }));
 		});
 }
 
-//altera a quantidade do pedido
-function alterarQuantidade(produtoId, delta) {
-	const input = document.getElementById(`quantidade-${produtoId}`);
-	let valor = parseInt(input.value);
-	valor = isNaN(valor) ? 1 : valor + delta;
-	if (valor < 1) valor = 1;
-	input.value = valor;
+function criarCartao(produto) {
+	const cartao = criar('div', { classe: 'product' });
+	cartao.dataset.type = produto.categoria ? produto.categoria.toLowerCase() : 'outros';
+
+	const imagem = criar('img', { classe: 'product-image', attrs: { src: urlImagem(produto), alt: produto.nome || 'Produto' } });
+	cartao.appendChild(criar('div', { classe: 'product-image-wrapper' }, [imagem]));
+
+	cartao.appendChild(criar('div', { classe: 'product-info' }, [
+		criar('h3', { texto: produto.nome }),
+		criar('p', { texto: produto.descricao || '' }),
+		criar('p', {}, [criar('strong', { texto: 'Preço: ' }), document.createTextNode(formatarPreco(produto.preco))]),
+		criar('p', {}, [criar('strong', { texto: 'Disponível: ' }), document.createTextNode(String(produto.estoque))])
+	]));
+
+	const quantidade = criar('input', {
+		attrs: { type: 'number', min: '1', max: String(produto.estoque), value: '1', 'aria-label': 'Quantidade' }
+	});
+	quantidade.id = 'quantidade-' + produto.id;
+	quantidade.style.width = '60px';
+	const botao = criar('button', { classe: 'add-to-cart', texto: 'Comprar', attrs: { type: 'button' } });
+	botao.addEventListener('click', () => adicionarAoCarrinho(produto.id, quantidade));
+	cartao.appendChild(criar('div', {}, [quantidade, botao]));
+	return cartao;
 }
 
-//adiciona os produtos ao carrinho
-function adicionarAoCarrinho(produtoId) {
-	const quantidade = document.getElementById(`quantidade-${produtoId}`).value;
-
+// Adiciona o produto ao carrinho da sessao
+function adicionarAoCarrinho(produtoId, campoQuantidade) {
+	const quantidade = parseInt(campoQuantidade.value, 10);
+	const mensagem = document.getElementById('mensagem');
+	if (!Number.isInteger(quantidade) || quantidade < 1) {
+		mostrarMensagem(mensagem, 'Informe uma quantidade válida.', true);
+		return;
+	}
 	fetch('carrinho', {
 		method: 'POST',
-		headers: {
-			'Content-Type': 'application/json'
-		},
-		body: JSON.stringify({
-			produtoId: produtoId,
-			quantidade: quantidade
-		})
+		headers: { 'Content-Type': 'application/json' },
+		body: JSON.stringify({ produtoId: produtoId, quantidade: quantidade })
 	})
-		.then(response => {
-			if (response.ok) {
-				alert('Produto adicionado ao carrinho!');
-			} else {
-				alert('Erro ao adicionar produto.');
-			}
-		});
+		.then(response => response.json().catch(() => ({})).then(corpo => ({ ok: response.ok, corpo })))
+		.then(({ ok, corpo }) => {
+			mostrarMensagem(mensagem, corpo.message || (ok ? 'Produto adicionado ao carrinho!' : 'Erro ao adicionar produto.'), !ok);
+		})
+		.catch(() => mostrarMensagem(mensagem, 'Erro de comunicação com o servidor.', true));
 }
 
-//desenha no html
 document.addEventListener('DOMContentLoaded', function() {
-	const botoesFiltro = document.querySelectorAll('.filter-btn');
-
-	botoesFiltro.forEach(botao => {
+	document.querySelectorAll('.filter-btn').forEach(botao => {
 		botao.addEventListener('click', function() {
-			const categoria = this.getAttribute('data-filter');
-
-			// Atualiza visualmente o botão ativo
 			document.querySelectorAll('.filter-btn').forEach(btn => btn.classList.remove('active'));
 			this.classList.add('active');
-
-			// Chama o carregamento AJAX com a categoria selecionada
-			carregarProdutosUser(categoria);
+			carregarProdutosUser(this.getAttribute('data-filter'));
 		});
 	});
-
-	// Carrega todos os produtos ao abrir a página
 	carregarProdutosUser('todos');
 });

@@ -40,11 +40,13 @@
 </div>
 
 <!-- Lista de produtos renderizados dinamicamente -->
+<div id="mensagem" role="status" style="display: none;"></div>
 <div id="productContainer" class="produtosPai">
         
 </div>
 
 <!-- Script JS para controlar o filtro por categoria -->
+<script src="js/util.js"></script>
 <script src="js/filtro.js"></script>
 
 </body>
