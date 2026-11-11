@@ -5,6 +5,7 @@ import dao.RegraNegocioException;
 import model.Carrinho;
 import model.Comprador;
 import model.Pedido;
+import utils.Limites;
 
 import jakarta.servlet.ServletException;
 import jakarta.servlet.annotation.WebServlet;
@@ -38,6 +39,7 @@ public class FinalizarCompraServlet extends HttpServlet {
         }
 
         try {
+            Limites.verificarNovoPedido();
             Pedido pedido = pedidoDAO.criarPedido(comprador.getProntuario(), carrinho.getItens());
             carrinho.limparCarrinho();
             response.sendRedirect("meus-pedidos.jsp?novo=" + pedido.getId());

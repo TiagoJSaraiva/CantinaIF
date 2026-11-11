@@ -32,6 +32,9 @@ public class CsrfFilter implements Filter {
     public static final String PARAM = "_csrf";
 
     private static final Set<String> METODOS_SEGUROS = Set.of("GET", "HEAD", "OPTIONS", "TRACE");
+    /** Sessoes anonimas (so para o token CSRF do login/cadastro) expiram em 5 minutos. */
+    static final int SESSAO_ANONIMA_SEGUNDOS = 300;
+
     private static final SecureRandom RANDOM = new SecureRandom();
 
     @Override
@@ -41,8 +44,17 @@ public class CsrfFilter implements Filter {
         HttpServletResponse response = (HttpServletResponse) res;
 
         if (METODOS_SEGUROS.contains(request.getMethod())) {
-            if (request.getServletPath().endsWith(".jsp")) {
-                token(request.getSession(true));
+            String caminho = request.getServletPath();
+            if (caminho.endsWith(".jsp")) {
+                HttpSession existente = request.getSession(false);
+                if (existente != null) {
+                    token(existente);
+                } else if ("/login.jsp".equals(caminho) || "/cadastro.jsp".equals(caminho)) {
+                    // visitante anonimo: so as telas de login/cadastro precisam de token; sessao curta
+                    HttpSession nova = request.getSession(true);
+                    nova.setMaxInactiveInterval(SESSAO_ANONIMA_SEGUNDOS);
+                    token(nova);
+                }
             }
             chain.doFilter(req, res);
             return;

@@ -11,6 +11,7 @@ import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.Part;
 import model.Produto;
+import utils.ImageProcessor;
 import utils.ImageType;
 
 /** Leitura e validacao (no servidor) dos campos de produto enviados pelo painel do vendedor. */
@@ -117,11 +118,12 @@ final class ProdutoForm {
         try (InputStream in = parte.getInputStream()) {
             bytes = in.readAllBytes();
         }
-        if (ImageType.detect(bytes) == null) {
-            erros.put("imagem", "Envie uma imagem JPEG, PNG, GIF ou WebP válida.");
-            return;
+        try {
+            // redimensiona e recomprime (JPEG, ate 640 px e 150 KB); rejeita o que nao decodifica
+            produto.setImagem(ImageProcessor.processar(bytes));
+        } catch (IllegalArgumentException e) {
+            erros.put("imagem", e.getMessage());
         }
-        produto.setImagem(bytes);
     }
 
     private static String valor(HttpServletRequest request, String nome) {

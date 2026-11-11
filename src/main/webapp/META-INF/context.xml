@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Sem credenciais aqui (o banco e configurado por variaveis de ambiente). Limita as sessoes ativas. -->
+<Context>
+	<Manager className="org.apache.catalina.session.StandardManager" maxActiveSessions="1000" />
+</Context>

@@ -6,10 +6,10 @@ import java.util.concurrent.atomic.AtomicLong;
 
 import org.junit.jupiter.api.Test;
 
-class LoginRateLimiterTest {
+class RateLimiterTest {
 
     private final AtomicLong agora = new AtomicLong(1_000_000L);
-    private final LoginRateLimiter limiter = new LoginRateLimiter(3, 60_000L, agora::get);
+    private final RateLimiter limiter = new RateLimiter(3, 60_000L, agora::get);
 
     @Test
     void bloqueiaAposAtingirOLimiteDeFalhas() {
@@ -50,5 +50,15 @@ class LoginRateLimiterTest {
         limiter.falha("a");
         limiter.falha("a");
         assertFalse(limiter.bloqueado("a"));
+    }
+
+    @Test
+    void tentarRegistraEBloqueiaNoLimite() {
+        assertTrue(limiter.tentar("k"));
+        assertTrue(limiter.tentar("k"));
+        assertTrue(limiter.tentar("k"));
+        assertFalse(limiter.tentar("k"));
+        agora.addAndGet(60_001L);
+        assertTrue(limiter.tentar("k"));
     }
 }

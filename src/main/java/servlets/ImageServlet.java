@@ -38,9 +38,15 @@ public class ImageServlet extends HttpServlet {
                     response.sendError(HttpServletResponse.SC_NOT_FOUND, "Imagem não encontrada.");
                     return;
                 }
+                String etag = "\"" + Integer.toHexString(java.util.Arrays.hashCode(imagem)) + "-" + imagem.length + "\"";
+                response.setHeader("ETag", etag);
+                response.setHeader("Cache-Control", "public, max-age=60");
+                if (etag.equals(request.getHeader("If-None-Match"))) {
+                    response.setStatus(HttpServletResponse.SC_NOT_MODIFIED);
+                    return;
+                }
                 response.setContentType(tipo);
                 response.setHeader("X-Content-Type-Options", "nosniff");
-                response.setHeader("Cache-Control", "private, max-age=300");
                 response.setContentLength(imagem.length);
                 try (OutputStream out = response.getOutputStream()) {
                     out.write(imagem);

@@ -1,7 +1,9 @@
 package servlets;
 
+import dao.RegraNegocioException;
 import dao.UserDao;
 import model.Comprador;
+import utils.Limites;
 
 import jakarta.servlet.ServletException;
 import jakarta.servlet.annotation.WebServlet;
@@ -38,12 +40,15 @@ public class UserRegisterServlet extends HttpServlet {
         String erro = null;
         if (erros.isEmpty()) {
             try {
+                Limites.verificarNovoComprador();
                 if (userDao.create(new Comprador(prontuario, email, senha, nome))) {
                     response.sendRedirect("login.jsp?cadastro=ok");
                     return;
                 }
                 erro = "Prontuário ou e-mail já cadastrado.";
                 erros.put("prontuario", "Este prontuário ou e-mail já está cadastrado.");
+            } catch (RegraNegocioException e) {
+                erro = e.getMessage();
             } catch (SQLException e) {
                 e.printStackTrace();
                 erro = "Não foi possível concluir o cadastro. Tente novamente em instantes.";

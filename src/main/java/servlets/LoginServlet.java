@@ -4,7 +4,7 @@ import dao.UserDao;
 import dao.VendedorDao;
 import model.Comprador;
 import model.Vendedor;
-import utils.LoginRateLimiter;
+import utils.RateLimiter;
 
 import jakarta.servlet.ServletException;
 import jakarta.servlet.annotation.WebServlet;
@@ -23,6 +23,10 @@ import java.sql.SQLException;
 public class LoginServlet extends HttpServlet {
     private static final long serialVersionUID = 1L;
 
+    private static final RateLimiter LIMITE = new RateLimiter(8, 5 * 60_000L, System::currentTimeMillis);
+
+    private static final int SESSAO_AUTENTICADA_SEGUNDOS = 30 * 60;
+
     private final UserDao userDao = new UserDao();
     private final VendedorDao vendedorDao = new VendedorDao();
 
@@ -40,7 +44,7 @@ public class LoginServlet extends HttpServlet {
         prontuario = prontuario.trim();
 
         String chave = request.getRemoteAddr();
-        LoginRateLimiter limite = LoginRateLimiter.PADRAO;
+        RateLimiter limite = LIMITE;
         if (limite.bloqueado(chave)) {
             long segundos = limite.segundosParaLiberar(chave);
             response.setStatus(429);
@@ -81,8 +85,11 @@ public class LoginServlet extends HttpServlet {
     private HttpSession novaSessao(HttpServletRequest request) {
         HttpSession session = request.getSession(false);
         if (session == null) {
-            return request.getSession(true);
+            session = request.getSession(true);
+            session.setMaxInactiveInterval(SESSAO_AUTENTICADA_SEGUNDOS);
+            return session;
         }
+        session.setMaxInactiveInterval(SESSAO_AUTENTICADA_SEGUNDOS); // a sessao anonima era curta (5 min)
         request.changeSessionId();
         session.removeAttribute("comprador");
         session.removeAttribute("vendedor");

@@ -19,6 +19,7 @@
             <c:choose>
                 <c:when test="${codigo == 404}">Página não encontrada</c:when>
                 <c:when test="${codigo == 403}">Acesso negado</c:when>
+                <c:when test="${codigo == 429}">Muitas requisições</c:when>
                 <c:when test="${codigo == 400 || codigo == 405}">Requisição inválida</c:when>
                 <c:otherwise>Algo deu errado</c:otherwise>
             </c:choose>
@@ -26,6 +27,7 @@
         <p>
             <c:choose>
                 <c:when test="${codigo == 404}">O endereço que você tentou acessar não existe.</c:when>
+                <c:when test="${codigo == 429}">Você fez requisições demais em pouco tempo. Aguarde um minuto e tente de novo.</c:when>
                 <c:when test="${codigo == 403}">Você não tem permissão para esta ação, ou sua sessão expirou. Volte e tente novamente.</c:when>
                 <c:when test="${codigo == 400 || codigo == 405}">Não foi possível processar o pedido.</c:when>
                 <c:otherwise>Ocorreu um erro inesperado. Tente novamente em instantes.</c:otherwise>

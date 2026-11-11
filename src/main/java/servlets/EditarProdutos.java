@@ -5,6 +5,7 @@ import java.sql.SQLException;
 import java.util.Map;
 
 import dao.ProductDao;
+import dao.RegraNegocioException;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.annotation.MultipartConfig;
 import jakarta.servlet.annotation.WebServlet;
@@ -12,6 +13,7 @@ import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import utils.ImageType;
+import utils.Limites;
 
 /** Edicao dos dados de um produto (vendedor); a imagem so e trocada se um novo arquivo for enviado. */
 @WebServlet("/editar-produto")
@@ -47,11 +49,16 @@ public class EditarProdutos extends HttpServlet {
         }
         form.produto.setId(id);
         try {
+            if (form.produto.getImagem() != null) {
+                Limites.verificarImagem(form.produto.getImagem().length);
+            }
             if (productDao.atualizar(form.produto)) {
                 Json.result(response, HttpServletResponse.SC_OK, true, "Produto atualizado.");
             } else {
                 Json.result(response, HttpServletResponse.SC_NOT_FOUND, false, "Produto não encontrado.");
             }
+        } catch (RegraNegocioException e) {
+            Json.result(response, HttpServletResponse.SC_CONFLICT, false, e.getMessage());
         } catch (SQLException e) {
             e.printStackTrace();
             Json.result(response, HttpServletResponse.SC_INTERNAL_SERVER_ERROR, false, "Erro ao atualizar o produto.");

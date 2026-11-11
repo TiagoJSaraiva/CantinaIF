@@ -1,6 +1,7 @@
 package servlets;
 
 import dao.ProductDao;
+import dao.RegraNegocioException;
 
 import jakarta.servlet.ServletException;
 import jakarta.servlet.annotation.MultipartConfig;
@@ -12,6 +13,7 @@ import java.io.IOException;
 import java.sql.SQLException;
 import java.util.Map;
 import utils.ImageType;
+import utils.Limites;
 
 /** Cria um produto (multipart: campos + imagem opcional). Responde JSON. */
 @WebServlet("/registrar-produto")
@@ -39,8 +41,11 @@ public class ProductRegisterServlet extends HttpServlet {
             return;
         }
         try {
+            Limites.verificarNovoProduto(form.produto.getImagem() == null ? 0 : form.produto.getImagem().length);
             productDao.create(form.produto);
             Json.result(response, HttpServletResponse.SC_OK, true, "Produto cadastrado com sucesso.");
+        } catch (RegraNegocioException e) {
+            Json.result(response, HttpServletResponse.SC_CONFLICT, false, e.getMessage());
         } catch (SQLException e) {
             e.printStackTrace();
             Json.result(response, HttpServletResponse.SC_INTERNAL_SERVER_ERROR, false,

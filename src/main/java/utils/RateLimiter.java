@@ -7,13 +7,10 @@ import java.util.Map;
 import java.util.function.LongSupplier;
 
 /**
- * Limite simples de tentativas de login: no maximo {@code maxFalhas} falhas dentro de uma janela deslizante,
+ * Limite simples de eventos por chave (tentativas de login, operacoes de escrita): no maximo {@code maxFalhas} falhas dentro de uma janela deslizante,
  * por chave (o servlet usa o endereco IP). Em memoria; nao e compartilhado entre instancias.
  */
-public final class LoginRateLimiter {
-
-    /** 8 falhas a cada 5 minutos por IP. */
-    public static final LoginRateLimiter PADRAO = new LoginRateLimiter(8, 5 * 60_000L, System::currentTimeMillis);
+public final class RateLimiter {
 
     private static final int LIMITE_DE_CHAVES = 5_000;
 
@@ -22,7 +19,7 @@ public final class LoginRateLimiter {
     private final LongSupplier relogio;
     private final Map<String, Deque<Long>> falhas = new HashMap<>();
 
-    public LoginRateLimiter(int maxFalhas, long janelaMs, LongSupplier relogio) {
+    public RateLimiter(int maxFalhas, long janelaMs, LongSupplier relogio) {
         this.maxFalhas = maxFalhas;
         this.janelaMs = janelaMs;
         this.relogio = relogio;
@@ -58,6 +55,15 @@ public final class LoginRateLimiter {
         Deque<Long> d = falhas.computeIfAbsent(chave, k -> new ArrayDeque<>());
         expirar(d);
         d.addLast(relogio.getAsLong());
+    }
+
+    /** Registra um evento se ainda houver folga e retorna true; retorna false (sem registrar) se bloqueado. */
+    public synchronized boolean tentar(String chave) {
+        if (bloqueado(chave)) {
+            return false;
+        }
+        falha(chave);
+        return true;
     }
 
     public synchronized void sucesso(String chave) {

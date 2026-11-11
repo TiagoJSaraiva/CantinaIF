@@ -72,8 +72,8 @@
             <span class="campo-erro" id="erro-categoria"></span>
         </div>
         <div class="field">
-            <label for="produto-imagem">Imagem (JPEG, PNG, GIF ou WebP, até 2 MB)</label>
-            <input type="file" id="produto-imagem" name="imagem" accept="image/jpeg,image/png,image/gif,image/webp">
+            <label for="produto-imagem">Imagem (JPEG, PNG ou GIF, até 2 MB; será reduzida para 640 px)</label>
+            <input type="file" id="produto-imagem" name="imagem" accept="image/jpeg,image/png,image/gif">
             <span class="dica" id="dica-imagem">Opcional. Ao editar, deixe em branco para manter a imagem atual.</span>
             <span class="campo-erro" id="erro-imagem"></span>
         </div>
