@@ -4,6 +4,7 @@ import dao.UserDao;
 import dao.VendedorDao;
 import model.Comprador;
 import model.Vendedor;
+import utils.Database;
 import utils.RateLimiter;
 
 import jakarta.servlet.ServletException;
@@ -60,6 +61,7 @@ public class LoginServlet extends HttpServlet {
                 limite.sucesso(chave);
                 HttpSession session = novaSessao(request);
                 session.setAttribute("vendedor", vendedor);
+                session.setAttribute("geracao", Database.geracao());
                 response.sendRedirect("registroProdutos.jsp");
                 return;
             }
@@ -69,6 +71,7 @@ public class LoginServlet extends HttpServlet {
                 limite.sucesso(chave);
                 HttpSession session = novaSessao(request);
                 session.setAttribute("comprador", comprador);
+                session.setAttribute("geracao", Database.geracao());
                 response.sendRedirect("home.jsp");
                 return;
             }

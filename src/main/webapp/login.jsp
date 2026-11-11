@@ -12,6 +12,9 @@
         <div class="brand-grande"><img src="img/Logo.png" alt=""><span>CantinaIF</span></div>
         <h1 id="titulo">Entrar</h1>
 
+        <c:if test="${param.restaurada == '1'}">
+            <div class="alerta alerta-aviso" role="status"><p>A demonstração foi restaurada; entre novamente.</p></div>
+        </c:if>
         <c:if test="${param.cadastro == 'ok'}">
             <div class="alerta alerta-ok" role="status"><p>Cadastro realizado. Faça login para continuar.</p></div>
         </c:if>

@@ -1,7 +1,9 @@
 package servlets;
 
 import java.io.IOException;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 
 import jakarta.servlet.Filter;
 import jakarta.servlet.FilterChain;
@@ -11,6 +13,7 @@ import jakarta.servlet.ServletResponse;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.servlet.http.HttpSession;
+import utils.Database;
 
 /**
  * Controle de acesso por perfil. Rotas do vendedor exigem "vendedor" na sessao; rotas do comprador
@@ -46,6 +49,21 @@ public class AuthFilter implements Filter {
         }
 
         HttpSession session = request.getSession(false);
+        if (session != null && session.getAttribute("geracao") != null
+                && !session.getAttribute("geracao").equals(Database.geracao())) {
+            // a base de demonstracao foi restaurada depois deste login: a conta pode nao existir mais
+            session.invalidate();
+            if (path.endsWith(".jsp") || path.equals("/FinalizarCompraServlet") || path.equals("/registrar-produto")) {
+                response.sendRedirect(request.getContextPath() + "/login.jsp?restaurada=1");
+            } else {
+                Map<String, Object> corpo = new LinkedHashMap<>();
+                corpo.put("success", false);
+                corpo.put("restaurada", true);
+                corpo.put("message", "A demonstração foi restaurada; entre novamente.");
+                Json.write(response, HttpServletResponse.SC_UNAUTHORIZED, corpo);
+            }
+            return;
+        }
         if (session != null && session.getAttribute(perfil) != null) {
             response.setHeader("Cache-Control", "no-store");
             chain.doFilter(req, res);

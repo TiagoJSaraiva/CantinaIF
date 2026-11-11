@@ -40,7 +40,13 @@ function cabecalhosCsrf(extra = {}) {
 // fetch que sempre resolve com { ok, status, corpo } (corpo = JSON ou {}).
 function requisitar(url, opcoes) {
 	return fetch(url, opcoes).then(resposta =>
-		resposta.json().catch(() => ({})).then(corpo => ({ ok: resposta.ok, status: resposta.status, corpo })));
+		resposta.json().catch(() => ({})).then(corpo => {
+			if (resposta.status === 401 && corpo.restaurada) {
+				// a base de demonstracao foi restaurada: a sessao nao vale mais
+				window.location.href = 'login.jsp?restaurada=1';
+			}
+			return { ok: resposta.ok, status: resposta.status, corpo };
+		}));
 }
 
 function urlImagem(produto) {
