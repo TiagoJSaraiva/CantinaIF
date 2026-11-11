@@ -1,0 +1,19 @@
+# Render Blueprint: demo publica (Tomcat + H2 em memoria + dados de demonstracao).
+# Sem CANTINA_DB_URL a aplicacao roda em modo demonstracao; o disco do plano free e efemero.
+services:
+  - type: web
+    name: cantinaif
+    runtime: docker
+    plan: free
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    healthCheckPath: /health
+    autoDeploy: true
+    envVars:
+      - key: CANTINA_COOKIE_SECURE
+        value: "true"
+      - key: CANTINA_DEMO_RESET_HOURS
+        value: "6"
+      # o Render termina o TLS: confia em X-Forwarded-* vindos do proxy (ver docker-entrypoint.sh)
+      - key: CANTINA_BEHIND_PROXY
+        value: "true"
