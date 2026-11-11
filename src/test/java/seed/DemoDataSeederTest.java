@@ -18,6 +18,7 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
 import dao.PedidoDAO;
+import utils.DbGate;
 import dao.ProductDao;
 import dao.UserDao;
 import model.ItemCarrinho;
@@ -197,6 +198,116 @@ class DemoDataSeederTest {
             String antes = fotografia(c);
             assertFalse(DemoDataSeeder.rodarSeVazio(AGORA.plusDays(1)));
             assertEquals(antes, fotografia(c));
+        }
+    }
+
+    @Test
+    void estoqueFinalEhOInicialMenosOConsumoDosPedidosNaoCancelados() throws Exception {
+        try (Connection c = Database.getConnection(); Statement st = c.createStatement()) {
+            DemoDataSeeder.Resultado r = DemoDataSeeder.run(c, AGORA);
+            // consumo por produto = soma dos itens de pedidos que NAO estao cancelados (o pedido baixa ao ser criado;
+            // cancelar devolve)
+            java.util.Map<Integer, Integer> consumo = new java.util.HashMap<>();
+            try (ResultSet rs = st.executeQuery("SELECT pp.produto_id, SUM(pp.quantidade) FROM Pedido_Produto pp "
+                    + "JOIN Pedido p ON p.id = pp.pedido_id WHERE p.status <> 'CANCELADO' GROUP BY pp.produto_id")) {
+                while (rs.next()) {
+                    consumo.put(rs.getInt(1), rs.getInt(2));
+                }
+            }
+            // consumo dos pedidos ABERTOS por produto nunca excede o estoque inicial
+            java.util.Map<Integer, Integer> abertos = new java.util.HashMap<>();
+            try (ResultSet rs = st.executeQuery("SELECT pp.produto_id, SUM(pp.quantidade) FROM Pedido_Produto pp "
+                    + "JOIN Pedido p ON p.id = pp.pedido_id WHERE p.status IN ('PENDENTE','EM_PREPARO','PRONTO') "
+                    + "GROUP BY pp.produto_id")) {
+                while (rs.next()) {
+                    abertos.put(rs.getInt(1), rs.getInt(2));
+                }
+            }
+            try (ResultSet rs = st.executeQuery("SELECT id, estoque FROM Produto")) {
+                while (rs.next()) {
+                    int id = rs.getInt(1);
+                    int inicial = r.estoqueInicial().get(id);
+                    assertEquals(inicial - consumo.getOrDefault(id, 0), rs.getInt(2), "produto " + id);
+                    assertTrue(rs.getInt(2) >= 0);
+                    assertTrue(abertos.getOrDefault(id, 0) <= inicial, "pedidos abertos acima do estoque inicial, produto " + id);
+                }
+            }
+        }
+    }
+
+    @Test
+    void leitorNuncaVeBaseVaziaECheckoutsConcorrentesNaoQuebramDuranteResetsRepetidos() throws Exception {
+        DemoDataSeeder.Plano plano = DemoDataSeeder.preparar();
+        String baseline;
+        try (Connection c = Database.getConnection()) {
+            DemoDataSeeder.aplicar(c, plano, AGORA);
+            baseline = fotografia(c);
+        }
+
+        java.util.concurrent.atomic.AtomicBoolean parar = new java.util.concurrent.atomic.AtomicBoolean(false);
+        java.util.concurrent.atomic.AtomicReference<String> falha = new java.util.concurrent.atomic.AtomicReference<>();
+        java.util.concurrent.atomic.AtomicInteger leituras = new java.util.concurrent.atomic.AtomicInteger();
+        java.util.concurrent.atomic.AtomicInteger checkouts = new java.util.concurrent.atomic.AtomicInteger();
+        java.util.List<Thread> threads = new java.util.ArrayList<>();
+
+        for (int i = 0; i < 3; i++) { // leitores SEM a trava: a transacao unica do reset ja garante estado completo
+            threads.add(new Thread(() -> {
+                ProductDao dao = new ProductDao();
+                while (!parar.get()) {
+                    try {
+                        int n = dao.listarProdutos(null).size();
+                        leituras.incrementAndGet();
+                        if (n != 30) {
+                            falha.compareAndSet(null, "leitor viu " + n + " produtos");
+                        }
+                    } catch (Exception e) {
+                        falha.compareAndSet(null, "leitor: " + e);
+                    }
+                }
+            }));
+        }
+        for (int i = 0; i < 3; i++) { // checkouts COM a trava de leitura (como o filtro faz)
+            threads.add(new Thread(() -> {
+                PedidoDAO pedidos = new PedidoDAO();
+                Produto p = new Produto();
+                p.setId(1);
+                while (!parar.get()) {
+                    DbGate.leitura().lock();
+                    try {
+                        pedidos.criarPedido(DemoDataSeeder.COMPRADOR_PRONTUARIO, List.of(new ItemCarrinho(p, 1)));
+                        checkouts.incrementAndGet();
+                    } catch (dao.RegraNegocioException e) {
+                        // estoque insuficiente: esperado ocasionalmente
+                    } catch (Exception e) {
+                        falha.compareAndSet(null, "checkout: " + e);
+                    } finally {
+                        DbGate.leitura().unlock();
+                    }
+                }
+            }));
+        }
+        threads.forEach(Thread::start);
+        for (int i = 0; i < 8; i++) {
+            DbGate.escrita().lock();
+            try (Connection c = Database.getConnection()) {
+                DemoDataSeeder.aplicar(c, plano, AGORA);
+            } finally {
+                DbGate.escrita().unlock();
+            }
+            Thread.sleep(40);
+        }
+        parar.set(true);
+        for (Thread th : threads) {
+            th.join(20_000);
+        }
+
+        assertNull(falha.get(), falha.get());
+        assertTrue(leituras.get() > 0 && checkouts.get() >= 0);
+        try (Connection c = Database.getConnection()) {
+            DemoDataSeeder.aplicar(c, plano, AGORA); // reset final: tudo volta exatamente ao seed
+            assertEquals(baseline, fotografia(c));
+            assertEquals(0, inteiro(c, "SELECT COUNT(*) FROM Pedido p WHERE p.total <> "
+                    + "(SELECT SUM(pp.quantidade * pp.preco_unitario) FROM Pedido_Produto pp WHERE pp.pedido_id = p.id)"));
         }
     }
 }

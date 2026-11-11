@@ -54,8 +54,16 @@ public final class DemoReset {
     /** Apaga e recria os dados de demonstracao. Nunca propaga excecao (para nao cancelar o agendamento). */
     static void restaurar() {
         try {
-            DemoDataSeeder.Resultado r = DemoDataSeeder.run(LocalDateTime.now());
-            System.out.println("[demo] base restaurada: " + r.produtos() + " produtos, " + r.pedidos() + " pedidos.");
+            // trabalho pesado (BCrypt, leitura das imagens) ANTES de segurar a trava
+            DemoDataSeeder.Plano plano = DemoDataSeeder.preparar();
+            DbGate.escrita().lock();
+            try (java.sql.Connection conn = Database.getConnection()) {
+                DemoDataSeeder.Resultado r = DemoDataSeeder.aplicar(conn, plano, LocalDateTime.now());
+                Database.novaGeracao();
+                System.out.println("[demo] base restaurada: " + r.produtos() + " produtos, " + r.pedidos() + " pedidos.");
+            } finally {
+                DbGate.escrita().unlock();
+            }
         } catch (Throwable t) {
             System.err.println("[demo] falha ao restaurar a base: " + t);
         }

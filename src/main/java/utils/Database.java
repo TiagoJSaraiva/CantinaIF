@@ -36,6 +36,9 @@ public final class Database {
 
     private static HikariDataSource dataSource;
     private static boolean demoMode;
+    /** Identifica a "geracao" da base: muda a cada restauracao e a cada inicio (sessoes antigas deixam de valer). */
+    private static final java.util.concurrent.atomic.AtomicLong GERACAO =
+            new java.util.concurrent.atomic.AtomicLong(System.currentTimeMillis());
 
     private Database() {
     }
@@ -101,6 +104,15 @@ public final class Database {
             init();
         }
         return dataSource.getConnection();
+    }
+
+    public static long geracao() {
+        return GERACAO.get();
+    }
+
+    /** Chamado apos restaurar a base: invalida, na pratica, as sessoes de usuarios que deixaram de existir. */
+    public static void novaGeracao() {
+        GERACAO.updateAndGet(g -> Math.max(g + 1, System.currentTimeMillis()));
     }
 
     /** True quando o banco e o H2 embutido: ha contas de demonstracao e a base e restaurada periodicamente. */

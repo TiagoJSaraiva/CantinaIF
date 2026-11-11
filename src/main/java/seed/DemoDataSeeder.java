@@ -13,7 +13,9 @@ import java.text.Normalizer;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.LinkedHashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Random;
 import java.util.Set;
 
@@ -50,7 +52,11 @@ public final class DemoDataSeeder {
     private static final int DIAS = 30;
 
     /** Resumo do que foi gravado. */
-    public record Resultado(int produtos, int compradores, int pedidos) {
+    public record Resultado(int produtos, int compradores, int pedidos, Map<Integer, Integer> estoqueInicial) {
+    }
+
+    /** Tudo que e caro de calcular (hashes BCrypt, leitura das imagens), preparado ANTES de tocar no banco. */
+    public record Plano(String hashDemo, String hashOutros, List<byte[]> imagens) {
     }
 
     private record Prod(String slug, String nome, String descricao, String preco, int estoque, String categoria,
@@ -113,22 +119,41 @@ public final class DemoDataSeeder {
 
     // ------------------------------------------------------------------ API
 
+    /** Calcula hashes e carrega imagens (sem acessar o banco). */
+    public static Plano preparar() {
+        List<byte[]> imagens = new ArrayList<>();
+        for (Prod prod : CATALOGO) {
+            imagens.add(prod.comImagem() ? imagem(prod.slug()) : null);
+        }
+        return new Plano(Passwords.hash(SENHA_DEMO), Passwords.hash("senha-demo-nao-publicada"), imagens);
+    }
+
     /** Apaga e recria os dados de demonstracao usando datas relativas a {@code agora}. */
     public static Resultado run(Connection conn, LocalDateTime agora) throws SQLException {
+        return aplicar(conn, preparar(), agora);
+    }
+
+    /**
+     * Apaga e reinsere tudo em UMA transacao (quem le o banco ve o estado anterior completo ou o novo completo,
+     * nunca uma base vazia ou pela metade). Os ids sao explicitos; so depois do commit os contadores de
+     * identidade sao ajustados (DDL, que nao pode ficar dentro de transacao).
+     */
+    public static Resultado aplicar(Connection conn, Plano plano, LocalDateTime agora) throws SQLException {
         boolean autoCommit = conn.getAutoCommit();
+        Resultado r;
         try {
-            conn.setAutoCommit(true);
-            limparTudo(conn);
             conn.setAutoCommit(false);
-            Resultado r = inserir(conn, agora);
+            limparTudo(conn);
+            r = inserir(conn, plano, agora);
             conn.commit();
-            return r;
         } catch (SQLException | RuntimeException e) {
             conn.rollback();
             throw e;
         } finally {
             conn.setAutoCommit(autoCommit);
         }
+        reiniciarIdentidades(conn, r.produtos() + 1, r.pedidos() + 1);
+        return r;
     }
 
     /** Executa {@link #run(Connection, LocalDateTime)} no banco configurado. */
@@ -161,21 +186,30 @@ public final class DemoDataSeeder {
             st.executeUpdate("DELETE FROM Produto");
             st.executeUpdate("DELETE FROM Comprador");
             st.executeUpdate("DELETE FROM Vendedor");
-            // reinicia os ids para o resultado ser identico a cada execucao
-            boolean h2 = conn.getMetaData().getDatabaseProductName().toUpperCase().contains("H2");
-            for (String tabela : new String[] { "Pedido", "Produto" }) {
-                st.executeUpdate(h2 ? "ALTER TABLE " + tabela + " ALTER COLUMN id RESTART WITH 1"
-                                    : "ALTER TABLE " + tabela + " AUTO_INCREMENT = 1");
-            }
+        }
+    }
+
+    /** Proximos ids gerados pelo banco (apos os ids explicitos do seed). DDL: fora da transacao. */
+    private static void reiniciarIdentidades(Connection conn, int proximoProduto, int proximoPedido) throws SQLException {
+        boolean h2 = conn.getMetaData().getDatabaseProductName().toUpperCase().contains("H2");
+        boolean autoCommit = conn.getAutoCommit();
+        conn.setAutoCommit(true);
+        try (Statement st = conn.createStatement()) {
+            st.executeUpdate(h2 ? "ALTER TABLE Produto ALTER COLUMN id RESTART WITH " + proximoProduto
+                                : "ALTER TABLE Produto AUTO_INCREMENT = " + proximoProduto);
+            st.executeUpdate(h2 ? "ALTER TABLE Pedido ALTER COLUMN id RESTART WITH " + proximoPedido
+                                : "ALTER TABLE Pedido AUTO_INCREMENT = " + proximoPedido);
+        } finally {
+            conn.setAutoCommit(autoCommit);
         }
     }
 
     // ------------------------------------------------------------------ insercao
 
-    private static Resultado inserir(Connection conn, LocalDateTime agora) throws SQLException {
+    private static Resultado inserir(Connection conn, Plano plano, LocalDateTime agora) throws SQLException {
         Random r = new Random(SEMENTE);
-        String hashDemo = Passwords.hash(SENHA_DEMO);
-        String hashOutros = Passwords.hash("senha-demo-nao-publicada");
+        String hashDemo = plano.hashDemo();
+        String hashOutros = plano.hashOutros();
 
         try (PreparedStatement ps = conn.prepareStatement("INSERT INTO Vendedor (prontuario, email, senha) VALUES (?, ?, ?)")) {
             ps.setString(1, VENDEDOR_PRONTUARIO);
@@ -187,20 +221,23 @@ public final class DemoDataSeeder {
         // produtos (ids 1..n na ordem do catalogo)
         List<BigDecimal> precos = new ArrayList<>();
         try (PreparedStatement ps = conn.prepareStatement(
-                "INSERT INTO Produto (nome, descricao, preco, estoque, categoria, imagem) VALUES (?, ?, ?, ?, ?, ?)")) {
+                "INSERT INTO Produto (id, nome, descricao, preco, estoque, categoria, imagem) VALUES (?, ?, ?, ?, ?, ?, ?)")) {
+            int idProduto = 0;
             for (Prod prod : CATALOGO) {
+                idProduto++;
                 BigDecimal preco = new BigDecimal(prod.preco());
                 precos.add(preco);
-                ps.setString(1, prod.nome());
-                ps.setString(2, prod.descricao());
-                ps.setBigDecimal(3, preco);
-                ps.setInt(4, prod.estoque());
-                ps.setString(5, prod.categoria());
-                byte[] imagem = prod.comImagem() ? imagem(prod.slug()) : null;
+                ps.setInt(1, idProduto);
+                ps.setString(2, prod.nome());
+                ps.setString(3, prod.descricao());
+                ps.setBigDecimal(4, preco);
+                ps.setInt(5, prod.estoque());
+                ps.setString(6, prod.categoria());
+                byte[] imagem = plano.imagens().get(idProduto - 1);
                 if (imagem != null) {
-                    ps.setBytes(6, imagem);
+                    ps.setBytes(7, imagem);
                 } else {
-                    ps.setNull(6, java.sql.Types.BLOB);
+                    ps.setNull(7, java.sql.Types.BLOB);
                 }
                 ps.addBatch();
             }
@@ -223,8 +260,16 @@ public final class DemoDataSeeder {
             ps.executeBatch();
         }
 
-        int pedidos = inserirPedidos(conn, r, agora, prontuarios, precos);
-        return new Resultado(CATALOGO.size(), prontuarios.size(), pedidos);
+        // consumo liquido de estoque (pedidos nao cancelados) por produto
+        Map<Integer, Integer> consumo = new LinkedHashMap<>();
+        int pedidos = inserirPedidos(conn, r, agora, prontuarios, precos, consumo);
+        // o estoque gravado e o estoque FINAL; o inicial = final + consumo (a regra real: o pedido baixa ao ser
+        // criado e cancelar devolve), entao nenhum pedido aberto pode exceder o estoque inicial
+        Map<Integer, Integer> inicial = new LinkedHashMap<>();
+        for (int i = 0; i < CATALOGO.size(); i++) {
+            inicial.put(i + 1, CATALOGO.get(i).estoque() + consumo.getOrDefault(i + 1, 0));
+        }
+        return new Resultado(CATALOGO.size(), prontuarios.size(), pedidos, inicial);
     }
 
     private static void adicionarComprador(PreparedStatement ps, String prontuario, String email, String hash,
@@ -238,10 +283,9 @@ public final class DemoDataSeeder {
     }
 
     private static int inserirPedidos(Connection conn, Random r, LocalDateTime agora, List<String> prontuarios,
-            List<BigDecimal> precos) throws SQLException {
+            List<BigDecimal> precos, Map<Integer, Integer> consumo) throws SQLException {
         try (PreparedStatement psPedido = conn.prepareStatement(
-                "INSERT INTO Pedido (comprador_prontuario, status, criado_em, total) VALUES (?, ?, ?, ?)",
-                Statement.RETURN_GENERATED_KEYS);
+                "INSERT INTO Pedido (id, comprador_prontuario, status, criado_em, total) VALUES (?, ?, ?, ?, ?)");
              PreparedStatement psItem = conn.prepareStatement(
                 "INSERT INTO Pedido_Produto (pedido_id, produto_id, quantidade, preco_unitario) VALUES (?, ?, ?, ?)")) {
 
@@ -270,17 +314,17 @@ public final class DemoDataSeeder {
                     total = total.add(precos.get(idx).multiply(BigDecimal.valueOf(quantidade)));
                 }
 
-                psPedido.setString(1, comprador);
-                psPedido.setString(2, status);
-                psPedido.setTimestamp(3, Timestamp.valueOf(criadoEm));
-                psPedido.setBigDecimal(4, total);
+                int pedidoId = i + 1;
+                psPedido.setInt(1, pedidoId);
+                psPedido.setString(2, comprador);
+                psPedido.setString(3, status);
+                psPedido.setTimestamp(4, Timestamp.valueOf(criadoEm));
+                psPedido.setBigDecimal(5, total);
                 psPedido.executeUpdate();
-                int pedidoId;
-                try (ResultSet rs = psPedido.getGeneratedKeys()) {
-                    rs.next();
-                    pedidoId = rs.getInt(1);
-                }
                 for (int[] linha : linhas) {
+                    if (!status.equals("CANCELADO")) {
+                        consumo.merge(linha[0], linha[1], Integer::sum);
+                    }
                     psItem.setInt(1, pedidoId);
                     psItem.setInt(2, linha[0]);
                     psItem.setInt(3, linha[1]);
