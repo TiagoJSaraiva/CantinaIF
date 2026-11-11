@@ -138,10 +138,23 @@ public class CarrinhoServlet extends HttpServlet {
 
 	private static int lerInt(JsonObject json, String campo) {
 		JsonElement e = (json == null) ? null : json.get(campo);
-		if (e == null || e.isJsonNull()) {
-			throw new IllegalArgumentException("Campo ausente: " + campo);
+		return inteiroEstrito(e, campo);
+	}
+
+	/**
+	 * Converte um valor JSON em int SEM truncar: "1.5" ou 1.5 sao rejeitados (400) em vez de virar 1; tambem
+	 * rejeita objetos, listas, nulos, texto nao numerico e valores fora do intervalo de int.
+	 */
+	static int inteiroEstrito(JsonElement e, String campo) {
+		if (e == null || e.isJsonNull() || !e.isJsonPrimitive()) {
+			throw new IllegalArgumentException("Campo ausente ou invalido: " + campo);
 		}
-		return e.getAsInt();
+		try {
+			java.math.BigDecimal valor = new java.math.BigDecimal(e.getAsString().trim());
+			return valor.intValueExact(); // lanca ArithmeticException se tiver parte fracionaria ou estourar int
+		} catch (NumberFormatException | ArithmeticException ex) {
+			throw new IllegalArgumentException("Valor inteiro invalido em " + campo, ex);
+		}
 	}
 
 	/** Lista os itens do carrinho da sessao como JSON plano. */

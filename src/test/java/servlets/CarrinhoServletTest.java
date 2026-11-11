@@ -53,4 +53,16 @@ class CarrinhoServletTest {
             assertEquals(1, vistos.size(), "rodada " + rodada + ": mais de um carrinho criado");
         }
     }
+
+    @Test
+    void quantidadeFracionariaOuInvalidaERejeitadaEmVezDeTruncada() {
+        var parser = new com.google.gson.JsonParser();
+        assertEquals(3, CarrinhoServlet.inteiroEstrito(parser.parse("3"), "q"));
+        assertEquals(3, CarrinhoServlet.inteiroEstrito(parser.parse("3.0"), "q"));
+        assertEquals(3, CarrinhoServlet.inteiroEstrito(parser.parse("\"3\""), "q"));
+        for (String ruim : new String[] { "1.5", "0.1", "\"1.5\"", "\"abc\"", "99999999999", "null", "{}", "[1]", "true", "1e30" }) {
+            assertThrows(IllegalArgumentException.class, () -> CarrinhoServlet.inteiroEstrito(parser.parse(ruim), "q"), ruim);
+        }
+        assertThrows(IllegalArgumentException.class, () -> CarrinhoServlet.inteiroEstrito(null, "q"));
+    }
 }

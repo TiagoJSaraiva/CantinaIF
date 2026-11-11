@@ -104,4 +104,28 @@ class LimitesTest {
         pedidos.atualizarStatus(pedido.getId(), model.StatusPedido.CANCELADO);
         Limites.verificarNovoPedido(); // cancelado nao conta como aberto
     }
+
+    @Test
+    void tetoDePedidosEmAbertoPorComprador() throws Exception {
+        new UserDao().create(new Comprador("LIM3", "lim3@x.demo", "senha1234", "Lim3"));
+        new UserDao().create(new Comprador("LIM4", "lim4@x.demo", "senha1234", "Lim4"));
+        Produto p = new Produto("Por comprador", "d", new BigDecimal("1.00"), 100, Categoria.SALGADO, null);
+        new ProductDao().create(p);
+        PedidoDAO pedidos = new PedidoDAO();
+        System.setProperty("CANTINA_MAX_PEDIDOS_ABERTOS_POR_COMPRADOR", "2");
+        try {
+            Limites.verificarNovoPedido("LIM3");
+            pedidos.criarPedido("LIM3", List.of(new ItemCarrinho(p, 1)));
+            Limites.verificarNovoPedido("LIM3");
+            var segundo = pedidos.criarPedido("LIM3", List.of(new ItemCarrinho(p, 1)));
+            LimiteAtingidoException e = assertThrows(LimiteAtingidoException.class, () -> Limites.verificarNovoPedido("LIM3"));
+            assertTrue(e.getMessage().contains("2 pedidos em aberto"));
+            Limites.verificarNovoPedido("LIM4"); // outro comprador nao e afetado
+
+            pedidos.atualizarStatus(segundo.getId(), model.StatusPedido.CANCELADO); // cancelado libera a vaga
+            Limites.verificarNovoPedido("LIM3");
+        } finally {
+            System.clearProperty("CANTINA_MAX_PEDIDOS_ABERTOS_POR_COMPRADOR");
+        }
+    }
 }

@@ -41,7 +41,7 @@ public class FinalizarCompraServlet extends HttpServlet {
         }
 
         try {
-            Limites.verificarNovoPedido();
+            Limites.verificarNovoPedido(comprador.getProntuario());
             Pedido pedido = pedidoDAO.criarPedidoConfirmandoPrecos(comprador.getProntuario(), carrinho.getItens());
             carrinho.limparCarrinho();
             response.sendRedirect("meus-pedidos.jsp?novo=" + pedido.getId());

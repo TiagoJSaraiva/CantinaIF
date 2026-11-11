@@ -15,6 +15,7 @@ import dao.LimitesDao;
  *   <li>CANTINA_MAX_COMPRADORES (padrao da demo: 200)</li>
  *   <li>CANTINA_MAX_PEDIDOS_ABERTOS (padrao da demo: 100)</li>
  *   <li>CANTINA_MAX_BYTES_IMAGENS (padrao da demo: 12582912 = 12 MB, somando todas as imagens)</li>
+ *   <li>CANTINA_MAX_PEDIDOS_ABERTOS_POR_COMPRADOR (padrao da demo: 5)</li>
  * </ul>
  */
 public final class Limites {
@@ -23,6 +24,7 @@ public final class Limites {
     public static final int PADRAO_COMPRADORES = 200;
     public static final int PADRAO_PEDIDOS_ABERTOS = 100;
     public static final long PADRAO_BYTES_IMAGENS = 12L * 1024 * 1024;
+    public static final int PADRAO_PEDIDOS_ABERTOS_POR_COMPRADOR = 5;
 
     private static final LimitesDao DAO = new LimitesDao();
 
@@ -47,6 +49,7 @@ public final class Limites {
     public static long maxProdutos() { return valor("CANTINA_MAX_PRODUTOS", PADRAO_PRODUTOS); }
     public static long maxCompradores() { return valor("CANTINA_MAX_COMPRADORES", PADRAO_COMPRADORES); }
     public static long maxPedidosAbertos() { return valor("CANTINA_MAX_PEDIDOS_ABERTOS", PADRAO_PEDIDOS_ABERTOS); }
+    public static long maxPedidosAbertosPorComprador() { return valor("CANTINA_MAX_PEDIDOS_ABERTOS_POR_COMPRADOR", PADRAO_PEDIDOS_ABERTOS_POR_COMPRADOR); }
     public static long maxBytesImagens() { return valor("CANTINA_MAX_BYTES_IMAGENS", PADRAO_BYTES_IMAGENS); }
 
     /** Antes de criar um produto (com a imagem ja processada, ou 0 se nao houver). */
@@ -77,6 +80,19 @@ public final class Limites {
         long max = maxPedidosAbertos();
         if (max > 0 && DAO.contarPedidosAbertos() >= max) {
             throw new LimiteAtingidoException("pedidos em aberto", max);
+        }
+    }
+
+    /** Antes de criar um pedido: teto global de pedidos em aberto e teto por comprador. */
+    public static void verificarNovoPedido(String prontuario) throws SQLException, LimiteAtingidoException {
+        verificarNovoPedido();
+        long max = maxPedidosAbertosPorComprador();
+        if (max > 0 && prontuario != null) {
+            long abertos = DAO.contarPedidosAbertosDe(prontuario);
+            if (abertos >= max) {
+                throw new LimiteAtingidoException("Você já tem " + abertos + " pedidos em aberto (máximo " + max
+                        + " na demonstração). Aguarde a retirada ou cancele um antes de fazer outro.");
+            }
         }
     }
 }

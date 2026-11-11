@@ -23,6 +23,19 @@ public class LimitesDao {
         return escalar("SELECT COUNT(*) FROM Pedido WHERE status IN ('PENDENTE', 'EM_PREPARO', 'PRONTO')");
     }
 
+    /** Pedidos em aberto de um comprador. */
+    public long contarPedidosAbertosDe(String prontuario) throws SQLException {
+        try (Connection c = Database.getConnection();
+             java.sql.PreparedStatement ps = c.prepareStatement(
+                     "SELECT COUNT(*) FROM Pedido WHERE comprador_prontuario = ? AND status IN ('PENDENTE', 'EM_PREPARO', 'PRONTO')")) {
+            ps.setString(1, prontuario);
+            try (ResultSet rs = ps.executeQuery()) {
+                rs.next();
+                return rs.getLong(1);
+            }
+        }
+    }
+
     /** Total de bytes de imagens guardadas. */
     public long bytesDeImagens() throws SQLException {
         return escalar("SELECT COALESCE(SUM(LENGTH(imagem)), 0) FROM Produto");
