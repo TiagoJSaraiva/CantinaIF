@@ -30,6 +30,24 @@ fi
 printf '%s' "$COOKIE" | grep -qi 'HttpOnly' && ok "cookie HttpOnly" || erro "cookie deveria ser HttpOnly"
 printf '%s' "$COOKIE" | grep -qi 'SameSite=Lax' && ok "cookie SameSite=Lax" || erro "cookie deveria ter SameSite=Lax"
 
+if [ "$MODO" = "trusted" ]; then
+  echo "== limite de login usa o IP real do cliente (X-Forwarded-For) quando o proxy e confiavel"
+  H1='X-Forwarded-Proto: https'
+  curl -s -D hs.$$.txt -o hs.$$.html -H "$H1" "$BASE/login.jsp"
+  SESS=$(grep -io 'JSESSIONID=[^;]*' hs.$$.txt | head -1 | cut -d= -f2)
+  TOK=$(grep -o 'name="_csrf" value="[^"]*"' hs.$$.html | head -1 | cut -d'"' -f4)
+  rm -f hs.$$.txt hs.$$.html
+  i=1
+  while [ $i -le 41 ]; do
+    curl -s -o /dev/null -H "$H1" -H 'X-Forwarded-For: 203.0.113.50' -H "Cookie: JSESSIONID=$SESS"       -d "_csrf=$TOK&prontuario=XX$i&senha=errada$i" "$BASE/login"
+    i=$((i + 1))
+  done
+  A=$(curl -s -o /dev/null -w '%{http_code}' -H "$H1" -H 'X-Forwarded-For: 203.0.113.50' -H "Cookie: JSESSIONID=$SESS" -d "_csrf=$TOK&prontuario=YY&senha=x" "$BASE/login")
+  B=$(curl -s -o /dev/null -w '%{http_code}' -H "$H1" -H 'X-Forwarded-For: 203.0.113.51' -H "Cookie: JSESSIONID=$SESS" -d "_csrf=$TOK&prontuario=YY&senha=x" "$BASE/login")
+  [ "$A" = "429" ] && ok "IP 203.0.113.50 bloqueado apos 40 falhas (429)" || erro "IP do cliente deveria estar bloqueado (recebido $A)"
+  [ "$B" = "200" ] && ok "outro IP (203.0.113.51) livre (200)" || erro "outro IP nao deveria estar bloqueado (recebido $B)"
+fi
+
 echo "== pagina de erro sem versao do servidor nem stack trace"
 CORPO=$(curl -s "$BASE/rota-que-nao-existe")
 printf '%s' "$CORPO" | grep -qi 'Apache Tomcat\|at org.apache' && erro "pagina de erro vaza informacao do servidor" || ok "sem vazamento"
