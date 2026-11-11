@@ -4,13 +4,14 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import java.sql.Connection;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
+import java.time.LocalDateTime;
 
 import com.zaxxer.hikari.HikariConfig;
 import com.zaxxer.hikari.HikariDataSource;
+
+import seed.DemoDataSeeder;
 
 /**
  * Ponto unico de acesso ao banco de dados (pool HikariCP).
@@ -18,10 +19,12 @@ import com.zaxxer.hikari.HikariDataSource;
  * Configuracao por variaveis de ambiente (ou propriedades de sistema com o mesmo nome):
  * <ul>
  *   <li>CANTINA_DB_URL - URL JDBC (ex.: jdbc:mysql://localhost:3306/cantinaif). Se ausente,
- *       usa H2 embutido em memoria, em modo MySQL, com schema e vendedor de demonstracao
- *       criados no boot.</li>
+ *       usa H2 embutido em memoria, em modo MySQL: o schema e os dados de demonstracao sao
+ *       criados no boot ("modo demonstracao").</li>
  *   <li>CANTINA_DB_USER - usuario (opcional para H2).</li>
  *   <li>CANTINA_DB_PASSWORD - senha (opcional para H2).</li>
+ *   <li>CANTINA_SEED_IF_EMPTY=true - em qualquer banco, semeia os dados de demonstracao no boot
+ *       somente se nao houver nenhum vendedor (nao apaga nada).</li>
  * </ul>
  */
 public final class Database {
@@ -31,12 +34,8 @@ public final class Database {
 
     private static final String SCHEMA_RESOURCE = "/db/schema.sql";
 
-    /** Conta de demonstracao (somente modo H2). Documentada em db/schema.sql. */
-    public static final String DEMO_VENDEDOR_PRONTUARIO = "VEND001";
-    public static final String DEMO_VENDEDOR_EMAIL = "vendedor@cantinaif.demo";
-    public static final String DEMO_VENDEDOR_SENHA = "demo1234";
-
     private static HikariDataSource dataSource;
+    private static boolean demoMode;
 
     private Database() {
     }
@@ -51,9 +50,19 @@ public final class Database {
             url = DEFAULT_H2_URL;
         }
         init(url, Config.get("CANTINA_DB_USER"), Config.get("CANTINA_DB_PASSWORD"));
+        demoMode = isH2(url);
+        boolean semear = demoMode || "true".equalsIgnoreCase(Config.get("CANTINA_SEED_IF_EMPTY"));
+        if (semear) {
+            try {
+                DemoDataSeeder.rodarSeVazio(LocalDateTime.now());
+            } catch (SQLException e) {
+                shutdown();
+                throw new IllegalStateException("Falha ao gravar os dados de demonstracao", e);
+            }
+        }
     }
 
-    /** Inicializa o pool com parametros explicitos (usado pelos testes). */
+    /** Inicializa o pool com parametros explicitos (usado pelos testes); em H2 aplica o schema, sem dados. */
     public static synchronized void init(String url, String user, String password) {
         if (dataSource != null) {
             return;
@@ -74,10 +83,10 @@ public final class Database {
             cfg.setDriverClassName("com.mysql.cj.jdbc.Driver");
         }
         dataSource = new HikariDataSource(cfg);
+        demoMode = false;
         if (isH2(url)) {
             try (Connection conn = dataSource.getConnection()) {
-                applySchema(conn);
-                createDemoVendedor(conn);
+                aplicarSchema(conn);
             } catch (SQLException | IOException e) {
                 dataSource.close();
                 dataSource = null;
@@ -94,19 +103,26 @@ public final class Database {
         return dataSource.getConnection();
     }
 
+    /** True quando o banco e o H2 embutido: ha contas de demonstracao e a base e restaurada periodicamente. */
+    public static synchronized boolean isDemoMode() {
+        return demoMode;
+    }
+
     /** Encerra o pool (fim da aplicacao ou dos testes). */
     public static synchronized void shutdown() {
         if (dataSource != null) {
             dataSource.close();
             dataSource = null;
         }
+        demoMode = false;
     }
 
     private static boolean isH2(String url) {
         return url.startsWith("jdbc:h2:");
     }
 
-    private static void applySchema(Connection conn) throws SQLException, IOException {
+    /** Aplica db/schema.sql (idempotente: CREATE TABLE IF NOT EXISTS). */
+    public static void aplicarSchema(Connection conn) throws SQLException, IOException {
         String script;
         try (InputStream in = Database.class.getResourceAsStream(SCHEMA_RESOURCE)) {
             if (in == null) {
@@ -125,24 +141,6 @@ public final class Database {
                     st.execute(comando);
                 }
             }
-        }
-    }
-
-    private static void createDemoVendedor(Connection conn) throws SQLException {
-        try (PreparedStatement check = conn.prepareStatement("SELECT 1 FROM Vendedor WHERE prontuario = ?")) {
-            check.setString(1, DEMO_VENDEDOR_PRONTUARIO);
-            try (ResultSet rs = check.executeQuery()) {
-                if (rs.next()) {
-                    return;
-                }
-            }
-        }
-        try (PreparedStatement ins = conn.prepareStatement(
-                "INSERT INTO Vendedor (prontuario, email, senha) VALUES (?, ?, ?)")) {
-            ins.setString(1, DEMO_VENDEDOR_PRONTUARIO);
-            ins.setString(2, DEMO_VENDEDOR_EMAIL);
-            ins.setString(3, Passwords.hash(DEMO_VENDEDOR_SENHA));
-            ins.executeUpdate();
         }
     }
 }

@@ -20,10 +20,12 @@
 --   * o INSERT do vendedor ficticio (senha em texto puro) foi removido: senhas
 --     agora sao guardadas como hash BCrypt (60 caracteres, cabem em VARCHAR(100)).
 --
--- CONTA DE DEMONSTRACAO (nao e segredo): em modo H2 a aplicacao cria no boot,
--- se nao existir, o vendedor
---     prontuario: VEND001   e-mail: vendedor@cantinaif.demo   senha: demo1234
--- A senha e gravada como hash BCrypt pela aplicacao (utils.Database).
+-- CONTAS DE DEMONSTRACAO (nao sao segredos): em modo H2 a aplicacao semeia dados ficticios no boot
+-- (seed.DemoDataSeeder: 30 produtos, 19 compradores, 50 pedidos). Senha das duas contas: demo1234
+--     vendedor:  prontuario VEND001     e-mail vendedor@cantinaif.demo
+--     comprador: prontuario CJ3000001   e-mail aluno@cantinaif.demo
+-- As senhas sao gravadas como hash BCrypt pela aplicacao. Para recriar os dados em outro banco:
+--     ./mvnw -q compile exec:java -Dexec.args=--confirmar-apagar   (apaga os dados existentes!)
 -- ============================================================================
 
 -- Comprador (aluno ou colaborador que faz os pedidos)

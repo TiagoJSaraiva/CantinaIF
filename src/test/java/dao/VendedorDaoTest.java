@@ -2,11 +2,15 @@ package dao;
 
 import static org.junit.jupiter.api.Assertions.*;
 
+import java.sql.Connection;
+import java.time.LocalDateTime;
+
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
 import model.Vendedor;
+import seed.DemoDataSeeder;
 import utils.Database;
 
 class VendedorDaoTest {
@@ -14,8 +18,11 @@ class VendedorDaoTest {
     private final VendedorDao dao = new VendedorDao();
 
     @BeforeAll
-    static void iniciar() {
+    static void iniciar() throws Exception {
         TestDb.start(VendedorDaoTest.class);
+        try (Connection c = Database.getConnection()) {
+            DemoDataSeeder.run(c, LocalDateTime.of(2030, 1, 15, 10, 0));
+        }
     }
 
     @AfterAll
@@ -24,16 +31,16 @@ class VendedorDaoTest {
     }
 
     @Test
-    void vendedorDemoCriadoNoBootAutentica() throws Exception {
-        Vendedor v = dao.autenticar(Database.DEMO_VENDEDOR_PRONTUARIO, Database.DEMO_VENDEDOR_SENHA);
+    void vendedorDemoSemeadoAutentica() throws Exception {
+        Vendedor v = dao.autenticar(DemoDataSeeder.VENDEDOR_PRONTUARIO, DemoDataSeeder.SENHA_DEMO);
         assertNotNull(v);
-        assertEquals(Database.DEMO_VENDEDOR_EMAIL, v.getEmail());
+        assertEquals(DemoDataSeeder.VENDEDOR_EMAIL, v.getEmail());
         assertNull(v.getSenha());
     }
 
     @Test
     void senhaErradaOuCredencialAntigaFixaNaoAutentica() throws Exception {
-        assertNull(dao.autenticar(Database.DEMO_VENDEDOR_PRONTUARIO, "errada"));
+        assertNull(dao.autenticar(DemoDataSeeder.VENDEDOR_PRONTUARIO, "errada"));
         assertNull(dao.autenticar("REMOVIDO", "REMOVIDO"));
     }
 
