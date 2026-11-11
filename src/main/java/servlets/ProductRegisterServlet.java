@@ -10,6 +10,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.sql.SQLException;
+import java.util.Map;
 import utils.ImageType;
 
 /** Cria um produto (multipart: campos + imagem opcional). Responde JSON. */
@@ -27,6 +28,11 @@ public class ProductRegisterServlet extends HttpServlet {
     @Override
     protected void doPost(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
+        Map<String, String> excedeu = ProdutoForm.verificarLimiteDoCorpo(request);
+        if (excedeu != null) {
+            Json.erros(response, excedeu);
+            return;
+        }
         ProdutoForm form = ProdutoForm.ler(request);
         if (!form.erros.isEmpty()) {
             Json.erros(response, form.erros);

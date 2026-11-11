@@ -26,6 +26,25 @@ final class ProdutoForm {
     private ProdutoForm() {
     }
 
+    /**
+     * Se o corpo multipart passar dos limites (ex.: imagem acima de 2 MB) o container descarta todos os
+     * parametros; detecta isso cedo para responder com a mensagem correta. Retorna null se esta tudo bem.
+     */
+    static Map<String, String> verificarLimiteDoCorpo(HttpServletRequest request) throws IOException, ServletException {
+        String tipo = request.getContentType();
+        if (tipo == null || !tipo.toLowerCase().startsWith("multipart/")) {
+            return null;
+        }
+        try {
+            request.getParts();
+            return null;
+        } catch (IllegalStateException e) {
+            Map<String, String> erros = new LinkedHashMap<>();
+            erros.put("imagem", "A imagem deve ter no máximo 2 MB.");
+            return erros;
+        }
+    }
+
     static ProdutoForm ler(HttpServletRequest request) throws IOException, ServletException {
         request.setCharacterEncoding("UTF-8");
         ProdutoForm f = new ProdutoForm();

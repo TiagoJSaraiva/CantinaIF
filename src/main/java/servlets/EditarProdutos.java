@@ -2,6 +2,7 @@ package servlets;
 
 import java.io.IOException;
 import java.sql.SQLException;
+import java.util.Map;
 
 import dao.ProductDao;
 import jakarta.servlet.ServletException;
@@ -27,6 +28,11 @@ public class EditarProdutos extends HttpServlet {
     @Override
     protected void doPost(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
+        Map<String, String> excedeu = ProdutoForm.verificarLimiteDoCorpo(request);
+        if (excedeu != null) {
+            Json.erros(response, excedeu);
+            return;
+        }
         int id;
         try {
             id = Integer.parseInt(request.getParameter("id"));
