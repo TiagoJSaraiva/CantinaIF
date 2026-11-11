@@ -1,224 +1,293 @@
-package dao; // Garanta que este é o pacote correto para seus DAOs
+package dao;
 
-import model.Comprador; // Garanta que o pacote model está correto
-import model.Pedido;     // Garanta que o pacote model está correto
-import model.Produto;    // Garanta que o pacote model está correto
-import model.ItemCarrinho; // Garanta que o pacote model está correto e que ItemCarrinho é sua classe para itens de pedido
-
+import model.Comprador;
+import model.ItemCarrinho;
+import model.Pedido;
+import model.Produto;
+import model.StatusPedido;
 import utils.Database;
 
+import java.math.BigDecimal;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.sql.Statement; // Importar para Statement.RETURN_GENERATED_KEYS
+import java.sql.Statement;
+import java.sql.Timestamp;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
-import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.TreeMap;
 
+/**
+ * Pedidos e estoque. Toda operacao que mexe em estoque ocorre na mesma transacao que grava o pedido
+ * (ou muda seu status): ou tudo e gravado, ou nada.
+ */
 public class PedidoDAO {
 
+    private static final String SELECT_PEDIDOS =
+            "SELECT p.id AS pedido_id, p.status, p.criado_em, p.total, "
+            + "c.prontuario, c.nome AS comprador_nome, c.email, "
+            + "pp.produto_id, prod.nome AS produto_nome, pp.quantidade, pp.preco_unitario "
+            + "FROM Pedido p "
+            + "JOIN Comprador c ON p.comprador_prontuario = c.prontuario "
+            + "JOIN Pedido_Produto pp ON p.id = pp.pedido_id "
+            + "JOIN Produto prod ON pp.produto_id = prod.id ";
+
+    private static final String ORDEM = " ORDER BY p.criado_em DESC, p.id DESC, prod.nome ASC";
+
     public PedidoDAO() {
-        // Construtor padrão
+    }
+
+    // ------------------------------------------------------------------ criacao
+
+    public Pedido criarPedido(String prontuario, List<ItemCarrinho> itens) throws SQLException, RegraNegocioException {
+        return criarPedido(prontuario, itens, LocalDateTime.now());
     }
 
     /**
-     * Lista todos os pedidos pendentes com todos os seus detalhes:
-     * Comprador (nome, prontuário, email) e
-     * Itens do Pedido (Produto e Quantidade de cada produto no pedido).
+     * Cria um pedido baixando o estoque na mesma transacao. O preco unitario e o total sao lidos/calculados
+     * no servidor a partir do banco (o carrinho da sessao nao e confiavel para preco).
      *
-     * @return Uma lista de objetos Pedido, cada um populado com seu Comprador e ItensCarrinho.
+     * @throws EstoqueInsuficienteException se algum item nao tiver estoque suficiente (nada e gravado)
      */
-    public List<Pedido> listarTodosPedidosComDetalhes() {
-        // Usamos um Map para garantir que cada Pedido seja instanciado apenas uma vez
-        // e que os itens sejam adicionados ao pedido correto.
-        Map<Integer, Pedido> pedidosMap = new HashMap<>();
+    public Pedido criarPedido(String prontuario, List<ItemCarrinho> itens, LocalDateTime criadoEm)
+            throws SQLException, RegraNegocioException {
+        if (itens == null || itens.isEmpty()) {
+            throw new RegraNegocioException("O carrinho está vazio.");
+        }
+        // Junta itens repetidos e ordena por id para reduzir risco de deadlock
+        Map<Integer, Integer> quantidades = new TreeMap<>();
+        for (ItemCarrinho item : itens) {
+            if (item.getQuantidade() < 1) {
+                throw new RegraNegocioException("A quantidade de cada item deve ser de pelo menos 1.");
+            }
+            quantidades.merge(item.getProduto().getId(), item.getQuantidade(), Integer::sum);
+        }
 
-        // SQL que junta todas as tabelas necessárias:
-        // Pedido (p), Comprador (c), Pedido_Produto (pp), Produto (prod)
-        String sql = "SELECT p.id AS pedido_id, " +
-                     "c.prontuario AS comprador_prontuario, c.nome AS comprador_nome, c.email AS comprador_email, " +
-                     "prod.id AS produto_id, prod.nome AS produto_nome, prod.descricao AS produto_descricao, " +
-                     "prod.preco AS produto_preco, prod.estoque AS produto_estoque, prod.categoria AS produto_categoria, " +
-                     "pp.quantidade AS item_quantidade " +
-                     "FROM Pedido p " +
-                     "JOIN Comprador c ON p.comprador_prontuario = c.prontuario " +
-                     "JOIN Pedido_Produto pp ON p.id = pp.pedido_id " +
-                     "JOIN Produto prod ON pp.produto_id = prod.id " +
-                     "ORDER BY p.id ASC, prod.nome ASC"; // Ordena para facilitar a agregação
+        try (Connection conn = Database.getConnection()) {
+            conn.setAutoCommit(false);
+            try {
+                Pedido pedido = new Pedido();
+                Comprador comprador = new Comprador();
+                comprador.setProntuario(prontuario);
+                pedido.setComprador(comprador);
+                pedido.setCriadoEm(criadoEm);
+                pedido.setStatus(StatusPedido.PENDENTE);
 
-        // Usa try-with-resources para garantir que a conexão e os statements sejam fechados automaticamente.
-        try (Connection conn = Database.getConnection(); // Obtém a conexão da sua fábrica
-             PreparedStatement stmt = conn.prepareStatement(sql);
-             ResultSet rs = stmt.executeQuery()) {
-
-            while (rs.next()) {
-                int pedidoId = rs.getInt("pedido_id");
-
-                // --- 1. Recuperar ou Criar o Objeto Pedido ---
-                Pedido pedido = pedidosMap.get(pedidoId);
-                if (pedido == null) {
-                    // Se o pedido ainda não está no mapa, cria um novo Pedido e seu Comprador.
-                    Comprador comprador = new Comprador();
-                    comprador.setProntuario(rs.getString("comprador_prontuario"));
-                    comprador.setNome(rs.getString("comprador_nome"));
-                    comprador.setEmail(rs.getString("comprador_email"));
-                    // IMPORTANTE: NÃO carregar a senha do comprador aqui por segurança.
-
-                    pedido = new Pedido();
-                    pedido.setId(pedidoId);
-                    pedido.setComprador(comprador);
-                    pedidosMap.put(pedidoId, pedido);
+                BigDecimal total = BigDecimal.ZERO;
+                for (Map.Entry<Integer, Integer> e : quantidades.entrySet()) {
+                    int produtoId = e.getKey();
+                    int quantidade = e.getValue();
+                    baixarEstoque(conn, produtoId, quantidade);
+                    Produto produto = lerProduto(conn, produtoId);
+                    ItemCarrinho item = new ItemCarrinho(produto, quantidade);
+                    pedido.addItem(item);
+                    total = total.add(item.getSubtotal());
                 }
+                pedido.setTotal(total);
 
-                // --- 2. Criar e Adicionar o Item do Pedido (ItemCarrinho) ---
-                // Cria o objeto Produto para o item do pedido
-                Produto produto = new Produto();
-                produto.setId(rs.getInt("produto_id"));
-                produto.setNome(rs.getString("produto_nome"));
-                produto.setDescricao(rs.getString("produto_descricao"));
-                produto.setPreco(rs.getFloat("produto_preco")); // Usando getFloat() conforme sua classe Produto
-                produto.setEstoque(rs.getInt("produto_estoque"));
-                
-                // Converte a string da categoria para o enum Produto.Categoria
-                String categoriaString = rs.getString("produto_categoria");
-                if (categoriaString != null && !categoriaString.isEmpty()) {
-                    try {
-                    	produto.setCategoria(Produto.Categoria.valueOf(categoriaString.trim().toUpperCase()));
-                    } catch (IllegalArgumentException e) {
-                        System.err.println("Erro: Categoria '" + categoriaString + "' inválida para o produto ID: " + produto.getId());
+                try (PreparedStatement ps = conn.prepareStatement(
+                        "INSERT INTO Pedido (comprador_prontuario, status, criado_em, total) VALUES (?, ?, ?, ?)",
+                        Statement.RETURN_GENERATED_KEYS)) {
+                    ps.setString(1, prontuario);
+                    ps.setString(2, StatusPedido.PENDENTE.name());
+                    ps.setTimestamp(3, Timestamp.valueOf(criadoEm));
+                    ps.setBigDecimal(4, total);
+                    ps.executeUpdate();
+                    try (ResultSet rs = ps.getGeneratedKeys()) {
+                        if (!rs.next()) {
+                            throw new SQLException("Não foi possível obter o ID gerado para o pedido.");
+                        }
+                        pedido.setId(rs.getInt(1));
                     }
                 }
-                // Não carregar a imagem aqui, pois ela é pesada e não necessária para a listagem inicial do pedido.
 
-                // Cria o ItemCarrinho e adiciona ao Pedido.
-                int quantidade = rs.getInt("item_quantidade");
-                ItemCarrinho itemCarrinho = new ItemCarrinho(produto, quantidade);
-                pedido.addItem(itemCarrinho);
-            }
-
-        } catch (SQLException e) {
-            System.err.println("Erro ao listar pedidos com detalhes: " + e.getMessage());
-            e.printStackTrace();
-        }
-        // Retorna a lista de todos os pedidos únicos que foram coletados no mapa.
-        return new ArrayList<>(pedidosMap.values());
-    }
-
-    /**
-     * Salva um novo pedido no banco de dados, incluindo seus itens.
-     * Esta operação é transacional para garantir atomicidade.
-     *
-     * @param pedido O objeto Pedido a ser salvo, contendo o Comprador e a lista de ItemCarrinho.
-     * @throws SQLException Se ocorrer um erro no banco de dados.
-     */
-    public void criarPedido(Pedido pedido) throws SQLException {
-        Connection conn = null;
-        PreparedStatement stmtPedido = null;
-        PreparedStatement stmtItemPedido = null;
-        ResultSet rs = null; // Para pegar o ID gerado do pedido
-
-        // SQL para inserir um novo pedido
-        String sqlInsertPedido = "INSERT INTO Pedido (comprador_prontuario) VALUES (?)";
-        // SQL para inserir um item no Pedido_Produto
-        String sqlInsertItemPedido = "INSERT INTO Pedido_Produto (pedido_id, produto_id, quantidade) VALUES (?, ?, ?)";
-
-        try {
-            conn = Database.getConnection(); // Obtém a conexão da sua fábrica
-            conn.setAutoCommit(false); // Inicia a transação para garantir que ambas as inserções (pedido e itens) ocorram ou falhem juntas
-
-            // 1. Inserir o Pedido principal e obter o ID gerado (AUTO_INCREMENT)
-            stmtPedido = conn.prepareStatement(sqlInsertPedido, Statement.RETURN_GENERATED_KEYS);
-            stmtPedido.setString(1, pedido.getComprador().getProntuario()); // Pega o prontuário do comprador do objeto Pedido
-            stmtPedido.executeUpdate(); // Executa a inserção do pedido
-
-            // Obtém o ID gerado para o pedido recém-inserido
-            rs = stmtPedido.getGeneratedKeys();
-            if (rs.next()) {
-                pedido.setId(rs.getInt(1)); // Define o ID gerado no objeto Pedido
-            } else {
-                throw new SQLException("Não foi possível obter o ID gerado para o pedido.");
-            }
-
-            // 2. Inserir cada ItemCarrinho na tabela Pedido_Produto
-            stmtItemPedido = conn.prepareStatement(sqlInsertItemPedido);
-            for (ItemCarrinho item : pedido.getItens()) { // Itera sobre os itens do pedido
-                stmtItemPedido.setInt(1, pedido.getId());               // ID do pedido recém-criado
-                stmtItemPedido.setInt(2, item.getProduto().getId());    // ID do produto do item do carrinho
-                stmtItemPedido.setInt(3, item.getQuantidade());         // Quantidade do produto no item do carrinho
-                stmtItemPedido.addBatch(); // Adiciona esta inserção ao batch
-            }
-            stmtItemPedido.executeBatch(); // Executa todas as inserções de itens em um único batch
-
-            conn.commit(); // Confirma todas as operações da transação se tudo correu bem
-        } catch (SQLException e) {
-            // Se algo der errado, tenta fazer rollback da transação
-            if (conn != null) {
-                try {
-                    conn.rollback(); // Desfaz todas as operações para manter a consistência do DB
-                } catch (SQLException ex) {
-                    System.err.println("Erro ao fazer rollback: " + ex.getMessage());
+                try (PreparedStatement ps = conn.prepareStatement(
+                        "INSERT INTO Pedido_Produto (pedido_id, produto_id, quantidade, preco_unitario) VALUES (?, ?, ?, ?)")) {
+                    for (ItemCarrinho item : pedido.getItens()) {
+                        ps.setInt(1, pedido.getId());
+                        ps.setInt(2, item.getProduto().getId());
+                        ps.setInt(3, item.getQuantidade());
+                        ps.setBigDecimal(4, item.getProduto().getPreco());
+                        ps.addBatch();
+                    }
+                    ps.executeBatch();
                 }
+
+                conn.commit();
+                return pedido;
+            } catch (SQLException | RegraNegocioException | RuntimeException ex) {
+                conn.rollback();
+                throw ex;
             }
-            System.err.println("Erro ao criar pedido: " + e.getMessage());
-            throw e; // Lança a exceção para que o Servlet que chamou possa tratá-la
-        } finally {
-            // Garante que todos os recursos (ResultSet, PreparedStatements, Connection) sejam fechados
-            if (rs != null) try { rs.close(); } catch (SQLException e) {}
-            if (stmtPedido != null) try { stmtPedido.close(); } catch (SQLException e) {}
-            if (stmtItemPedido != null) try { stmtItemPedido.close(); } catch (SQLException e) {}
-            if (conn != null) try { conn.close(); } catch (SQLException e) {}
         }
     }
 
-    /**
-     * Deleta um pedido do banco de dados, incluindo seus itens associados.
-     * Esta operação é transacional para garantir que ou tudo é deletado, ou nada é.
-     *
-     * @param pedidoId O ID do pedido a ser deletado.
-     * @throws SQLException Se ocorrer um erro no banco de dados.
-     */
-    public void deletarPedido(int pedidoId) throws SQLException {
-        // SQL para deletar itens na tabela Pedido_Produto (chave estrangeira)
-        String sqlDeleteItens = "DELETE FROM Pedido_Produto WHERE pedido_id = ?";
-        // SQL para deletar o pedido na tabela Pedido
-        String sqlDeletePedido = "DELETE FROM Pedido WHERE id = ?";
-
-        Connection conn = null;
-        PreparedStatement stmtItens = null;
-        PreparedStatement stmtPedido = null;
-
-        try {
-            conn = Database.getConnection(); // Obtém a conexão da sua fábrica
-            conn.setAutoCommit(false); // Inicia uma transação para garantir atomicidade
-
-            // 1. Deleta os itens associados ao pedido na tabela Pedido_Produto
-            stmtItens = conn.prepareStatement(sqlDeleteItens);
-            stmtItens.setInt(1, pedidoId);
-            stmtItens.executeUpdate(); // Executa a exclusão dos itens
-
-            // 2. Deleta o próprio pedido na tabela Pedido
-            stmtPedido = conn.prepareStatement(sqlDeletePedido);
-            stmtPedido.setInt(1, pedidoId);
-            stmtPedido.executeUpdate(); // Executa a exclusão do pedido
-
-            conn.commit(); // Confirma todas as operações se tudo correu bem
-        } catch (SQLException e) {
-            if (conn != null) {
-                try {
-                    conn.rollback(); // Desfaz todas as operações para manter a consistência do DB
-                } catch (SQLException ex) {
-                    System.err.println("Erro ao fazer rollback: " + ex.getMessage());
+    /** UPDATE atomico: so baixa se houver estoque suficiente. */
+    private void baixarEstoque(Connection conn, int produtoId, int quantidade)
+            throws SQLException, RegraNegocioException {
+        try (PreparedStatement ps = conn.prepareStatement(
+                "UPDATE Produto SET estoque = estoque - ? WHERE id = ? AND estoque >= ?")) {
+            ps.setInt(1, quantidade);
+            ps.setInt(2, produtoId);
+            ps.setInt(3, quantidade);
+            if (ps.executeUpdate() == 1) {
+                return;
+            }
+        }
+        try (PreparedStatement ps = conn.prepareStatement("SELECT nome, estoque FROM Produto WHERE id = ?")) {
+            ps.setInt(1, produtoId);
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    throw new EstoqueInsuficienteException(rs.getString("nome"), rs.getInt("estoque"));
                 }
             }
-            System.err.println("Erro ao deletar pedido: " + e.getMessage());
-            throw e; // Lança a exceção para que o Servlet possa tratá-la
-        } finally {
-            // Garante que os recursos sejam fechados em qualquer cenário (sucesso ou erro).
-            if (stmtItens != null) try { stmtItens.close(); } catch (SQLException e) {}
-            if (stmtPedido != null) try { stmtPedido.close(); } catch (SQLException e) {}
-            if (conn != null) try { conn.close(); } catch (SQLException e) {}
         }
+        throw new RegraNegocioException("Um dos produtos do carrinho não existe mais.");
+    }
+
+    private Produto lerProduto(Connection conn, int produtoId) throws SQLException {
+        try (PreparedStatement ps = conn.prepareStatement("SELECT id, nome, preco FROM Produto WHERE id = ?")) {
+            ps.setInt(1, produtoId);
+            try (ResultSet rs = ps.executeQuery()) {
+                rs.next();
+                Produto p = new Produto();
+                p.setId(rs.getInt("id"));
+                p.setNome(rs.getString("nome"));
+                p.setPreco(rs.getBigDecimal("preco").setScale(2, java.math.RoundingMode.HALF_UP));
+                return p;
+            }
+        }
+    }
+
+    // ------------------------------------------------------------------ status
+
+    /** Muda o status (acao do vendedor). Cancelar devolve o estoque. */
+    public void atualizarStatus(int pedidoId, StatusPedido novo) throws SQLException, RegraNegocioException {
+        mudarStatus(pedidoId, novo, null);
+    }
+
+    /** O comprador cancela o proprio pedido, somente enquanto estiver PENDENTE. */
+    public void cancelarComoComprador(int pedidoId, String prontuario) throws SQLException, RegraNegocioException {
+        mudarStatus(pedidoId, StatusPedido.CANCELADO, prontuario);
+    }
+
+    private void mudarStatus(int pedidoId, StatusPedido novo, String prontuarioDono)
+            throws SQLException, RegraNegocioException {
+        try (Connection conn = Database.getConnection()) {
+            conn.setAutoCommit(false);
+            try {
+                StatusPedido atual;
+                try (PreparedStatement ps = conn.prepareStatement(
+                        "SELECT status, comprador_prontuario FROM Pedido WHERE id = ? FOR UPDATE")) {
+                    ps.setInt(1, pedidoId);
+                    try (ResultSet rs = ps.executeQuery()) {
+                        if (!rs.next()
+                                || (prontuarioDono != null && !prontuarioDono.equals(rs.getString("comprador_prontuario")))) {
+                            throw new RegraNegocioException("Pedido não encontrado.");
+                        }
+                        atual = StatusPedido.valueOf(rs.getString("status"));
+                    }
+                }
+                if (!atual.podeIrPara(novo)) {
+                    throw new TransicaoInvalidaException(atual, novo);
+                }
+                if (prontuarioDono != null && atual != StatusPedido.PENDENTE) {
+                    throw new TransicaoInvalidaException(
+                            "Só é possível cancelar pedidos pendentes. Procure a cantina para este pedido.");
+                }
+                if (novo == StatusPedido.CANCELADO) {
+                    devolverEstoque(conn, pedidoId);
+                }
+                try (PreparedStatement ps = conn.prepareStatement("UPDATE Pedido SET status = ? WHERE id = ?")) {
+                    ps.setString(1, novo.name());
+                    ps.setInt(2, pedidoId);
+                    ps.executeUpdate();
+                }
+                conn.commit();
+            } catch (SQLException | RegraNegocioException | RuntimeException ex) {
+                conn.rollback();
+                throw ex;
+            }
+        }
+    }
+
+    private void devolverEstoque(Connection conn, int pedidoId) throws SQLException {
+        List<int[]> itens = new ArrayList<>();
+        try (PreparedStatement ps = conn.prepareStatement(
+                "SELECT produto_id, quantidade FROM Pedido_Produto WHERE pedido_id = ?")) {
+            ps.setInt(1, pedidoId);
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    itens.add(new int[] { rs.getInt(1), rs.getInt(2) });
+                }
+            }
+        }
+        try (PreparedStatement ps = conn.prepareStatement("UPDATE Produto SET estoque = estoque + ? WHERE id = ?")) {
+            for (int[] item : itens) {
+                ps.setInt(1, item[1]);
+                ps.setInt(2, item[0]);
+                ps.addBatch();
+            }
+            ps.executeBatch();
+        }
+    }
+
+    // ------------------------------------------------------------------ consultas
+
+    /** Todos os pedidos (mais recentes primeiro), opcionalmente filtrados por status. */
+    public List<Pedido> listarPedidos(StatusPedido filtro) throws SQLException {
+        if (filtro == null) {
+            return consultar("", null);
+        }
+        return consultar("WHERE p.status = ? ", filtro.name());
+    }
+
+    /** Pedidos de um comprador (mais recentes primeiro). */
+    public List<Pedido> listarPorComprador(String prontuario) throws SQLException {
+        return consultar("WHERE p.comprador_prontuario = ? ", prontuario);
+    }
+
+    public Pedido buscarPorId(int id) throws SQLException {
+        List<Pedido> r = consultar("WHERE p.id = ? ", id);
+        return r.isEmpty() ? null : r.get(0);
+    }
+
+    private List<Pedido> consultar(String where, Object parametro) throws SQLException {
+        Map<Integer, Pedido> pedidos = new LinkedHashMap<>();
+        try (Connection conn = Database.getConnection();
+             PreparedStatement ps = conn.prepareStatement(SELECT_PEDIDOS + where + ORDEM)) {
+            if (parametro != null) {
+                ps.setObject(1, parametro);
+            }
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    int id = rs.getInt("pedido_id");
+                    Pedido pedido = pedidos.get(id);
+                    if (pedido == null) {
+                        pedido = new Pedido();
+                        pedido.setId(id);
+                        pedido.setStatus(StatusPedido.valueOf(rs.getString("status")));
+                        pedido.setCriadoEm(rs.getTimestamp("criado_em").toLocalDateTime());
+                        pedido.setTotal(rs.getBigDecimal("total"));
+                        Comprador c = new Comprador();
+                        c.setProntuario(rs.getString("prontuario"));
+                        c.setNome(rs.getString("comprador_nome"));
+                        c.setEmail(rs.getString("email"));
+                        pedido.setComprador(c);
+                        pedidos.put(id, pedido);
+                    }
+                    Produto p = new Produto();
+                    p.setId(rs.getInt("produto_id"));
+                    p.setNome(rs.getString("produto_nome"));
+                    p.setPreco(rs.getBigDecimal("preco_unitario"));
+                    pedido.addItem(new ItemCarrinho(p, rs.getInt("quantidade")));
+                }
+            }
+        }
+        return new ArrayList<>(pedidos.values());
     }
 }

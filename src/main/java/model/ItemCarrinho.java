@@ -1,6 +1,11 @@
-package model; 
+package model;
+
+import java.math.BigDecimal;
 
 public class ItemCarrinho implements java.io.Serializable {
+
+    private static final long serialVersionUID = 1L;
+
     private Produto produto;
     private int quantidade;
 
@@ -12,23 +17,14 @@ public class ItemCarrinho implements java.io.Serializable {
         this.quantidade = quantidade;
     }
 
-    public Produto getProduto() {
-        return produto;
-    }
+    public Produto getProduto() { return produto; }
+    public void setProduto(Produto produto) { this.produto = produto; }
 
-    public void setProduto(Produto produto) {
-        this.produto = produto;
-    }
+    public int getQuantidade() { return quantidade; }
+    public void setQuantidade(int quantidade) { this.quantidade = quantidade; }
 
-    public int getQuantidade() {
-        return quantidade;
-    }
-
-    public void setQuantidade(int quantidade) {
-        this.quantidade = quantidade;
-    }
-
-    public double getSubtotal() {
-        return produto.getPreco() * quantidade;
+    /** Preco unitario x quantidade. */
+    public BigDecimal getSubtotal() {
+        return produto.getPreco().multiply(BigDecimal.valueOf(quantidade));
     }
 }

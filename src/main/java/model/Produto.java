@@ -1,100 +1,69 @@
 package model;
 
+import java.math.BigDecimal;
 
-public class Produto implements java.io.Serializable
-{
+public class Produto implements java.io.Serializable {
+
+    private static final long serialVersionUID = 1L;
+
     public enum Categoria {
-	SALGADO,
-	DOCE,
-	LANCHE,
-	BEBIDA
+        SALGADO,
+        DOCE,
+        LANCHE,
+        BEBIDA
     }
-	
+
     private int id;
     private String nome;
     private String descricao;
-    private float preco; // Mantido como float, mas considere BigDecimal!
+    private BigDecimal preco;
     private int estoque;
     private Categoria categoria;
     private byte[] imagem;
-	
-    // NOVO: Construtor padrão (sem argumentos) - Essencial para o Gson!
+    private boolean temImagem;
+
     public Produto() {
     }
 
-    // Construtor original
-    public Produto(String nome, String descricao, float preco, int estoque) {
+    public Produto(String nome, String descricao, BigDecimal preco, int estoque) {
+        this(nome, descricao, preco, estoque, null, null);
+    }
+
+    public Produto(String nome, String descricao, BigDecimal preco, int estoque, Categoria categoria, byte[] imagem) {
         this.nome = nome;
         this.descricao = descricao;
         this.preco = preco;
         this.estoque = estoque;
-        this.imagem = null;
-    }
-
-    // Construtor adicional para incluir a imagem e a categoria
-    // Adicionei categoria ao construtor, pois é um campo importante
-    public Produto(String nome, String descricao, float preco, int estoque, Categoria categoria, byte[] imagem) {
-        this.nome = nome;
-        this.descricao = descricao;
-        this.preco = preco;
-        this.estoque = estoque;
-        this.categoria = categoria; // Atribui a categoria
-        this.imagem = imagem;
-    }
-
-    public int getId() {
-        return id;
-    }
-
-    public void setId(int id) {
-        this.id = id;
-    }
-
-    public String getNome() {
-        return nome;
-    }
-
-    public void setNome(String nome) {
-        this.nome = nome;
-    }
-
-    public String getDescricao() {
-        return descricao;
-    }
-
-    public void setDescricao(String descricao) {
-        this.descricao = descricao;
-    }
-
-    public float getPreco() {
-        return preco;
-    }
-
-    public void setPreco(float preco) {
-        this.preco = preco;
-    }
-
-    public int getEstoque() {
-        return estoque;
-    }
-
-    public void setEstoque(int estoque) {
-        this.estoque = estoque;
-    }
-
-    public Categoria getCategoria() {
-        return categoria;
-    }
-
-    public void setCategoria(Categoria categoria) {
         this.categoria = categoria;
+        setImagem(imagem);
     }
-    
-    public byte[] getImagem() {
-        return imagem;
-    }
+
+    public int getId() { return id; }
+    public void setId(int id) { this.id = id; }
+
+    public String getNome() { return nome; }
+    public void setNome(String nome) { this.nome = nome; }
+
+    public String getDescricao() { return descricao; }
+    public void setDescricao(String descricao) { this.descricao = descricao; }
+
+    public BigDecimal getPreco() { return preco; }
+    public void setPreco(BigDecimal preco) { this.preco = preco; }
+
+    public int getEstoque() { return estoque; }
+    public void setEstoque(int estoque) { this.estoque = estoque; }
+
+    public Categoria getCategoria() { return categoria; }
+    public void setCategoria(Categoria categoria) { this.categoria = categoria; }
+
+    public byte[] getImagem() { return imagem; }
 
     public void setImagem(byte[] imagem) {
         this.imagem = imagem;
+        this.temImagem = imagem != null && imagem.length > 0;
     }
+
+    /** Indica se o produto tem imagem, sem precisar carregar os bytes (listagens). */
+    public boolean isTemImagem() { return temImagem; }
+    public void setTemImagem(boolean temImagem) { this.temImagem = temImagem; }
 }

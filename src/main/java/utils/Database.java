@@ -116,9 +116,8 @@ public final class Database {
         }
         StringBuilder sem = new StringBuilder();
         for (String linha : script.split("\\R")) {
-            if (!linha.trim().startsWith("--")) {
-                sem.append(linha).append('\n');
-            }
+            int comentario = linha.indexOf("--");
+            sem.append(comentario >= 0 ? linha.substring(0, comentario) : linha).append('\n');
         }
         try (Statement st = conn.createStatement()) {
             for (String comando : sem.toString().split(";")) {

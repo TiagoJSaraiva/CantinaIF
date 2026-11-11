@@ -2,6 +2,7 @@ package servlets;
 
 import java.io.BufferedReader;
 import java.io.IOException;
+import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -21,13 +22,27 @@ import model.Carrinho;
 import model.ItemCarrinho;
 import model.Produto;
 
+/**
+ * Carrinho da sessao. GET lista; POST adiciona {produtoId, quantidade}; PUT define a quantidade
+ * absoluta de um item {produtoId, quantidade}; DELETE remove (?produtoId=).
+ */
 @WebServlet("/carrinho")
 public class CarrinhoServlet extends HttpServlet {
 	private static final long serialVersionUID = 1L;
 
-	/** Adiciona um produto ao carrinho da sessao. Corpo JSON: {produtoId, quantidade}. */
+	private final ProductDao productDao = new ProductDao();
+
 	@Override
 	protected void doPost(HttpServletRequest request, HttpServletResponse response) throws IOException {
+		alterar(request, response, true);
+	}
+
+	@Override
+	protected void doPut(HttpServletRequest request, HttpServletResponse response) throws IOException {
+		alterar(request, response, false);
+	}
+
+	private void alterar(HttpServletRequest request, HttpServletResponse response, boolean somar) throws IOException {
 		int produtoId;
 		int quantidade;
 		try (BufferedReader reader = request.getReader()) {
@@ -43,9 +58,20 @@ public class CarrinhoServlet extends HttpServlet {
 			return;
 		}
 
-		Produto produto = new ProductDao().buscarPorId(produtoId);
+		Produto produto;
+		try {
+			produto = productDao.buscarResumo(produtoId);
+		} catch (SQLException e) {
+			e.printStackTrace();
+			Json.result(response, HttpServletResponse.SC_INTERNAL_SERVER_ERROR, false, "Erro ao consultar o produto.");
+			return;
+		}
 		if (produto == null) {
 			Json.result(response, HttpServletResponse.SC_NOT_FOUND, false, "Produto não encontrado.");
+			return;
+		}
+		if (produto.getEstoque() < 1) {
+			Json.result(response, HttpServletResponse.SC_CONFLICT, false, "Produto esgotado.");
 			return;
 		}
 
@@ -56,20 +82,41 @@ public class CarrinhoServlet extends HttpServlet {
 			session.setAttribute("carrinho", carrinho);
 		}
 
-		// Considera o que ja esta no carrinho ao checar o estoque
 		int jaNoCarrinho = 0;
 		for (ItemCarrinho item : carrinho.getItens()) {
 			if (item.getProduto().getId() == produtoId) {
 				jaNoCarrinho = item.getQuantidade();
 			}
 		}
-		if (jaNoCarrinho + quantidade > produto.getEstoque()) {
-			Json.result(response, HttpServletResponse.SC_CONFLICT, false, "Estoque insuficiente para a quantidade pedida.");
+		int desejada = somar ? jaNoCarrinho + quantidade : quantidade;
+		if (desejada > produto.getEstoque()) {
+			Json.result(response, HttpServletResponse.SC_CONFLICT, false,
+					"Estoque insuficiente: restam " + produto.getEstoque() + " unidade(s) de " + produto.getNome() + ".");
 			return;
 		}
 
-		carrinho.adicionarProduto(produto, quantidade);
-		Json.result(response, HttpServletResponse.SC_OK, true, "Produto adicionado ao carrinho.");
+		if (somar) {
+			carrinho.adicionarProduto(produto, quantidade);
+		} else if (!carrinho.alterarQuantidade(produtoId, quantidade)) {
+			Json.result(response, HttpServletResponse.SC_NOT_FOUND, false, "Item não está no carrinho.");
+			return;
+		}
+		Json.result(response, HttpServletResponse.SC_OK, true, somar ? "Produto adicionado ao carrinho." : "Quantidade atualizada.");
+	}
+
+	@Override
+	protected void doDelete(HttpServletRequest request, HttpServletResponse response) throws IOException {
+		try {
+			int produtoId = Integer.parseInt(request.getParameter("produtoId"));
+			HttpSession session = request.getSession(false);
+			Carrinho carrinho = (session != null) ? (Carrinho) session.getAttribute("carrinho") : null;
+			if (carrinho != null) {
+				carrinho.removerProduto(produtoId);
+			}
+			Json.result(response, HttpServletResponse.SC_OK, true, "Item removido.");
+		} catch (NumberFormatException e) {
+			Json.result(response, HttpServletResponse.SC_BAD_REQUEST, false, "Requisição inválida.");
+		}
 	}
 
 	private static int lerInt(JsonObject json, String campo) {
@@ -97,9 +144,11 @@ public class CarrinhoServlet extends HttpServlet {
 			itemJson.put("preco", p.getPreco());
 			itemJson.put("quantidade", item.getQuantidade());
 			itemJson.put("subtotal", item.getSubtotal());
-			itemJson.put("temImagem", p.getImagem() != null && p.getImagem().length > 0);
+			itemJson.put("estoque", p.getEstoque());
+			itemJson.put("temImagem", p.isTemImagem());
 			jsonList.add(itemJson);
 		}
+		response.setHeader("Cache-Control", "no-store");
 		Json.write(response, HttpServletResponse.SC_OK, jsonList);
 	}
 }

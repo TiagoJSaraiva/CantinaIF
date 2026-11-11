@@ -25,7 +25,7 @@ public class AuthFilter implements Filter {
 
     /** Rotas exclusivas do comprador. */
     private static final List<String> COMPRADOR = List.of(
-            "/home.jsp", "/Carrinho.jsp", "/carrinho", "/FinalizarCompraServlet", "/apiUser/");
+            "/home.jsp", "/Carrinho.jsp", "/meus-pedidos.jsp", "/carrinho", "/FinalizarCompraServlet", "/apiUser/");
 
     @Override
     public void doFilter(ServletRequest req, ServletResponse res, FilterChain chain)

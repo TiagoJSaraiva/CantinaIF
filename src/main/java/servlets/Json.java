@@ -30,4 +30,13 @@ final class Json {
         body.put("message", message);
         write(response, status, body);
     }
+
+    /** Erros de validacao por campo: 400 {success:false, message, erros:{campo: mensagem}}. */
+    static void erros(HttpServletResponse response, Map<String, String> erros) throws IOException {
+        Map<String, Object> body = new LinkedHashMap<>();
+        body.put("success", false);
+        body.put("message", "Corrija os campos destacados.");
+        body.put("erros", erros);
+        write(response, HttpServletResponse.SC_BAD_REQUEST, body);
+    }
 }

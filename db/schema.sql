@@ -15,6 +15,8 @@
 --     aplicacao grava a categoria sempre em minusculas;
 --   * tabelas criadas com IF NOT EXISTS, colunas essenciais NOT NULL e CHECKs
 --     de preco/estoque/quantidade nao negativos;
+--   * Pedido ganhou status, criado_em e total; Pedido_Produto guarda preco_unitario; Comprador ganhou cpf.
+--     (Bancos MySQL criados com a versao anterior precisam de ALTER TABLE equivalente.)
 --   * o INSERT do vendedor ficticio (senha em texto puro) foi removido: senhas
 --     agora sao guardadas como hash BCrypt (60 caracteres, cabem em VARCHAR(100)).
 --
@@ -29,7 +31,8 @@ CREATE TABLE IF NOT EXISTS Comprador (
     prontuario VARCHAR(10)  NOT NULL PRIMARY KEY,
     email      VARCHAR(100) NOT NULL UNIQUE,
     senha      VARCHAR(100) NOT NULL,           -- hash BCrypt
-    nome       VARCHAR(75)
+    nome       VARCHAR(75),
+    cpf        VARCHAR(11) UNIQUE               -- opcional; nos dados de demonstracao e sempre ficticio
 );
 
 -- Vendedor (responsavel pela cantina)
@@ -55,16 +58,22 @@ CREATE TABLE IF NOT EXISTS Produto (
 
 -- Pedido realizado por um comprador
 CREATE TABLE IF NOT EXISTS Pedido (
-    id                   INT         NOT NULL PRIMARY KEY AUTO_INCREMENT,
-    comprador_prontuario VARCHAR(10) NOT NULL,
+    id                   INT           NOT NULL PRIMARY KEY AUTO_INCREMENT,
+    comprador_prontuario VARCHAR(10)   NOT NULL,
+    status               VARCHAR(12)   NOT NULL DEFAULT 'PENDENTE',
+    criado_em            TIMESTAMP     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    total                DECIMAL(10,2) NOT NULL DEFAULT 0,   -- calculado no servidor
+    CONSTRAINT ck_pedido_status CHECK (status IN ('PENDENTE', 'EM_PREPARO', 'PRONTO', 'ENTREGUE', 'CANCELADO')),
+    CONSTRAINT ck_pedido_total  CHECK (total >= 0),
     CONSTRAINT fk_pedido_comprador FOREIGN KEY (comprador_prontuario) REFERENCES Comprador(prontuario)
 );
 
 -- Itens do pedido (um produto aparece no maximo uma vez por pedido)
 CREATE TABLE IF NOT EXISTS Pedido_Produto (
-    pedido_id  INT NOT NULL,
-    produto_id INT NOT NULL,
-    quantidade INT NOT NULL DEFAULT 1,
+    pedido_id      INT           NOT NULL,
+    produto_id     INT           NOT NULL,
+    quantidade     INT           NOT NULL DEFAULT 1,
+    preco_unitario DECIMAL(10,2) NOT NULL DEFAULT 0,   -- preco do produto no momento da compra
     PRIMARY KEY (pedido_id, produto_id),
     CONSTRAINT fk_pp_pedido  FOREIGN KEY (pedido_id)  REFERENCES Pedido(id),
     CONSTRAINT fk_pp_produto FOREIGN KEY (produto_id) REFERENCES Produto(id),

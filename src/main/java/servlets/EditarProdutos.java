@@ -1,17 +1,24 @@
 package servlets;
 
 import java.io.IOException;
+import java.sql.SQLException;
 
 import dao.ProductDao;
 import jakarta.servlet.ServletException;
+import jakarta.servlet.annotation.MultipartConfig;
 import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
-import model.Produto;
+import utils.ImageType;
 
-/** Edicao dos dados de um produto (vendedor). A imagem nao e alterada aqui. */
+/** Edicao dos dados de um produto (vendedor); a imagem so e trocada se um novo arquivo for enviado. */
 @WebServlet("/editar-produto")
+@MultipartConfig(
+    fileSizeThreshold = 512 * 1024,
+    maxFileSize = ImageType.MAX_BYTES,
+    maxRequestSize = ImageType.MAX_BYTES + 64 * 1024
+)
 public class EditarProdutos extends HttpServlet {
     private static final long serialVersionUID = 1L;
 
@@ -20,31 +27,26 @@ public class EditarProdutos extends HttpServlet {
     @Override
     protected void doPost(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
-        request.setCharacterEncoding("UTF-8");
+        int id;
         try {
-            int id = Integer.parseInt(request.getParameter("id"));
-            String nome = request.getParameter("nome");
-            String descricao = request.getParameter("descricao");
-            float preco = Float.parseFloat(request.getParameter("preco"));
-            int estoque = Integer.parseInt(request.getParameter("estoque"));
-            Produto.Categoria categoria = Produto.Categoria.valueOf(request.getParameter("categoria").trim().toUpperCase());
-
-            if (nome == null || nome.isBlank() || preco < 0 || estoque < 0) {
-                Json.result(response, HttpServletResponse.SC_BAD_REQUEST, false,
-                        "Informe um nome e valores de preço e estoque não negativos.");
-                return;
-            }
-
-            Produto produto = new Produto(nome.trim(), descricao, preco, estoque, categoria, null);
-            produto.setId(id);
-            if (productDao.atualizar(produto)) {
+            id = Integer.parseInt(request.getParameter("id"));
+        } catch (NumberFormatException e) {
+            Json.result(response, HttpServletResponse.SC_BAD_REQUEST, false, "Produto inválido.");
+            return;
+        }
+        ProdutoForm form = ProdutoForm.ler(request);
+        if (!form.erros.isEmpty()) {
+            Json.erros(response, form.erros);
+            return;
+        }
+        form.produto.setId(id);
+        try {
+            if (productDao.atualizar(form.produto)) {
                 Json.result(response, HttpServletResponse.SC_OK, true, "Produto atualizado.");
             } else {
                 Json.result(response, HttpServletResponse.SC_NOT_FOUND, false, "Produto não encontrado.");
             }
-        } catch (NullPointerException | IllegalArgumentException e) {
-            Json.result(response, HttpServletResponse.SC_BAD_REQUEST, false, "Dados do produto inválidos.");
-        } catch (Exception e) {
+        } catch (SQLException e) {
             e.printStackTrace();
             Json.result(response, HttpServletResponse.SC_INTERNAL_SERVER_ERROR, false, "Erro ao atualizar o produto.");
         }
