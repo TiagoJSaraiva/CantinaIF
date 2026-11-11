@@ -30,7 +30,11 @@
 		</cookie-config>
 	</session-config>
 
-	<!-- Ordem dos filtros: cabecalhos de seguranca, autorizacao por perfil e token CSRF -->
+	<!-- Ordem dos filtros: limite de corpo, cabecalhos de seguranca, autorizacao por perfil e token CSRF -->
+	<filter>
+		<filter-name>BodyLimitFilter</filter-name>
+		<filter-class>servlets.BodyLimitFilter</filter-class>
+	</filter>
 	<filter>
 		<filter-name>SecurityHeadersFilter</filter-name>
 		<filter-class>servlets.SecurityHeadersFilter</filter-class>
@@ -51,6 +55,10 @@
 		<filter-name>CsrfFilter</filter-name>
 		<filter-class>servlets.CsrfFilter</filter-class>
 	</filter>
+	<filter-mapping>
+		<filter-name>BodyLimitFilter</filter-name>
+		<url-pattern>/*</url-pattern>
+	</filter-mapping>
 	<filter-mapping>
 		<filter-name>SecurityHeadersFilter</filter-name>
 		<url-pattern>/*</url-pattern>
@@ -87,6 +95,10 @@
 	</error-page>
 	<error-page>
 		<error-code>405</error-code>
+		<location>/erro.jsp</location>
+	</error-page>
+	<error-page>
+		<error-code>413</error-code>
 		<location>/erro.jsp</location>
 	</error-page>
 	<error-page>

@@ -17,6 +17,44 @@ DEFAULT_PROXIES='10\.\d+\.\d+\.\d+|192\.168\.\d+\.\d+|172\.(1[6-9]|2[0-9]|3[01])
 # 1) porta
 sed -i 's/port="8080"/port="${http.port:-8080}"/' "$CONF"
 
+# 1b) conector HTTP: limites de corpo/cabecalho/parametros e tempos limite contra clientes lentos
+#     (substitui o primeiro <Connector> ativo; idempotente por marcadores)
+CONN="$(mktemp)"
+cat > "$CONN" <<'XML'
+    <Connector port="${http.port:-8080}" protocol="HTTP/1.1"
+               redirectPort="8443"
+               connectionTimeout="10000"
+               connectionUploadTimeout="5000"
+               disableUploadTimeout="false"
+               keepAliveTimeout="10000"
+               maxKeepAliveRequests="100"
+               maxThreads="60"
+               acceptCount="50"
+               maxHttpHeaderSize="8192"
+               maxPostSize="16384"
+               maxSwallowSize="65536"
+               maxParameterCount="60"
+               />
+XML
+TMPC="$(mktemp)"
+awk -v cf="$CONN" '
+  /CANTINA_CONNECTOR_BEGIN/ { print; while ((getline l < cf) > 0) print l; skip = 1; feito = 1; next }
+  /CANTINA_CONNECTOR_END/   { skip = 0 }
+  skip == 1                 { next }
+  !feito && /<Connector port="(8080|\$\{http\.port)/ {
+    print "<!-- CANTINA_CONNECTOR_BEGIN -->"
+    while ((getline l < cf) > 0) print l
+    print "<!-- CANTINA_CONNECTOR_END -->"
+    feito = 1
+    emconector = ($0 ~ /\/>/) ? 0 : 1
+    next
+  }
+  emconector { if ($0 ~ /\/>/) emconector = 0; next }
+  { print }
+' "$CONF" > "$TMPC"
+cat "$TMPC" > "$CONF"
+rm -f "$CONN" "$TMPC"
+
 # 2) marcadores (inseridos uma unica vez, antes do </Host>)
 if ! grep -q 'CANTINA_VALVES_BEGIN' "$CONF"; then
   sed -i 's#</Host>#<!-- CANTINA_VALVES_BEGIN -->\n<!-- CANTINA_VALVES_END -->\n</Host>#' "$CONF"

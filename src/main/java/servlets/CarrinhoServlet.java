@@ -50,6 +50,12 @@ public class CarrinhoServlet extends HttpServlet {
 			produtoId = lerInt(json, "produtoId");
 			quantidade = lerInt(json, "quantidade");
 		} catch (RuntimeException e) {
+			for (Throwable t = e; t != null; t = t.getCause()) {
+				if (t instanceof BodyLimitFilter.CorpoGrandeDemaisException) {
+					Json.result(response, 413, false, "Requisição grande demais.");
+					return;
+				}
+			}
 			Json.result(response, HttpServletResponse.SC_BAD_REQUEST, false, "Requisição inválida.");
 			return;
 		}
