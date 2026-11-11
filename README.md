@@ -39,16 +39,16 @@ The project was later modernized (security, order domain, demo data, responsive 
 **Student (buyer)**
 - Sign up with institutional ID (*prontuário*), name, e-mail and password; login/logout.
 - Storefront with text search and category filter (savory, snacks, sweets, drinks). Sold-out products are shown but cannot be bought; "last unit" badge when stock is 1.
-- Cart with quantity change, item removal, subtotal and total; stock is checked against what is already in the cart.
-- Checkout creates the order and decrements stock in the same database transaction. If any item lacks stock, nothing is saved and the buyer is told which item.
+- Cart with quantity change, item removal, subtotal and total (up to 99 units per item); stock is checked against what is already in the cart.
+- Checkout creates the order and decrements stock in the same database transaction. If any item lacks stock, nothing is saved and the buyer is told which item. If a price changed since the item entered the cart, nothing is saved either: the cart is refreshed and the buyer must confirm again.
 - "My orders": history with status, items, unit prices at purchase time and total.
 - Cancel an order while it is still *Pending* (stock is returned).
 
 **Seller (canteen operator)**
 - Orders panel grouped/filterable by status (in progress, pending, preparing, ready, delivered, canceled) with counts and periodic refresh.
 - Explicit status actions: *Pending → Preparing → Ready → Delivered*; cancel from any non-final status (returns stock). Invalid transitions are rejected by the server.
-- Product management: create, edit (name, description, price, category, image), quick stock adjustment, search and category filter.
-- Image upload (JPEG, PNG, GIF or WebP, up to 2 MB) validated on the server.
+- Product management: create, edit (name, description, price, category, image), quick stock adjustment, search and category filter. Stock edits are compare-and-swap in SQL: if an order changed the stock in the meantime, the panel reports a conflict (HTTP 409) instead of overwriting it.
+- Image upload (JPEG, PNG or GIF, up to 2 MB). Every image is decoded, resized (longest side 640 px) and re-encoded as JPEG (up to 150 KB, metadata stripped) on the server; files that cannot be decoded are rejected. WebP is not supported.
 
 ## Demo accounts
 
@@ -58,6 +58,16 @@ These are fictitious demo accounts, not secrets. They exist in demo mode (embedd
 |------|-------------------|----------|
 | Student | `CJ3000001` | `demo1234` |
 | Seller | `VEND001` | `demo1234` |
+
+## The public demo: what to expect
+
+If a public demo is deployed, keep in mind (all of this is by design, to keep a free, internet-facing demo safe and cheap):
+
+- **Shared accounts with a public password.** Anyone can sign in as the demo student or the demo seller and create, edit or cancel anything. Do not type real personal data; everything is fictitious.
+- **Limits** (defaults in demo mode, configurable, see the environment table): 60 products, 200 sign-ups, 100 open orders, 12 MB of images in total. When a limit is reached the app says so ("limite da demonstração atingido; a base é restaurada periodicamente"). There are also request-rate limits for write operations and for sign-ups and logins.
+- **Periodic restore.** The database is in memory and goes back to the seed at every restart and every `CANTINA_DEMO_RESET_HOURS` hours (default 6). Anything created by visitors disappears.
+- **Sessions at reset.** A session started before a restore is invalidated: the next click sends the user to the login page with the message "A demonstração foi restaurada; entre novamente." (an account created before the restore no longer exists).
+- **Uploads are re-encoded** (JPEG, up to 640 px / 150 KB), so a visitor cannot fill the memory with large files.
 
 ## Screenshots
 
@@ -95,7 +105,7 @@ docs/screenshots/             README screenshots
 Dockerfile, docker-compose.yml, render.yaml, .env.example, .github/workflows/ci.yml
 ```
 
-Request flow: `SecurityHeadersFilter` (CSP and friends) → `AuthFilter` (role-based access: seller routes, buyer routes) → `CsrfFilter` (token on every state-changing request) → servlet → DAO → `Database` pool. Business rules (stock, status transitions) live in `PedidoDAO` inside transactions. JSON endpoints return DTOs (never raw entities or image bytes).
+Request flow: `SecurityHeadersFilter` (CSP and friends) → `DbGateFilter` (read lock, so nobody sees the database in the middle of a demo restore) → `WriteRateFilter` (rate limit for write operations) → `AuthFilter` (role-based access: seller routes, buyer routes; also drops sessions from before a restore) → `CsrfFilter` (token on every state-changing request) → servlet → DAO → `Database` pool. Business rules (stock, status transitions) live in `PedidoDAO` inside transactions. JSON endpoints return DTOs (never raw entities or image bytes).
 
 ## Data model
 
@@ -168,7 +178,7 @@ docker build -t cantinaif .
 docker run --rm -p 8080:8080 cantinaif
 ```
 
-The image publishes the app at `/` (`ROOT.war`), honors the `PORT` variable, runs as a non-root user and caps the heap with `-XX:MaxRAMPercentage`. See [limitations](#implementation-notes-and-known-limitations): the Dockerfile has not been executed yet.
+The image publishes the app at `/` (`ROOT.war`), honors the `PORT` variable, runs as a non-root user (`app`) and limits memory (`-XX:MaxRAMPercentage=60`, `-XX:MaxMetaspaceSize=192m`, `-XX:+ExitOnOutOfMemoryError`, so the platform restarts the service if memory runs out). At every start `docker-entrypoint.sh` edits Tomcat's `conf/server.xml` idempotently (port, `ErrorReportValve` without report/version and, only when `CANTINA_BEHIND_PROXY=true`, a `RemoteIpValve`); the proxy regex is never passed through `JAVA_OPTS`. The image was built and run locally (see [implementation notes](#implementation-notes-and-known-limitations)) and a CI job builds it and runs a smoke test on every push.
 
 ### With MySQL (`docker compose`)
 
@@ -192,6 +202,10 @@ Create the database (`CREATE DATABASE cantinaif CHARACTER SET utf8mb4 COLLATE ut
 | `CANTINA_SEED_IF_EMPTY` | `false` | `true` loads the demo data at boot if there is no seller (any database; deletes nothing). |
 | `CANTINA_DEMO_RESET_HOURS` | `6` | Demo mode only: hours between automatic restores of the seed data (accepts fractions; `0` disables). |
 | `CANTINA_SEED_CONFIRMAR` | _(unset)_ | `SIM` confirms the manual seed command (alternative to `--confirmar-apagar`). |
+| `CANTINA_MAX_PRODUTOS` | `60` in demo mode, unlimited otherwise | Maximum number of products (`0` = no limit). |
+| `CANTINA_MAX_COMPRADORES` | `200` in demo mode, unlimited otherwise | Maximum number of registered students. |
+| `CANTINA_MAX_PEDIDOS_ABERTOS` | `100` in demo mode, unlimited otherwise | Maximum number of open orders (pending, preparing or ready). |
+| `CANTINA_MAX_BYTES_IMAGENS` | `12582912` (12 MB) in demo mode, unlimited otherwise | Maximum total size of stored product images. |
 | `CANTINA_COOKIE_SECURE` | `false` | `true` marks the session cookie `Secure` (use behind HTTPS). |
 | `CANTINA_BEHIND_PROXY` | `false` | Docker image: `true` makes Tomcat trust `X-Forwarded-For`/`X-Forwarded-Proto` from trusted proxies. |
 | `CANTINA_TRUSTED_PROXIES` | private ranges | Docker image: Java regex of trusted proxy IPs. |
@@ -206,15 +220,15 @@ In demo mode the application boots populated, so there is always something to sh
 
 Contents:
 - **30 products** (8 savory, 8 snacks, 7 sweets, 7 drinks) with realistic names, descriptions and prices in BRL. Edge cases: 3 sold-out products, 1 product with stock 1, 1 very long name, 1 product without an image.
-- **Original illustrations** for 29 products (PNG, up to 30 KB each, versioned in `src/main/resources/seed/img/`). No photos or third-party artwork; brand names were avoided.
-- **1 seller and 19 students** (the demo student, 15 with orders and 3 with none). Names are fictitious, e-mails use the `.demo` domain and CPF numbers are generated (valid check digits, not real people).
-- **50 orders** over the last 30 days in every status, with totals consistent with unit prices; the demo student has a varied history.
+- **Original illustrations** for 29 products (PNG, up to 30 KB each, versioned in `src/main/resources/seed/img/`; the seed loads them as they are, without the upload re-encoding). No photos or third-party artwork; brand names were avoided.
+- **1 seller and 19 students** (the demo student, 15 with orders and 3 with none). Names are fictitious and e-mails use the `.demo` domain. CPF numbers are generated synthetically (they have valid check digits, but no relation to real people; any coincidence with a real number is accidental). The CPF is stored in a database column only and is not shown on any screen or returned by any API.
+- **50 orders** over the last 30 days in every status, with totals consistent with unit prices; the demo student has a varied history. Stock follows the real rule (an order decrements stock when created, cancelling returns it): the stored stock is the final one and the seeder computes the initial stock as final + units in non-canceled orders, so no open order exceeds the initial stock.
 
 All data is fictitious.
 
 How it is restored:
 - every restart of the application (the H2 database is in memory);
-- periodically, every `CANTINA_DEMO_RESET_HOURS` hours (default 6);
+- periodically, every `CANTINA_DEMO_RESET_HOURS` hours (default 6). The restore is atomic: hashes and images are prepared first, then everything is deleted and reinserted in one transaction while requests wait on a lock; sessions from before the restore are invalidated;
 - manually, against the configured database (this **deletes** products, buyers, sellers and orders):
 
 ```bash
@@ -236,9 +250,9 @@ java tools/GerarImagensSeed.java src/main/resources/seed/img
 ./mvnw verify
 ```
 
-46 JUnit 5 tests run on in-memory H2: DAOs (users, sellers, products, orders), BCrypt, order domain (total computed on the server, stock decrement, insufficient stock with rollback, cancellation returning stock, invalid status transitions), seed (running twice yields identical data, totals and stock consistent), login rate limiter, upload type detection and sign-up validation.
+88 JUnit 5 tests run on in-memory H2 (and Mockito for the filters): DAOs (users, sellers, products, orders), BCrypt, order domain (total computed on the server, stock decrement, insufficient stock with rollback, price change at checkout, cancellation returning stock, invalid status transitions, compare-and-swap stock edits), cart (overflow, concurrency), seed (running twice yields identical data; totals, stock and initial stock consistent; concurrent readers and checkouts during repeated restores never see an empty or inconsistent database), `AuthFilter` and `CsrfFilter`, login guard (per account and per IP), rate limiter, demo caps, image resizing and type detection, and sign-up validation.
 
-GitHub Actions (`.github/workflows/ci.yml`) runs `./mvnw -B verify` with JDK 21 on every push and pull request to `main` and stores the WAR as an artifact. There are no automated browser tests.
+GitHub Actions (`.github/workflows/ci.yml`) has two jobs on every push and pull request to `main`: `./mvnw -B verify` with JDK 21 (the WAR is stored as an artifact) and a Docker job that builds the image, runs it with `PORT=10000`, `CANTINA_BEHIND_PROXY=true` and a 512 MB limit, and runs `tools/smoke-proxy.sh` (health check, `Secure` cookie, HSTS, real client IP in the login limiter, error page without server details) plus a non-root check. `tools/test-entrypoint.sh` runs the real entrypoint against a local Tomcat 10.1 copy (no Docker needed). There are no automated browser tests.
 
 ## Deploying to Render
 
@@ -254,7 +268,9 @@ Free plan caveats (stated honestly):
 - the file system is **ephemeral** and the database is in memory, so **data returns to the seed at every restart** (and every 6 hours while running);
 - the free instance is small (512 MB); the image limits the Java heap accordingly.
 
-Behind Render's HTTPS proxy: Tomcat's `RemoteIpValve` is in the image and only trusts `X-Forwarded-*` headers when `CANTINA_BEHIND_PROXY=true` and the connection comes from a trusted (private) proxy address. That makes the session cookie `Secure`, and the login rate limiter uses the real client IP. This was verified locally by simulating the headers with `curl`; it has not been verified on Render itself.
+Behind Render's HTTPS proxy: with `CANTINA_BEHIND_PROXY=true` the entrypoint adds Tomcat's `RemoteIpValve`, which honors `X-Forwarded-For` / `X-Forwarded-Proto` only when the connection comes from a trusted proxy address (private ranges by default; override with `CANTINA_TRUSTED_PROXIES`). Then `request.isSecure()` is true (so the session cookie is `Secure` and HSTS is sent) and the login limiter sees the real client IP.
+
+What was actually tested: the image was built and run locally with Docker (`--memory=512m`, `PORT=10000`, `CANTINA_BEHIND_PROXY=true`, `CANTINA_COOKIE_SECURE=true`), and requests with simulated `X-Forwarded-*` headers from the Docker gateway (a private address) showed the `Secure` cookie, HSTS and per-client-IP login limiting; the entrypoint was also run against a local Tomcat 10.1.28. What was **not** tested: Render itself. Whether Render's edge addresses fall inside the default trusted ranges is unverified; if the cookie is not `Secure` or all visitors share one IP on Render, set `CANTINA_TRUSTED_PROXIES` accordingly.
 
 ## Security
 
@@ -262,9 +278,9 @@ Behind Render's HTTPS proxy: Tomcat's `RemoteIpValve` is in the image and only t
 - Role-based access control in `AuthFilter` for pages and APIs (seller × buyer), 401/403 for APIs, redirect to login for pages.
 - CSRF: per-session token required on every POST/PUT/DELETE (`X-CSRF-Token` header or `_csrf` field).
 - Headers: strict Content-Security-Policy (no inline scripts or styles), `X-Frame-Options: DENY`, `X-Content-Type-Options: nosniff`, `Referrer-Policy`, `Permissions-Policy`, HSTS on HTTPS.
-- Session cookie `HttpOnly` and `SameSite=Lax`, `Secure` when configured or when the request is HTTPS.
-- Login rate limit: 8 failed attempts per 5 minutes per client IP (in memory, per instance).
-- Uploads: size limit (2 MB), real type detected from the file's magic bytes (JPEG/PNG/GIF/WebP), served with the detected type and `nosniff`.
+- Session cookie `HttpOnly` and `SameSite=Lax`, `Secure` when configured or when the request is HTTPS (as resolved by the server, not by a raw header). The CSRF token is renewed at login. Anonymous visitors only get a session on the login and sign-up pages, and it lasts 5 minutes; at most 5000 sessions are active at once and sessions are not persisted across restarts. A POST with the wrong role gets 403.
+- Login rate limit in two layers: 5 failures per 3 minutes per account (prontuário) and a much higher ceiling of 40 failures per 5 minutes per client IP, so people behind one NAT are not locked out together. In demo mode the two demo accounts (public password) are exempt from the per-account lock (they remain under the per-IP ceiling). Known trade-off: someone can lock another person's account for a few minutes by failing on purpose. Write operations are also rate-limited per IP (90 per minute; 6 sign-ups per 10 minutes). All in memory, per instance.
+- Uploads: size limit (2 MB), type detected from the magic bytes, then decoded, resized and re-encoded as JPEG (metadata dropped; very large pixel counts are rejected before decoding); served with `nosniff` and an `ETag`.
 - Output escaping everywhere (`<c:out>`, `textContent`); prepared statements for all SQL; friendly error pages with no stack traces.
 
 ## Implementation notes and known limitations
@@ -272,8 +288,7 @@ Behind Render's HTTPS proxy: Tomcat's `RemoteIpValve` is in the image and only t
 - No online payment: the order is reserved and paid at the counter.
 - Stock is decremented when the order is created and returned on cancellation (atomic `UPDATE ... WHERE estoque >= ?` inside the order transaction).
 - The sign-up form asks for ID, name, e-mail and password. The CPF column exists but is only filled by the demo data. The original idea of validating IDs against the institution's records and supporting several campuses/canteens is **not implemented**: there is a single canteen.
-- The Docker image and `docker compose` have **not been run** (Docker was unavailable during development); only `docker compose config`, the entrypoint syntax and the Tomcat property substitution used by the image were checked.
-- The seed was tested only on H2. The MySQL path (`AUTO_INCREMENT` restart) has not been exercised.
+- Docker was exercised locally (Docker 28): the image builds and runs as non-root with a 512 MB limit (about 150 MB at rest and about 200 MB after 30 uploads of 1.4 MB images, which were capped by the demo limits), and `docker compose` with MySQL 8.4 starts, loads the seed (`CANTINA_SEED_IF_EMPTY`), lets the seller sign in and creates products with the next id after the seed. It has not been run on Render. The seed's manual command (`exec:java`) was only run against H2 files; on MySQL it was exercised through the compose boot path.
 - Databases created with the old schema need `ALTER TABLE` statements: add `Comprador.cpf VARCHAR(11) UNIQUE`; add `Pedido.status VARCHAR(12) NOT NULL DEFAULT 'PENDENTE'`, `Pedido.criado_em TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP` and `Pedido.total DECIMAL(10,2) NOT NULL DEFAULT 0`; add `Pedido_Produto.preco_unitario DECIMAL(10,2) NOT NULL DEFAULT 0`. Old plain-text passwords are not valid BCrypt hashes, so those users must be re-created.
 - The cart lives in the HTTP session (in memory); the login rate limiter is per instance; images are stored as BLOBs; lists are not paginated; the seller panel refreshes by polling.
 - Dates are shown in the browser's time zone.
