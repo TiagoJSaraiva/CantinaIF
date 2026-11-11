@@ -1,15 +1,288 @@
 # CantinaIF
-## Projeto Final de CJOWEB2 - IFSP-CJO 2025
 
-  <p>Este projeto visa desenvolver uma aplicação web para auxiliar o acesso às cantinas de Institutos Federais (IFs), que muitas vezes se encontram congestionadas em horário de intervalo ou troca de aulas. Este projeto utiliza como principal ferramenta o acesso dos alunos aos seus celulares ou computadores durante a aula, pois assim eles podem acessar um site onde o responsável pela cantina coloca os salgados, doces, bebidas e lanches especiais disponíveis no dia. Com esse sistema, os alunos e colaboradores da instituição podem mandar um pedido informando ao vendedor que possuem interesse em comprar determinado item com antecedência.</p>
-  <p>Um sistema como esse oferece várias vantagens. Um exemplo é que o vendedor pode começar a preparar os alimentos enquanto os potenciais compradores ainda estão em suas aulas, e isso ajuda o vendedor a entender quantos e quais produtos deixar prontos, e também permite que os compradores deixem seu lanche reservado ao pedirem com antecedência. A aplicação NÃO tem relação com delivery de pedidos!</p>
+[![CI](https://github.com/TiagoJSaraiva/CantinaIF/actions/workflows/ci.yml/badge.svg)](https://github.com/TiagoJSaraiva/CantinaIF/actions/workflows/ci.yml)
 
-#### Funcionamento da aplicação
-  - Os usuários devem fornecer seu prontuário institucional, CPF e nome para que o cadastro seja realizado com sucesso; os documentos como prontuário e CPF serão verificados com as informações da instituição relacionada para confirmar que seja realmente um aluno ou colaborador, pois esse é um sistema com escopo fechado, funcionando apenas dentro dos IFs e não tendo relação com clientes de fora. Nem mesmo o aluno de uma faculdade que usa esse sistema porá usar seu login para comprar em uma faculdade diferente da sua, uma vez que cada cantina terá seu sistema fechado para si e poderá ser acessada apenas pelos alunos e colaboradores de sua mesma unidade.<br><br>
-    **De acordo com o prontuário usado para login, o sistema direciona o usuário para a cantina correspondente.*
+> Leia em português: [LEIA-ME.md](LEIA-ME.md)
 
-  - Usuários do tipo **Comprador** têm acesso a uma página inicial que mostra os itens disponíveis na cantina de sua instituição.
+Pre-ordering system for a school canteen at an IFSP campus (Instituto Federal de São Paulo): students browse the day's products on their phone, reserve items ahead of the break, and pick them up (and pay) at the counter; the canteen operator manages products, stock and orders.
 
-  - Usuários do tipo **Vendedor** têm acesso a uma página onde podem editar as características dos produtos disponíveis para pedido, uma página de visualização geral dos produtos disponíveis em seu estabelecimento e uma página onde ele pode monitorar de forma rápida e prática os pedidos, com o objetivo de facilitar o monitoramento.
+Live demo: _pending deployment_ <!-- DEMO_URL -->
 
-  - Cada produto deve ter um nome, uma descrição (onde pode conter os ingredientes ou outras informações), quantidade em estoque e valor do produto.
+![Storefront](docs/screenshots/vitrine.png)
+
+## Table of contents
+
+1. [Overview](#overview)
+2. [Features](#features)
+3. [Demo accounts](#demo-accounts)
+4. [Screenshots](#screenshots)
+5. [Stack and architecture](#stack-and-architecture)
+6. [Data model](#data-model)
+7. [Prerequisites](#prerequisites)
+8. [Running it](#running-it)
+9. [Environment variables](#environment-variables)
+10. [Demo data](#demo-data)
+11. [Tests and CI](#tests-and-ci)
+12. [Deploying to Render](#deploying-to-render)
+13. [Security](#security)
+14. [Implementation notes and known limitations](#implementation-notes-and-known-limitations)
+15. [Credits](#credits)
+
+## Overview
+
+CantinaIF started as the final project of the *CJOWEB2* course (IFSP, Campos do Jordão campus, 2025). Canteens at federal institutes get crowded during breaks; with CantinaIF the student reserves the order during class and the seller starts preparing it early. It is **not** a delivery system and there is **no online payment**: payment happens at the counter when the order is picked up.
+
+The project was later modernized (security, order domain, demo data, responsive UI, Docker, CI) while keeping the original technology choices: plain Servlets/JSP, JDBC, vanilla JavaScript, no frameworks.
+
+## Features
+
+**Student (buyer)**
+- Sign up with institutional ID (*prontuário*), name, e-mail and password; login/logout.
+- Storefront with text search and category filter (savory, snacks, sweets, drinks). Sold-out products are shown but cannot be bought; "last unit" badge when stock is 1.
+- Cart with quantity change, item removal, subtotal and total; stock is checked against what is already in the cart.
+- Checkout creates the order and decrements stock in the same database transaction. If any item lacks stock, nothing is saved and the buyer is told which item.
+- "My orders": history with status, items, unit prices at purchase time and total.
+- Cancel an order while it is still *Pending* (stock is returned).
+
+**Seller (canteen operator)**
+- Orders panel grouped/filterable by status (in progress, pending, preparing, ready, delivered, canceled) with counts and periodic refresh.
+- Explicit status actions: *Pending → Preparing → Ready → Delivered*; cancel from any non-final status (returns stock). Invalid transitions are rejected by the server.
+- Product management: create, edit (name, description, price, category, image), quick stock adjustment, search and category filter.
+- Image upload (JPEG, PNG, GIF or WebP, up to 2 MB) validated on the server.
+
+## Demo accounts
+
+These are fictitious demo accounts, not secrets. They exist in demo mode (embedded H2 database) and are shown on the login page.
+
+| Role | ID (*prontuário*) | Password |
+|------|-------------------|----------|
+| Student | `CJ3000001` | `demo1234` |
+| Seller | `VEND001` | `demo1234` |
+
+## Screenshots
+
+| Login | Storefront |
+|---|---|
+| ![Login](docs/screenshots/login.png) | ![Storefront](docs/screenshots/vitrine.png) |
+| **Cart** | **My orders** |
+| ![Cart](docs/screenshots/carrinho.png) | ![My orders](docs/screenshots/meus-pedidos.png) |
+| **Seller: orders** | **Seller: products** |
+| ![Seller orders](docs/screenshots/painel-pedidos.png) | ![Seller products](docs/screenshots/painel-produtos.png) |
+
+Screenshots were captured from the running application (demo mode) in a headless Chrome at 1280 px width.
+
+## Stack and architecture
+
+- **Java 21**, **Jakarta Servlet 6 / JSP + JSTL 3**, WAR packaging, Tomcat 10.1+ (tested on 10.1.28).
+- **JDBC** (no ORM) with a **HikariCP** pool, configured only through environment variables.
+- **H2** (in-memory, MySQL mode) by default; **MySQL 8** when `CANTINA_DB_URL` is set. A single `db/schema.sql` works on both.
+- **BCrypt** (`at.favre.lib:bcrypt`) for passwords, **Gson** for JSON, **JUnit 5** for tests, **Maven Wrapper** (Maven 3.9.11).
+- Front end: JSP pages + vanilla JavaScript (`fetch`) + a single CSS file, mobile-first, no frameworks.
+
+```
+db/schema.sql                 database schema (MySQL 8 and H2)
+src/main/java/
+  dao/                        JDBC data access (users, products, orders) and business-rule exceptions
+  model/                      domain objects, DTOs for JSON, order status enum
+  seed/DemoDataSeeder.java    deterministic demo data (boot in H2, manual command elsewhere)
+  servlets/                   controllers, JSON endpoints and the filters (see below)
+  utils/                      Database (pool), config, BCrypt helper, login rate limiter, demo reset, image sniffing
+src/main/resources/seed/img/  demo product illustrations (PNG)
+src/main/webapp/              JSP pages, WEB-INF/jspf (head/navbar), css/app.css, js/, img/
+src/test/java/                JUnit 5 tests (run on H2)
+tools/GerarImagensSeed.java   generates the demo illustrations (Java2D)
+docs/screenshots/             README screenshots
+Dockerfile, docker-compose.yml, render.yaml, .env.example, .github/workflows/ci.yml
+```
+
+Request flow: `SecurityHeadersFilter` (CSP and friends) → `AuthFilter` (role-based access: seller routes, buyer routes) → `CsrfFilter` (token on every state-changing request) → servlet → DAO → `Database` pool. Business rules (stock, status transitions) live in `PedidoDAO` inside transactions. JSON endpoints return DTOs (never raw entities or image bytes).
+
+## Data model
+
+```mermaid
+erDiagram
+    COMPRADOR ||--o{ PEDIDO : places
+    PEDIDO ||--|{ PEDIDO_PRODUTO : contains
+    PRODUTO ||--o{ PEDIDO_PRODUTO : "appears in"
+
+    COMPRADOR {
+        varchar prontuario PK
+        varchar email UK
+        varchar senha "BCrypt hash"
+        varchar nome
+        varchar cpf UK "optional, fictitious in demo data"
+    }
+    VENDEDOR {
+        varchar prontuario PK
+        varchar email UK
+        varchar senha "BCrypt hash"
+    }
+    PRODUTO {
+        int id PK
+        varchar nome
+        varchar descricao
+        decimal preco
+        int estoque
+        varchar categoria "salgado, doce, lanche, bebida"
+        blob imagem
+    }
+    PEDIDO {
+        int id PK
+        varchar comprador_prontuario FK
+        varchar status "PENDENTE, EM_PREPARO, PRONTO, ENTREGUE, CANCELADO"
+        timestamp criado_em
+        decimal total "computed on the server"
+    }
+    PEDIDO_PRODUTO {
+        int pedido_id PK
+        int produto_id PK
+        int quantidade
+        decimal preco_unitario "price at purchase time"
+    }
+```
+
+`VENDEDOR` is standalone (there is a single canteen). Money is stored as `DECIMAL(10,2)` and handled as `BigDecimal`. CHECK constraints enforce non-negative price/stock/total, quantity ≥ 1, the category list and the status list.
+
+## Prerequisites
+
+- JDK 21 (`JAVA_HOME` set).
+- To run the WAR without Docker: Tomcat 10.1+ (Jakarta namespace; Tomcat 9 does not work).
+- Optional: Docker (image and `docker compose`), MySQL 8.
+- Maven is not required: use the included wrapper (`./mvnw`, or `mvnw.cmd` on Windows).
+
+## Running it
+
+### Demo mode (no database)
+
+```bash
+./mvnw clean package
+# copy target/CantinaIF-0.0.1-SNAPSHOT.war to Tomcat's webapps/ (as CantinaIF.war for /CantinaIF, or ROOT.war for /)
+```
+
+Start Tomcat and open `http://localhost:8080/CantinaIF/` (or `/`). With no `CANTINA_DB_URL`, the app uses an in-memory H2 database, creates the schema and loads the demo data at boot. The context path is dynamic: every URL in the pages is relative.
+
+### Docker
+
+```bash
+docker build -t cantinaif .
+docker run --rm -p 8080:8080 cantinaif
+```
+
+The image publishes the app at `/` (`ROOT.war`), honors the `PORT` variable, runs as a non-root user and caps the heap with `-XX:MaxRAMPercentage`. See [limitations](#implementation-notes-and-known-limitations): the Dockerfile has not been executed yet.
+
+### With MySQL (`docker compose`)
+
+```bash
+cp .env.example .env     # set MYSQL_PASSWORD (required)
+docker compose up --build
+```
+
+Compose starts MySQL 8.4 (schema applied from `db/schema.sql` on first start, data in a named volume) and the app, with `CANTINA_SEED_IF_EMPTY=true` so the demo data is loaded only if the database has no seller yet.
+
+### Using an existing MySQL
+
+Create the database (`CREATE DATABASE cantinaif CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;`), apply `db/schema.sql`, and set `CANTINA_DB_URL`, `CANTINA_DB_USER` and `CANTINA_DB_PASSWORD` for Tomcat.
+
+## Environment variables
+
+| Variable | Default | Purpose |
+|---|---|---|
+| `CANTINA_DB_URL` | _(unset)_ | JDBC URL. Unset = embedded H2 in demo mode. |
+| `CANTINA_DB_USER` / `CANTINA_DB_PASSWORD` | _(unset)_ | Database credentials (not needed for H2). |
+| `CANTINA_SEED_IF_EMPTY` | `false` | `true` loads the demo data at boot if there is no seller (any database; deletes nothing). |
+| `CANTINA_DEMO_RESET_HOURS` | `6` | Demo mode only: hours between automatic restores of the seed data (accepts fractions; `0` disables). |
+| `CANTINA_SEED_CONFIRMAR` | _(unset)_ | `SIM` confirms the manual seed command (alternative to `--confirmar-apagar`). |
+| `CANTINA_COOKIE_SECURE` | `false` | `true` marks the session cookie `Secure` (use behind HTTPS). |
+| `CANTINA_BEHIND_PROXY` | `false` | Docker image: `true` makes Tomcat trust `X-Forwarded-For`/`X-Forwarded-Proto` from trusted proxies. |
+| `CANTINA_TRUSTED_PROXIES` | private ranges | Docker image: Java regex of trusted proxy IPs. |
+| `PORT` | `8080` | Docker image: HTTP port. |
+| `MYSQL_DATABASE`, `MYSQL_USER`, `MYSQL_PASSWORD` | `cantinaif`, `cantina`, _(required)_ | `docker compose` only. |
+
+Variables can also be given as JVM system properties with the same name (e.g. `-DCANTINA_DEMO_RESET_HOURS=1`). No credential is stored in the code or in `context.xml`.
+
+## Demo data
+
+In demo mode the application boots populated, so there is always something to show. The seeder (`seed.DemoDataSeeder`) is deterministic (fixed seed `20260610`), and all dates are relative to the moment it runs, so the data never looks stale.
+
+Contents:
+- **30 products** (8 savory, 8 snacks, 7 sweets, 7 drinks) with realistic names, descriptions and prices in BRL. Edge cases: 3 sold-out products, 1 product with stock 1, 1 very long name, 1 product without an image.
+- **Original illustrations** for 29 products (PNG, up to 30 KB each, versioned in `src/main/resources/seed/img/`). No photos or third-party artwork; brand names were avoided.
+- **1 seller and 19 students** (the demo student, 15 with orders and 3 with none). Names are fictitious, e-mails use the `.demo` domain and CPF numbers are generated (valid check digits, not real people).
+- **50 orders** over the last 30 days in every status, with totals consistent with unit prices; the demo student has a varied history.
+
+All data is fictitious.
+
+How it is restored:
+- every restart of the application (the H2 database is in memory);
+- periodically, every `CANTINA_DEMO_RESET_HOURS` hours (default 6);
+- manually, against the configured database (this **deletes** products, buyers, sellers and orders):
+
+```bash
+CANTINA_DB_URL=jdbc:mysql://localhost:3306/cantinaif CANTINA_DB_USER=... CANTINA_DB_PASSWORD=... \
+  ./mvnw -q compile exec:java -Dexec.args=--confirmar-apagar
+```
+
+Without `--confirmar-apagar` (or `CANTINA_SEED_CONFIRMAR=SIM`) the command only prints a warning and does nothing; without `CANTINA_DB_URL` it refuses to run.
+
+Regenerating the images (JDK 21, from the repository root):
+
+```bash
+java tools/GerarImagensSeed.java src/main/resources/seed/img
+```
+
+## Tests and CI
+
+```bash
+./mvnw verify
+```
+
+46 JUnit 5 tests run on in-memory H2: DAOs (users, sellers, products, orders), BCrypt, order domain (total computed on the server, stock decrement, insufficient stock with rollback, cancellation returning stock, invalid status transitions), seed (running twice yields identical data, totals and stock consistent), login rate limiter, upload type detection and sign-up validation.
+
+GitHub Actions (`.github/workflows/ci.yml`) runs `./mvnw -B verify` with JDK 21 on every push and pull request to `main` and stores the WAR as an artifact. There are no automated browser tests.
+
+## Deploying to Render
+
+The repository includes a Render Blueprint (`render.yaml`): one Docker web service named `cantinaif`, plan `free`, health check at `/health` (public, lightweight, no login, no database), auto-deploy on, and these variables: `CANTINA_COOKIE_SECURE=true`, `CANTINA_DEMO_RESET_HOURS=6` and `CANTINA_BEHIND_PROXY=true`. `CANTINA_DB_URL` is intentionally not set, so the app runs in demo mode with H2.
+
+1. Create an account at [render.com](https://render.com) and connect your GitHub account.
+2. **New → Blueprint**, choose this repository and confirm. Render builds the Dockerfile and deploys.
+3. When the deploy is live, open the service URL and sign in with the demo accounts.
+4. Replace the `<!-- DEMO_URL -->` line in this README with the public address.
+
+Free plan caveats (stated honestly):
+- the service **spins down after about 15 minutes without traffic** and takes **around 1 minute** to wake up on the next request;
+- the file system is **ephemeral** and the database is in memory, so **data returns to the seed at every restart** (and every 6 hours while running);
+- the free instance is small (512 MB); the image limits the Java heap accordingly.
+
+Behind Render's HTTPS proxy: Tomcat's `RemoteIpValve` is in the image and only trusts `X-Forwarded-*` headers when `CANTINA_BEHIND_PROXY=true` and the connection comes from a trusted (private) proxy address. That makes the session cookie `Secure`, and the login rate limiter uses the real client IP. This was verified locally by simulating the headers with `curl`; it has not been verified on Render itself.
+
+## Security
+
+- Passwords stored as BCrypt hashes; the session never holds a password; the session id is rotated on login; logout invalidates the session (POST + CSRF).
+- Role-based access control in `AuthFilter` for pages and APIs (seller × buyer), 401/403 for APIs, redirect to login for pages.
+- CSRF: per-session token required on every POST/PUT/DELETE (`X-CSRF-Token` header or `_csrf` field).
+- Headers: strict Content-Security-Policy (no inline scripts or styles), `X-Frame-Options: DENY`, `X-Content-Type-Options: nosniff`, `Referrer-Policy`, `Permissions-Policy`, HSTS on HTTPS.
+- Session cookie `HttpOnly` and `SameSite=Lax`, `Secure` when configured or when the request is HTTPS.
+- Login rate limit: 8 failed attempts per 5 minutes per client IP (in memory, per instance).
+- Uploads: size limit (2 MB), real type detected from the file's magic bytes (JPEG/PNG/GIF/WebP), served with the detected type and `nosniff`.
+- Output escaping everywhere (`<c:out>`, `textContent`); prepared statements for all SQL; friendly error pages with no stack traces.
+
+## Implementation notes and known limitations
+
+- No online payment: the order is reserved and paid at the counter.
+- Stock is decremented when the order is created and returned on cancellation (atomic `UPDATE ... WHERE estoque >= ?` inside the order transaction).
+- The sign-up form asks for ID, name, e-mail and password. The CPF column exists but is only filled by the demo data. The original idea of validating IDs against the institution's records and supporting several campuses/canteens is **not implemented**: there is a single canteen.
+- The Docker image and `docker compose` have **not been run** (Docker was unavailable during development); only `docker compose config`, the entrypoint syntax and the Tomcat property substitution used by the image were checked.
+- The seed was tested only on H2. The MySQL path (`AUTO_INCREMENT` restart) has not been exercised.
+- Databases created with the old schema need `ALTER TABLE` statements: add `Comprador.cpf VARCHAR(11) UNIQUE`; add `Pedido.status VARCHAR(12) NOT NULL DEFAULT 'PENDENTE'`, `Pedido.criado_em TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP` and `Pedido.total DECIMAL(10,2) NOT NULL DEFAULT 0`; add `Pedido_Produto.preco_unitario DECIMAL(10,2) NOT NULL DEFAULT 0`. Old plain-text passwords are not valid BCrypt hashes, so those users must be re-created.
+- The cart lives in the HTTP session (in memory); the login rate limiter is per instance; images are stored as BLOBs; lists are not paginated; the seller panel refreshes by polling.
+- Dates are shown in the browser's time zone.
+
+## Credits
+
+Final project of the CJOWEB2 course, IFSP Campos do Jordão, 2025, by:
+
+- Brian Gustavo de Oliveira Brandão
+- Luiz Henrique Freitas
+- Tiago Jarruge Saraiva
+- Arthur de Almeida Brandino
