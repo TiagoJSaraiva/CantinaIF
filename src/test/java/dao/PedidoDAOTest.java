@@ -214,4 +214,29 @@ class PedidoDAOTest {
         assertEquals(antigo.getId(), lista.get(1).getId());
         assertEquals(agora.minusDays(3), lista.get(1).getCriadoEm());
     }
+
+    @Test
+    void precoAlteradoDesdeOCarrinhoImpedeOCheckoutSemGravarNada() throws Exception {
+        String comprador = novoComprador();
+        Produto a = novoProduto("Preco mudou", "5.00", 10);
+        // o carrinho guarda o preco visto pelo comprador (5,00)
+        Produto visto = new Produto();
+        visto.setId(a.getId());
+        visto.setPreco(new BigDecimal("5.00"));
+
+        Produto reajustado = new Produto("Preco mudou", "d", new BigDecimal("6.00"), 10, Categoria.SALGADO, null);
+        reajustado.setId(a.getId());
+        produtos.atualizar(reajustado);
+
+        PrecoAlteradoException ex = assertThrows(PrecoAlteradoException.class,
+                () -> dao.criarPedidoConfirmandoPrecos(comprador, List.of(new ItemCarrinho(visto, 2))));
+        assertEquals(0, new BigDecimal("6.00").compareTo(ex.getAtual()));
+        assertEquals(10, estoque(a), "nada baixou");
+        assertTrue(dao.listarPorComprador(comprador).isEmpty());
+
+        // depois de o carrinho ser atualizado para o preco atual, o checkout passa
+        visto.setPreco(new BigDecimal("6.00"));
+        var pedido = dao.criarPedidoConfirmandoPrecos(comprador, List.of(new ItemCarrinho(visto, 2)));
+        assertEquals(0, new BigDecimal("12.00").compareTo(pedido.getTotal()));
+    }
 }

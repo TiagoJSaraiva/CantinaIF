@@ -48,6 +48,15 @@ public class PedidoDAO {
     }
 
     /**
+     * Como {@link #criarPedido(String, List)}, mas confere que o preco no banco e o mesmo que o comprador viu
+     * (o preco do item no carrinho); se mudou, lanca {@link PrecoAlteradoException} e nada e gravado.
+     */
+    public Pedido criarPedidoConfirmandoPrecos(String prontuario, List<ItemCarrinho> itens)
+            throws SQLException, RegraNegocioException {
+        return criarPedido(prontuario, itens, LocalDateTime.now(), true);
+    }
+
+    /**
      * Cria um pedido baixando o estoque na mesma transacao. O preco unitario e o total sao lidos/calculados
      * no servidor a partir do banco (o carrinho da sessao nao e confiavel para preco).
      *
@@ -55,12 +64,19 @@ public class PedidoDAO {
      */
     public Pedido criarPedido(String prontuario, List<ItemCarrinho> itens, LocalDateTime criadoEm)
             throws SQLException, RegraNegocioException {
+        return criarPedido(prontuario, itens, criadoEm, false);
+    }
+
+    private Pedido criarPedido(String prontuario, List<ItemCarrinho> itens, LocalDateTime criadoEm, boolean confirmarPrecos)
+            throws SQLException, RegraNegocioException {
         if (itens == null || itens.isEmpty()) {
             throw new RegraNegocioException("O carrinho está vazio.");
         }
         // Junta itens repetidos e ordena por id para reduzir risco de deadlock
         Map<Integer, Integer> quantidades = new TreeMap<>();
+        Map<Integer, BigDecimal> precosVistos = new java.util.HashMap<>();
         for (ItemCarrinho item : itens) {
+            precosVistos.put(item.getProduto().getId(), item.getProduto().getPreco());
             if (item.getQuantidade() < 1) {
                 throw new RegraNegocioException("A quantidade de cada item deve ser de pelo menos 1.");
             }
@@ -83,6 +99,10 @@ public class PedidoDAO {
                     int quantidade = e.getValue();
                     baixarEstoque(conn, produtoId, quantidade);
                     Produto produto = lerProduto(conn, produtoId);
+                    BigDecimal visto = precosVistos.get(produtoId);
+                    if (confirmarPrecos && visto != null && visto.compareTo(produto.getPreco()) != 0) {
+                        throw new PrecoAlteradoException(produto.getNome(), visto, produto.getPreco());
+                    }
                     ItemCarrinho item = new ItemCarrinho(produto, quantidade);
                     pedido.addItem(item);
                     total = total.add(item.getSubtotal());

@@ -1,6 +1,7 @@
 package servlets;
 
 import dao.PedidoDAO;
+import dao.PrecoAlteradoException;
 import dao.RegraNegocioException;
 import model.Carrinho;
 import model.Comprador;
@@ -25,6 +26,7 @@ public class FinalizarCompraServlet extends HttpServlet {
     private static final long serialVersionUID = 1L;
 
     private final PedidoDAO pedidoDAO = new PedidoDAO();
+    private final dao.ProductDao produtos = new dao.ProductDao();
 
     @Override
     protected void doPost(HttpServletRequest request, HttpServletResponse response)
@@ -40,14 +42,33 @@ public class FinalizarCompraServlet extends HttpServlet {
 
         try {
             Limites.verificarNovoPedido();
-            Pedido pedido = pedidoDAO.criarPedido(comprador.getProntuario(), carrinho.getItens());
+            Pedido pedido = pedidoDAO.criarPedidoConfirmandoPrecos(comprador.getProntuario(), carrinho.getItens());
             carrinho.limparCarrinho();
             response.sendRedirect("meus-pedidos.jsp?novo=" + pedido.getId());
+        } catch (PrecoAlteradoException e) {
+            atualizarCarrinho(carrinho);
+            voltar(request, response, e.getMessage());
         } catch (RegraNegocioException e) {
             voltar(request, response, e.getMessage() + " Ajuste seu carrinho e tente novamente.");
         } catch (SQLException e) {
             e.printStackTrace();
             voltar(request, response, "Erro ao finalizar sua compra. Tente novamente mais tarde.");
+        }
+    }
+
+    /** Recarrega preco e estoque atuais dos itens do carrinho (e remove os que nao existem mais). */
+    private void atualizarCarrinho(Carrinho carrinho) {
+        try {
+            java.util.Map<Integer, model.Produto> atuais = new java.util.HashMap<>();
+            for (model.ItemCarrinho item : carrinho.getItens()) {
+                model.Produto p = produtos.buscarResumo(item.getProduto().getId());
+                if (p != null) {
+                    atuais.put(p.getId(), p);
+                }
+            }
+            carrinho.atualizarDe(atuais);
+        } catch (SQLException e) {
+            e.printStackTrace();
         }
     }
 

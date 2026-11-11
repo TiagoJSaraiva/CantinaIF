@@ -53,8 +53,9 @@ public class CarrinhoServlet extends HttpServlet {
 			Json.result(response, HttpServletResponse.SC_BAD_REQUEST, false, "Requisição inválida.");
 			return;
 		}
-		if (quantidade < 1) {
-			Json.result(response, HttpServletResponse.SC_BAD_REQUEST, false, "A quantidade deve ser de pelo menos 1.");
+		if (quantidade < 1 || quantidade > Carrinho.MAX_POR_ITEM) {
+			Json.result(response, HttpServletResponse.SC_BAD_REQUEST, false,
+					"A quantidade deve ser de 1 a " + Carrinho.MAX_POR_ITEM + ".");
 			return;
 		}
 
@@ -75,33 +76,43 @@ public class CarrinhoServlet extends HttpServlet {
 			return;
 		}
 
-		HttpSession session = request.getSession();
-		Carrinho carrinho = (Carrinho) session.getAttribute("carrinho");
-		if (carrinho == null) {
-			carrinho = new Carrinho();
-			session.setAttribute("carrinho", carrinho);
-		}
-
-		int jaNoCarrinho = 0;
-		for (ItemCarrinho item : carrinho.getItens()) {
-			if (item.getProduto().getId() == produtoId) {
-				jaNoCarrinho = item.getQuantidade();
+		Carrinho carrinho = obterOuCriarCarrinho(request.getSession());
+		// a conferencia de estoque e a alteracao do carrinho acontecem juntas (sem corrida entre requisicoes)
+		synchronized (carrinho) {
+			long jaNoCarrinho = carrinho.quantidadeDe(produtoId);
+			long desejada = somar ? jaNoCarrinho + quantidade : quantidade; // long: sem estouro de int
+			if (desejada > produto.getEstoque()) {
+				Json.result(response, HttpServletResponse.SC_CONFLICT, false,
+						"Estoque insuficiente: restam " + produto.getEstoque() + " unidade(s) de " + produto.getNome() + ".");
+				return;
+			}
+			if (desejada > Carrinho.MAX_POR_ITEM) {
+				Json.result(response, HttpServletResponse.SC_CONFLICT, false,
+						"O máximo é " + Carrinho.MAX_POR_ITEM + " unidades por item.");
+				return;
+			}
+			if (somar) {
+				carrinho.adicionarProduto(produto, quantidade);
+			} else if (!carrinho.alterarQuantidade(produtoId, quantidade)) {
+				Json.result(response, HttpServletResponse.SC_NOT_FOUND, false, "Item não está no carrinho.");
+				return;
 			}
 		}
-		int desejada = somar ? jaNoCarrinho + quantidade : quantidade;
-		if (desejada > produto.getEstoque()) {
-			Json.result(response, HttpServletResponse.SC_CONFLICT, false,
-					"Estoque insuficiente: restam " + produto.getEstoque() + " unidade(s) de " + produto.getNome() + ".");
-			return;
-		}
-
-		if (somar) {
-			carrinho.adicionarProduto(produto, quantidade);
-		} else if (!carrinho.alterarQuantidade(produtoId, quantidade)) {
-			Json.result(response, HttpServletResponse.SC_NOT_FOUND, false, "Item não está no carrinho.");
-			return;
-		}
 		Json.result(response, HttpServletResponse.SC_OK, true, somar ? "Produto adicionado ao carrinho." : "Quantidade atualizada.");
+	}
+
+	private static final Object CRIACAO = new Object();
+
+	/** Cria o carrinho da sessao uma unica vez, mesmo com varias requisicoes simultaneas numa sessao nova. */
+	static Carrinho obterOuCriarCarrinho(HttpSession session) {
+		synchronized (CRIACAO) {
+			Carrinho carrinho = (Carrinho) session.getAttribute("carrinho");
+			if (carrinho == null) {
+				carrinho = new Carrinho();
+				session.setAttribute("carrinho", carrinho);
+			}
+			return carrinho;
+		}
 	}
 
 	@Override
