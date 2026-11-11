@@ -13,8 +13,9 @@ import seed.DemoDataSeeder;
  *   <li>por IP: um teto bem mais alto (padrao 40 em 5 minutos), para nao punir todos os que dividem um NAT
  *       ou a borda de um proxy.</li>
  * </ul>
- * No modo demonstracao as contas de demonstracao (senha publica) ficam fora do bloqueio por conta: bloquea-las
- * derrubaria a demo para todos; elas continuam sujeitas ao teto por IP.
+ * No modo demonstracao as contas de demonstracao (senha publica) NUNCA sao bloqueadas, nem por conta nem por IP:
+ * bloquea-las derrubaria a demo para todos (e se todos os visitantes aparecerem com o mesmo IP, atras de uma borda
+ * nao confiavel, um so visitante travaria o login de todos). O teto por IP vale para as demais contas.
  * Em memoria, por instancia. Uma desvantagem conhecida do bloqueio por conta: quem erra a senha de proposito
  * consegue travar a conta de outra pessoa por alguns minutos.
  */
@@ -48,14 +49,18 @@ public final class LoginGuard {
     }
 
     public synchronized boolean bloqueado(String ip, String prontuario) {
-        return porIp.bloqueado(ip) || (!contaIsenta(prontuario) && porConta.bloqueado(chave(prontuario)));
+        if (contaIsenta(prontuario)) {
+            return false; // contas de demo (senha publica): nunca bloqueadas, nem por IP (um colapso de IPs nao derruba a demo)
+        }
+        return porIp.bloqueado(ip) || porConta.bloqueado(chave(prontuario));
     }
 
     /** Segundos ate liberar (o maior entre os dois bloqueios aplicaveis). */
     public synchronized long segundosParaLiberar(String ip, String prontuario) {
-        long a = porIp.segundosParaLiberar(ip);
-        long b = contaIsenta(prontuario) ? 0 : porConta.segundosParaLiberar(chave(prontuario));
-        return Math.max(a, b);
+        if (contaIsenta(prontuario)) {
+            return 0;
+        }
+        return Math.max(porIp.segundosParaLiberar(ip), porConta.segundosParaLiberar(chave(prontuario)));
     }
 
     public synchronized void falha(String ip, String prontuario) {

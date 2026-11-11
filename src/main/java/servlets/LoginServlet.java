@@ -4,6 +4,7 @@ import dao.UserDao;
 import dao.VendedorDao;
 import model.Comprador;
 import model.Vendedor;
+import utils.ClientIp;
 import utils.Database;
 import utils.LoginGuard;
 
@@ -42,9 +43,10 @@ public class LoginServlet extends HttpServlet {
         }
         prontuario = prontuario.trim();
 
-        String ip = request.getRemoteAddr();
+        String ip = ClientIp.de(request);
         LoginGuard guarda = LoginGuard.PADRAO;
         if (guarda.bloqueado(ip, prontuario)) {
+            ClientIp.registrarBloqueio("login", ip);
             long segundos = guarda.segundosParaLiberar(ip, prontuario);
             response.setStatus(429);
             response.setHeader("Retry-After", String.valueOf(segundos));

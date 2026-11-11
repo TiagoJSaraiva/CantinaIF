@@ -15,6 +15,8 @@ services:
       CANTINA_SEED_IF_EMPTY: ${CANTINA_SEED_IF_EMPTY:-true}
       CANTINA_COOKIE_SECURE: ${CANTINA_COOKIE_SECURE:-false}
       CANTINA_BEHIND_PROXY: ${CANTINA_BEHIND_PROXY:-false}
+      CANTINA_TRUSTED_PROXIES: ${CANTINA_TRUSTED_PROXIES:-}
+      CANTINA_CLIENT_IP_HEADER: ${CANTINA_CLIENT_IP_HEADER:-}
     depends_on:
       mysql:
         condition: service_healthy

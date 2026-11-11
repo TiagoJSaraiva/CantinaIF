@@ -19,6 +19,7 @@ public class AppLifecycleListener implements ServletContextListener {
         if ("true".equalsIgnoreCase(Config.get("CANTINA_COOKIE_SECURE"))) {
             ctx.getSessionCookieConfig().setSecure(true);
         }
+        ClientIp.registrarInicializacao();
         Database.init();
         if (Database.isDemoMode()) {
             ctx.setAttribute("demoMode", Boolean.TRUE);

@@ -10,6 +10,7 @@ import jakarta.servlet.ServletRequest;
 import jakarta.servlet.ServletResponse;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import utils.ClientIp;
 import utils.RateLimiter;
 
 /**
@@ -37,12 +38,13 @@ public class WriteRateFilter implements Filter {
         String caminho = request.getServletPath();
         boolean escrita = !("GET".equals(metodo) || "HEAD".equals(metodo) || "OPTIONS".equals(metodo));
         if (escrita && CAMINHOS.contains(caminho)) {
-            String ip = request.getRemoteAddr();
+            String ip = ClientIp.de(request);
             boolean permitido = GERAL.tentar(ip);
             if (permitido && "/register".equals(caminho)) {
                 permitido = CADASTRO.tentar(ip);
             }
             if (!permitido) {
+                ClientIp.registrarBloqueio("escrita", ip);
                 response.setHeader("Retry-After", "60");
                 if ("/register".equals(caminho) || "/FinalizarCompraServlet".equals(caminho)) {
                     response.sendError(429, "Muitas requisições.");

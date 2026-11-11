@@ -74,12 +74,14 @@ class LoginGuardTest {
         }
         assertFalse(guarda.bloqueado("4.4.4.4", DemoDataSeeder.VENDEDOR_PRONTUARIO), "senha publica: nao pode derrubar a demo");
         assertFalse(guarda.bloqueado("5.5.5.5", DemoDataSeeder.VENDEDOR_PRONTUARIO));
-        // mas o teto por IP continua valendo
-        for (int i = 0; i < 5; i++) {
-            guarda.falha("4.4.4.4", DemoDataSeeder.COMPRADOR_PRONTUARIO);
+        // mesmo com o IP estourado (varredura de outras contas), a conta de demo continua entrando
+        for (int i = 0; i < 12; i++) {
+            guarda.falha("4.4.4.4", "CJ" + i);
         }
-        assertTrue(guarda.bloqueado("4.4.4.4", DemoDataSeeder.COMPRADOR_PRONTUARIO));
-        assertFalse(guarda.bloqueado("5.5.5.5", DemoDataSeeder.COMPRADOR_PRONTUARIO));
+        assertTrue(guarda.bloqueado("4.4.4.4", "CJ-outra"), "o teto por IP vale para as demais contas");
+        assertFalse(guarda.bloqueado("4.4.4.4", DemoDataSeeder.COMPRADOR_PRONTUARIO));
+        assertFalse(guarda.bloqueado("4.4.4.4", DemoDataSeeder.VENDEDOR_PRONTUARIO));
+        assertEquals(0, guarda.segundosParaLiberar("4.4.4.4", DemoDataSeeder.VENDEDOR_PRONTUARIO));
 
         demo.set(false);
         for (int i = 0; i < 3; i++) {

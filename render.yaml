@@ -17,3 +17,6 @@ services:
       # o Render termina o TLS: confia em X-Forwarded-* vindos do proxy (ver docker-entrypoint.sh)
       - key: CANTINA_BEHIND_PROXY
         value: "true"
+      # Opcional, depois do deploy: se o log mostrar todos os visitantes com o mesmo IP, defina
+      #   CANTINA_CLIENT_IP_HEADER (cabecalho de IP do cliente da borda) ou CANTINA_TRUSTED_PROXIES.
+      #   Veja "Verificacao pos-deploy" no README.
