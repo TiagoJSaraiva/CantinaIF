@@ -72,6 +72,11 @@ public class AuthFilter implements Filter {
 
         boolean autenticadoOutroPerfil = session != null
                 && (session.getAttribute("vendedor") != null || session.getAttribute("comprador") != null);
+        if (autenticadoOutroPerfil && !"GET".equals(request.getMethod())) {
+            // requisicao que altera estado com o perfil errado: 403 (nao redireciona)
+            Json.result(response, HttpServletResponse.SC_FORBIDDEN, false, "Acesso negado para este perfil.");
+            return;
+        }
         boolean pagina = path.endsWith(".jsp") || path.equals("/FinalizarCompraServlet")
                 || path.equals("/registrar-produto");
         if (pagina) {

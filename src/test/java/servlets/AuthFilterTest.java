@@ -123,4 +123,20 @@ class AuthFilterTest {
         verify(res, never()).sendRedirect(anyString());
         verify(res, never()).setStatus(anyInt());
     }
+
+    @Test
+    void postComPerfilErradoRecebe403MesmoEmRotaDePagina() throws Exception {
+        FilterChain cadeia = mock(FilterChain.class);
+        HttpSession comprador = sessao("comprador", new Comprador(), Database.geracao());
+        HttpServletResponse res = resposta(new StringWriter());
+        filtro.doFilter(requisicao("POST", "/registrar-produto", comprador), res, cadeia);
+        verify(res).setStatus(403);
+        verify(res, never()).sendRedirect(anyString());
+        verifyNoInteractions(cadeia);
+
+        HttpSession vendedor = sessao("vendedor", new Vendedor(), Database.geracao());
+        HttpServletResponse res2 = resposta(new StringWriter());
+        filtro.doFilter(requisicao("POST", "/FinalizarCompraServlet", vendedor), res2, cadeia);
+        verify(res2).setStatus(403);
+    }
 }
