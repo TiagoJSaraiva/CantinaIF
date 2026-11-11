@@ -43,6 +43,15 @@ public class EditarProdutos extends HttpServlet {
             return;
         }
         ProdutoForm form = ProdutoForm.ler(request);
+        if (form.limite != null) {
+            Json.result(response, HttpServletResponse.SC_CONFLICT, false, form.limite);
+            return;
+        }
+        if (form.ocupado != null) {
+            response.setHeader("Retry-After", "5");
+            Json.result(response, HttpServletResponse.SC_SERVICE_UNAVAILABLE, false, form.ocupado);
+            return;
+        }
         if (!form.erros.isEmpty()) {
             Json.erros(response, form.erros);
             return;

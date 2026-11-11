@@ -35,7 +35,26 @@ public class ProductRegisterServlet extends HttpServlet {
             Json.erros(response, excedeu);
             return;
         }
+        try {
+            Limites.verificarNovoProduto(0); // teto de produtos antes de qualquer processamento
+        } catch (RegraNegocioException e) {
+            Json.result(response, HttpServletResponse.SC_CONFLICT, false, e.getMessage());
+            return;
+        } catch (SQLException e) {
+            e.printStackTrace();
+            Json.result(response, HttpServletResponse.SC_INTERNAL_SERVER_ERROR, false, "Erro ao verificar os limites.");
+            return;
+        }
         ProdutoForm form = ProdutoForm.ler(request);
+        if (form.limite != null) {
+            Json.result(response, HttpServletResponse.SC_CONFLICT, false, form.limite);
+            return;
+        }
+        if (form.ocupado != null) {
+            response.setHeader("Retry-After", "5");
+            Json.result(response, HttpServletResponse.SC_SERVICE_UNAVAILABLE, false, form.ocupado);
+            return;
+        }
         if (!form.erros.isEmpty()) {
             Json.erros(response, form.erros);
             return;

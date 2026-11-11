@@ -10,15 +10,22 @@ import java.util.Map;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.Part;
+import dao.RegraNegocioException;
 import model.Produto;
 import utils.ImageProcessor;
 import utils.ImageType;
+import utils.Limites;
 
 /** Leitura e validacao (no servidor) dos campos de produto enviados pelo painel do vendedor. */
 final class ProdutoForm {
 
     private static final BigDecimal PRECO_MAXIMO = new BigDecimal("99999999.99");
     private static final int ESTOQUE_MAXIMO = 1_000_000;
+
+    /** Preenchido quando um teto da demonstracao impede aceitar a imagem (verificado ANTES de processa-la). */
+    String limite;
+    /** Preenchido quando ha outro processamento de imagem em andamento. */
+    String ocupado;
 
     /** Mensagens de erro por campo (vazio quando valido). */
     final Map<String, String> erros = new LinkedHashMap<>();
@@ -119,8 +126,20 @@ final class ProdutoForm {
             bytes = in.readAllBytes();
         }
         try {
+            // tetos da demonstracao ANTES do trabalho caro (pior caso: imagem de 150 KB)
+            Limites.verificarImagem(ImageProcessor.BYTES_MAXIMOS);
+        } catch (RegraNegocioException e) {
+            limite = e.getMessage();
+            return;
+        } catch (java.sql.SQLException e) {
+            erros.put("imagem", "Não foi possível verificar o espaço disponível. Tente novamente.");
+            return;
+        }
+        try {
             // redimensiona e recomprime (JPEG, ate 640 px e 150 KB); rejeita o que nao decodifica
             produto.setImagem(ImageProcessor.processar(bytes));
+        } catch (ImageProcessor.OcupadoException e) {
+            ocupado = e.getMessage();
         } catch (IllegalArgumentException e) {
             erros.put("imagem", e.getMessage());
         }

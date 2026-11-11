@@ -11,6 +11,7 @@ import java.util.Iterator;
 
 import javax.imageio.IIOImage;
 import javax.imageio.ImageIO;
+import javax.imageio.ImageReadParam;
 import javax.imageio.ImageReader;
 import javax.imageio.ImageWriteParam;
 import javax.imageio.ImageWriter;
@@ -26,8 +27,26 @@ public final class ImageProcessor {
 
     public static final int LADO_MAXIMO = 640;
     public static final int BYTES_MAXIMOS = 150 * 1024;
-    /** Protecao contra "bombas de descompressao": imagens com mais pixels que isso sao rejeitadas sem decodificar. */
-    public static final long PIXELS_MAXIMOS = 25_000_000L;
+    /**
+     * Protecao contra "bombas de descompressao": a largura e a altura sao lidas do cabecalho ANTES de decodificar e
+     * imagens com mais de ~5 megapixels sao rejeitadas. As que passam sao decodificadas com subamostragem, ja perto
+     * do tamanho final, e so uma imagem e processada por vez em toda a aplicacao.
+     */
+    public static final long PIXELS_MAXIMOS = 5_000_000L;
+
+    /** Tempo maximo de espera pela vez de processar (ms); acima disso a requisicao recebe "ocupado". */
+    static volatile long esperaMs = 3000;
+
+    private static final java.util.concurrent.Semaphore SEMAFORO = new java.util.concurrent.Semaphore(1, true);
+
+    /** Ha outro processamento de imagem em andamento e a vez nao chegou a tempo. */
+    public static class OcupadoException extends RuntimeException {
+        private static final long serialVersionUID = 1L;
+
+        public OcupadoException() {
+            super("Muitos envios de imagem ao mesmo tempo; tente novamente em instantes.");
+        }
+    }
 
     private static final float[] QUALIDADES = { 0.85f, 0.7f, 0.55f, 0.4f, 0.3f };
 
@@ -43,6 +62,24 @@ public final class ImageProcessor {
         if (tipo.equals("image/webp")) {
             throw new IllegalArgumentException("Imagens WebP não são suportadas; envie JPEG, PNG ou GIF.");
         }
+        boolean obteve;
+        try {
+            obteve = SEMAFORO.tryAcquire(esperaMs, java.util.concurrent.TimeUnit.MILLISECONDS);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw new OcupadoException();
+        }
+        if (!obteve) {
+            throw new OcupadoException();
+        }
+        try {
+            return processarExclusivo(entrada);
+        } finally {
+            SEMAFORO.release();
+        }
+    }
+
+    private static byte[] processarExclusivo(byte[] entrada) {
         BufferedImage origem = decodificar(entrada);
         BufferedImage atual = reduzir(origem, LADO_MAXIMO);
         try {
@@ -77,9 +114,13 @@ public final class ImageProcessor {
                 long largura = leitor.getWidth(0);
                 long altura = leitor.getHeight(0);
                 if (largura <= 0 || altura <= 0 || largura * altura > PIXELS_MAXIMOS) {
-                    throw new IllegalArgumentException("A imagem tem dimensões grandes demais.");
+                    throw new IllegalArgumentException("A imagem tem dimensões grandes demais (máximo de 5 megapixels).");
                 }
-                BufferedImage img = leitor.read(0);
+                // subamostragem: decodifica ja perto do tamanho final (lado >= LADO_MAXIMO), sem materializar tudo
+                int fator = (int) Math.max(1, Math.max(largura, altura) / LADO_MAXIMO);
+                ImageReadParam param = leitor.getDefaultReadParam();
+                param.setSourceSubsampling(fator, fator, 0, 0);
+                BufferedImage img = leitor.read(0, param);
                 if (img == null) {
                     throw new IllegalArgumentException("Não foi possível ler a imagem enviada.");
                 }

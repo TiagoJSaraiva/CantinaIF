@@ -36,7 +36,7 @@ class ImageProcessorTest {
 
     @Test
     void imagemGrandeEReduzidaParaNoMaximo640pxE150KB() throws Exception {
-        byte[] original = codificar(ruido(3000, 2000, BufferedImage.TYPE_INT_RGB), "png"); // ruido: dificil de comprimir
+        byte[] original = codificar(ruido(2500, 1900, BufferedImage.TYPE_INT_RGB), "png"); // ruido: dificil de comprimir
         byte[] saida = ImageProcessor.processar(original);
 
         assertTrue(saida.length <= ImageProcessor.BYTES_MAXIMOS, "tamanho: " + saida.length);
@@ -91,5 +91,67 @@ class ImageProcessorTest {
         byte[] png = codificar(enorme, "png");
         IllegalArgumentException e = assertThrows(IllegalArgumentException.class, () -> ImageProcessor.processar(png));
         assertTrue(e.getMessage().contains("dimensões"));
+    }
+
+    @Test
+    void bombaDePixelsDe4999x4999EhRejeitadaPeloCabecalhoSemDecodificar() throws Exception {
+        BufferedImage bomba = new BufferedImage(4999, 4999, BufferedImage.TYPE_BYTE_GRAY); // ~25 MP, PNG minusculo
+        byte[] png = codificar(bomba, "png");
+        assertTrue(png.length < 200 * 1024, "o PNG e pequeno: " + png.length);
+        IllegalArgumentException e = assertThrows(IllegalArgumentException.class, () -> ImageProcessor.processar(png));
+        assertTrue(e.getMessage().contains("5 megapixels"));
+    }
+
+    @Test
+    void imagemDe4_8MegapixelsEAceitaEReduzida() throws Exception {
+        BufferedImage img = ruido(2400, 2000, BufferedImage.TYPE_INT_RGB);
+        byte[] saida = ImageProcessor.processar(codificar(img, "png"));
+        BufferedImage lida = ler(saida);
+        assertTrue(Math.max(lida.getWidth(), lida.getHeight()) <= ImageProcessor.LADO_MAXIMO);
+        assertTrue(saida.length <= ImageProcessor.BYTES_MAXIMOS);
+    }
+
+    @Test
+    void apenasUmProcessamentoPorVezOutrosRecebemOcupado() throws Exception {
+        long esperaOriginal = ImageProcessor.esperaMs;
+        ImageProcessor.esperaMs = 150;
+        try {
+            byte[] png = codificar(ruido(1800, 1800, BufferedImage.TYPE_INT_RGB), "png");
+            int n = 6;
+            java.util.concurrent.ExecutorService pool = java.util.concurrent.Executors.newFixedThreadPool(n);
+            java.util.concurrent.CountDownLatch largada = new java.util.concurrent.CountDownLatch(1);
+            java.util.concurrent.atomic.AtomicInteger ok = new java.util.concurrent.atomic.AtomicInteger();
+            java.util.concurrent.atomic.AtomicInteger ocupados = new java.util.concurrent.atomic.AtomicInteger();
+            java.util.concurrent.atomic.AtomicInteger emParalelo = new java.util.concurrent.atomic.AtomicInteger();
+            java.util.concurrent.atomic.AtomicInteger maximo = new java.util.concurrent.atomic.AtomicInteger();
+            for (int i = 0; i < n; i++) {
+                pool.submit(() -> {
+                    largada.await();
+                    try {
+                        ImageProcessor.processar(png);
+                        ok.incrementAndGet();
+                    } catch (ImageProcessor.OcupadoException e) {
+                        ocupados.incrementAndGet();
+                    }
+                    return null;
+                });
+            }
+            largada.countDown();
+            pool.shutdown();
+            assertTrue(pool.awaitTermination(120, java.util.concurrent.TimeUnit.SECONDS));
+            assertEquals(n, ok.get() + ocupados.get());
+            assertTrue(ok.get() >= 1);
+            assertTrue(ocupados.get() >= 1, "com espera curta, alguns precisam receber 'ocupado'");
+        } finally {
+            ImageProcessor.esperaMs = esperaOriginal;
+        }
+    }
+
+    @Test
+    void semaforoLiberadoMesmoQuandoAImagemEInvalida() {
+        for (int i = 0; i < 5; i++) {
+            assertThrows(IllegalArgumentException.class, () -> ImageProcessor.processar("lixo".getBytes()));
+        }
+        assertDoesNotThrow(() -> ImageProcessor.processar(codificar(ruido(50, 50, BufferedImage.TYPE_INT_RGB), "png")));
     }
 }
