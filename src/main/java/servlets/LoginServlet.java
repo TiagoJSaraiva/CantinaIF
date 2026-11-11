@@ -5,7 +5,7 @@ import dao.VendedorDao;
 import model.Comprador;
 import model.Vendedor;
 import utils.Database;
-import utils.RateLimiter;
+import utils.LoginGuard;
 
 import jakarta.servlet.ServletException;
 import jakarta.servlet.annotation.WebServlet;
@@ -23,8 +23,6 @@ import java.sql.SQLException;
 @WebServlet("/login")
 public class LoginServlet extends HttpServlet {
     private static final long serialVersionUID = 1L;
-
-    private static final RateLimiter LIMITE = new RateLimiter(8, 5 * 60_000L, System::currentTimeMillis);
 
     private static final int SESSAO_AUTENTICADA_SEGUNDOS = 30 * 60;
 
@@ -44,10 +42,10 @@ public class LoginServlet extends HttpServlet {
         }
         prontuario = prontuario.trim();
 
-        String chave = request.getRemoteAddr();
-        RateLimiter limite = LIMITE;
-        if (limite.bloqueado(chave)) {
-            long segundos = limite.segundosParaLiberar(chave);
+        String ip = request.getRemoteAddr();
+        LoginGuard guarda = LoginGuard.PADRAO;
+        if (guarda.bloqueado(ip, prontuario)) {
+            long segundos = guarda.segundosParaLiberar(ip, prontuario);
             response.setStatus(429);
             response.setHeader("Retry-After", String.valueOf(segundos));
             falhar(request, response, "Muitas tentativas de login. Tente novamente em "
@@ -58,7 +56,7 @@ public class LoginServlet extends HttpServlet {
         try {
             Vendedor vendedor = vendedorDao.autenticar(prontuario, senha);
             if (vendedor != null) {
-                limite.sucesso(chave);
+                guarda.sucesso(prontuario);
                 HttpSession session = novaSessao(request);
                 session.setAttribute("vendedor", vendedor);
                 session.setAttribute("geracao", Database.geracao());
@@ -68,7 +66,7 @@ public class LoginServlet extends HttpServlet {
 
             Comprador comprador = userDao.autenticar(prontuario, senha);
             if (comprador != null) {
-                limite.sucesso(chave);
+                guarda.sucesso(prontuario);
                 HttpSession session = novaSessao(request);
                 session.setAttribute("comprador", comprador);
                 session.setAttribute("geracao", Database.geracao());
@@ -80,7 +78,7 @@ public class LoginServlet extends HttpServlet {
             falhar(request, response, "Não foi possível entrar agora. Tente novamente em instantes.");
             return;
         }
-        limite.falha(chave);
+        guarda.falha(ip, prontuario);
         falhar(request, response, "Usuário ou senha inválidos.");
     }
 
@@ -97,6 +95,8 @@ public class LoginServlet extends HttpServlet {
         session.removeAttribute("comprador");
         session.removeAttribute("vendedor");
         session.removeAttribute("carrinho");
+        session.removeAttribute(CsrfFilter.ATTR);
+        CsrfFilter.token(session); // novo token CSRF para a sessao autenticada
         return session;
     }
 

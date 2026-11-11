@@ -113,7 +113,71 @@ public class ProductDao {
         }
     }
 
-    /** Ajuste rapido de estoque (valor absoluto). */
+    /** Resultado de uma atualizacao condicionada ao estoque que o vendedor viu. */
+    public enum ResultadoEstoque { OK, NAO_ENCONTRADO, CONFLITO }
+
+    /**
+     * Ajuste de estoque com comparacao-e-troca atomica no SQL: so grava se o estoque ainda for o que o vendedor
+     * viu ({@code esperado}); assim nao sobrescreve baixas (checkouts) ou devolucoes concorrentes.
+     */
+    public ResultadoEstoque atualizarEstoque(int produtoId, int esperado, int novo) throws SQLException {
+        try (Connection conn = Database.getConnection();
+             PreparedStatement stmt = conn.prepareStatement("UPDATE Produto SET estoque = ? WHERE id = ? AND estoque = ?")) {
+            stmt.setInt(1, novo);
+            stmt.setInt(2, produtoId);
+            stmt.setInt(3, esperado);
+            if (stmt.executeUpdate() == 1) {
+                return ResultadoEstoque.OK;
+            }
+        }
+        return existe(produtoId) ? ResultadoEstoque.CONFLITO : ResultadoEstoque.NAO_ENCONTRADO;
+    }
+
+    /** Estoque atual de um produto, ou -1 se nao existir. */
+    public int estoqueAtual(int produtoId) throws SQLException {
+        try (Connection conn = Database.getConnection();
+             PreparedStatement stmt = conn.prepareStatement("SELECT estoque FROM Produto WHERE id = ?")) {
+            stmt.setInt(1, produtoId);
+            try (ResultSet rs = stmt.executeQuery()) {
+                return rs.next() ? rs.getInt(1) : -1;
+            }
+        }
+    }
+
+    private boolean existe(int produtoId) throws SQLException {
+        return estoqueAtual(produtoId) >= 0;
+    }
+
+    /** Como {@link #atualizar(Produto)}, mas so grava se o estoque ainda for {@code estoqueEsperado}. */
+    public ResultadoEstoque atualizar(Produto produto, int estoqueEsperado) throws SQLException {
+        boolean trocaImagem = produto.getImagem() != null;
+        String sql = "UPDATE Produto SET nome = ?, descricao = ?, preco = ?, estoque = ?, categoria = ?"
+                + (trocaImagem ? ", imagem = ?" : "") + " WHERE id = ? AND estoque = ?";
+        try (Connection conn = Database.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+            int i = 1;
+            stmt.setString(i++, produto.getNome());
+            stmt.setString(i++, produto.getDescricao());
+            stmt.setBigDecimal(i++, produto.getPreco());
+            stmt.setInt(i++, produto.getEstoque());
+            if (produto.getCategoria() != null) {
+                stmt.setString(i++, produto.getCategoria().name().toLowerCase());
+            } else {
+                stmt.setNull(i++, Types.VARCHAR);
+            }
+            if (trocaImagem) {
+                stmt.setBytes(i++, produto.getImagem());
+            }
+            stmt.setInt(i++, produto.getId());
+            stmt.setInt(i, estoqueEsperado);
+            if (stmt.executeUpdate() == 1) {
+                return ResultadoEstoque.OK;
+            }
+        }
+        return existe(produto.getId()) ? ResultadoEstoque.CONFLITO : ResultadoEstoque.NAO_ENCONTRADO;
+    }
+
+    /** Ajuste rapido de estoque (valor absoluto, sem conferir o valor anterior; preferir a versao com "esperado"). */
     public boolean atualizarEstoque(int produtoId, int estoque) throws SQLException {
         try (Connection conn = Database.getConnection();
              PreparedStatement stmt = conn.prepareStatement("UPDATE Produto SET estoque = ? WHERE id = ?")) {

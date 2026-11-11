@@ -9,7 +9,10 @@ import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 
-/** Ajuste rapido do estoque de um produto (vendedor). */
+/**
+ * Ajuste rapido do estoque de um produto (vendedor). Recebe o estoque que o vendedor viu ("esperado") e o novo
+ * valor; a gravacao e atomica (compara e troca no SQL) e responde 409 se o estoque mudou nesse meio tempo.
+ */
 @WebServlet("/atualizarEstoque")
 public class AtualizarEstoqueServlet extends HttpServlet {
     private static final long serialVersionUID = 1L;
@@ -22,14 +25,22 @@ public class AtualizarEstoqueServlet extends HttpServlet {
         try {
             int id = Integer.parseInt(request.getParameter("id"));
             int estoque = Integer.parseInt(request.getParameter("estoque"));
-            if (estoque < 0) {
-                Json.result(response, HttpServletResponse.SC_BAD_REQUEST, false, "O estoque não pode ser negativo.");
+            int esperado = Integer.parseInt(request.getParameter("esperado"));
+            if (estoque < 0 || estoque > 1_000_000) {
+                Json.result(response, HttpServletResponse.SC_BAD_REQUEST, false, "O estoque deve estar entre 0 e 1000000.");
                 return;
             }
-            if (productDao.atualizarEstoque(id, estoque)) {
-                Json.result(response, HttpServletResponse.SC_OK, true, "Estoque atualizado.");
-            } else {
-                Json.result(response, HttpServletResponse.SC_NOT_FOUND, false, "Produto não encontrado.");
+            switch (productDao.atualizarEstoque(id, esperado, estoque)) {
+                case OK:
+                    Json.result(response, HttpServletResponse.SC_OK, true, "Estoque atualizado.");
+                    break;
+                case CONFLITO:
+                    Json.result(response, HttpServletResponse.SC_CONFLICT, false,
+                            "O estoque mudou (agora " + productDao.estoqueAtual(id)
+                            + ") por outra operação, por exemplo um pedido. Nada foi alterado; confira e tente de novo.");
+                    break;
+                default:
+                    Json.result(response, HttpServletResponse.SC_NOT_FOUND, false, "Produto não encontrado.");
             }
         } catch (NumberFormatException e) {
             Json.result(response, HttpServletResponse.SC_BAD_REQUEST, false, "Parâmetros inválidos.");

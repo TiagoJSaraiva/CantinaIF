@@ -63,10 +63,10 @@ document.addEventListener('DOMContentLoaded', function() {
 			requisitar('atualizarEstoque', {
 				method: 'POST',
 				headers: cabecalhosCsrf({ 'Content-Type': 'application/x-www-form-urlencoded' }),
-				body: new URLSearchParams({ id: produto.id, estoque: valor }).toString()
-			}).then(({ ok, corpo }) => {
+				body: new URLSearchParams({ id: produto.id, estoque: valor, esperado: produto.estoque }).toString()
+			}).then(({ ok, status, corpo }) => {
 				mostrarMensagem(mensagem, ok ? 'Estoque de ' + produto.nome + ' atualizado para ' + valor + '.' : (corpo.message || 'Erro ao atualizar o estoque.'), !ok);
-				if (ok) { produto.estoque = valor; carregar(); } else campoEstoque.value = String(produto.estoque);
+				if (ok) { produto.estoque = valor; carregar(); } else { campoEstoque.value = String(produto.estoque); if (status === 409) carregar(); }
 			}).catch(() => mostrarMensagem(mensagem, 'Erro de comunicação com o servidor.', true));
 		};
 		const menos = criar('button', { texto: '−', attrs: { type: 'button', 'aria-label': 'Diminuir estoque de ' + produto.nome } });
@@ -102,6 +102,7 @@ document.addEventListener('DOMContentLoaded', function() {
 			document.getElementById('produto-descricao').value = produto.descricao || '';
 			document.getElementById('produto-preco').value = Number(produto.preco).toFixed(2);
 			document.getElementById('produto-estoque').value = String(produto.estoque);
+			document.getElementById('produto-estoque').dataset.original = String(produto.estoque);
 			document.getElementById('produto-categoria').value = produto.categoria || '';
 		}
 		document.getElementById('dica-imagem').hidden = !produto;
@@ -124,6 +125,7 @@ document.addEventListener('DOMContentLoaded', function() {
 		const id = document.getElementById('produto-id').value;
 		const dados = new FormData(form);
 		if (!id) dados.delete('id');
+		if (id) dados.set('estoqueAnterior', document.getElementById('produto-estoque').dataset.original || '');
 		const botao = document.getElementById('btn-salvar');
 		botao.disabled = true;
 		erroGeral.hidden = true;

@@ -109,4 +109,50 @@ class ProductDaoTest {
         assertThrows(java.sql.SQLException.class,
                 () -> dao.create(new Produto("Ruim", "d", preco("-1.00"), 1, Categoria.DOCE, null)));
     }
+
+    @Test
+    void ajusteDeEstoqueComparaETrocaSemSobrescreverBaixaConcorrente() throws Exception {
+        Produto p = novo("CAS", 10, Categoria.SALGADO);
+        // o vendedor viu 10; antes de ele gravar, um checkout baixou 3
+        dao.atualizarEstoque(p.getId(), 7);
+        assertEquals(ProductDao.ResultadoEstoque.CONFLITO, dao.atualizarEstoque(p.getId(), 10, 11));
+        assertEquals(7, dao.estoqueAtual(p.getId()), "o valor concorrente foi preservado");
+        assertEquals(ProductDao.ResultadoEstoque.OK, dao.atualizarEstoque(p.getId(), 7, 8));
+        assertEquals(8, dao.estoqueAtual(p.getId()));
+        assertEquals(ProductDao.ResultadoEstoque.NAO_ENCONTRADO, dao.atualizarEstoque(999999, 1, 2));
+    }
+
+    @Test
+    void edicaoCompletaTambemComparaOEstoque() throws Exception {
+        Produto p = novo("CAS2", 5, Categoria.DOCE);
+        Produto edit = new Produto("CAS2 editado", "d", preco("2.00"), 9, Categoria.DOCE, null);
+        edit.setId(p.getId());
+        dao.atualizarEstoque(p.getId(), 4); // alguem comprou 1 depois que o vendedor abriu o formulario (viu 5)
+        assertEquals(ProductDao.ResultadoEstoque.CONFLITO, dao.atualizar(edit, 5));
+        assertEquals("CAS2", dao.buscarResumo(p.getId()).getNome(), "nada foi alterado");
+        assertEquals(ProductDao.ResultadoEstoque.OK, dao.atualizar(edit, 4));
+        assertEquals(9, dao.estoqueAtual(p.getId()));
+    }
+
+    @Test
+    void ajustesConcorrentesDeEstoquePorComparaETrocaNaoPerdemAtualizacoes() throws Exception {
+        Produto p = novo("CAS3", 0, Categoria.SALGADO);
+        int threads = 8, porThread = 25;
+        java.util.concurrent.ExecutorService pool = java.util.concurrent.Executors.newFixedThreadPool(threads);
+        for (int t = 0; t < threads; t++) {
+            pool.submit(() -> {
+                for (int i = 0; i < porThread; i++) {
+                    boolean ok = false;
+                    while (!ok) { // tenta de novo ate conseguir incrementar em 1 (como o painel faria apos o 409)
+                        int atual = dao.estoqueAtual(p.getId());
+                        ok = dao.atualizarEstoque(p.getId(), atual, atual + 1) == ProductDao.ResultadoEstoque.OK;
+                    }
+                }
+                return null;
+            });
+        }
+        pool.shutdown();
+        assertTrue(pool.awaitTermination(30, java.util.concurrent.TimeUnit.SECONDS));
+        assertEquals(threads * porThread, dao.estoqueAtual(p.getId()));
+    }
 }
