@@ -4,10 +4,10 @@ import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 /**
- * Trava de leitura/escrita entre as requisicoes e a restauracao da base de demonstracao: cada requisicao
- * segura a trava de LEITURA (varias ao mesmo tempo); o reset toma a de ESCRITA (espera as requisicoes em
- * andamento e segura as novas ate terminar). Assim ninguem ve a base no meio de um reset.
- * A trava e justa (FIFO) para o reset nao ser adiado indefinidamente.
+ * Trava de leitura/escrita entre o ACESSO AO BANCO e a restauracao da base de demonstracao. Quem usa o banco
+ * ({@link Database#getConnection()}) segura a trava de LEITURA apenas enquanto a conexao esta aberta (curto, sem
+ * I/O de rede no meio); o reset toma a de ESCRITA com tempo limite e, se nao conseguir, tenta de novo depois.
+ * A requisicao HTTP em si nunca segura a trava (um cliente lento nao trava ninguem). Trava justa (FIFO).
  */
 public final class DbGate {
 

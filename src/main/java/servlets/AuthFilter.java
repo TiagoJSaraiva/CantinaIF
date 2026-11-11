@@ -13,7 +13,9 @@ import jakarta.servlet.ServletResponse;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.servlet.http.HttpSession;
+import utils.BaseRestauradaException;
 import utils.Database;
+import utils.GeracaoDaRequisicao;
 
 /**
  * Controle de acesso por perfil. Rotas do vendedor exigem "vendedor" na sessao; rotas do comprador
@@ -52,21 +54,26 @@ public class AuthFilter implements Filter {
         if (session != null && session.getAttribute("geracao") != null
                 && !session.getAttribute("geracao").equals(Database.geracao())) {
             // a base de demonstracao foi restaurada depois deste login: a conta pode nao existir mais
-            session.invalidate();
-            if (path.endsWith(".jsp") || path.equals("/FinalizarCompraServlet") || path.equals("/registrar-produto")) {
-                response.sendRedirect(request.getContextPath() + "/login.jsp?restaurada=1");
-            } else {
-                Map<String, Object> corpo = new LinkedHashMap<>();
-                corpo.put("success", false);
-                corpo.put("restaurada", true);
-                corpo.put("message", "A demonstração foi restaurada; entre novamente.");
-                Json.write(response, HttpServletResponse.SC_UNAUTHORIZED, corpo);
-            }
+            restaurada(request, response, session, path);
             return;
         }
         if (session != null && session.getAttribute(perfil) != null) {
             response.setHeader("Cache-Control", "no-store");
-            chain.doFilter(req, res);
+            Object geracao = session.getAttribute("geracao");
+            GeracaoDaRequisicao.definir(geracao instanceof Long ? (Long) geracao : null);
+            try {
+                chain.doFilter(req, res);
+            } catch (BaseRestauradaException e) {
+                restaurada(request, response, session, path);
+            } catch (ServletException e) {
+                if (e.getRootCause() instanceof BaseRestauradaException || e.getCause() instanceof BaseRestauradaException) {
+                    restaurada(request, response, session, path);
+                } else {
+                    throw e;
+                }
+            } finally {
+                GeracaoDaRequisicao.limpar();
+            }
             return;
         }
 
@@ -85,6 +92,28 @@ public class AuthFilter implements Filter {
             Json.result(response, HttpServletResponse.SC_FORBIDDEN, false, "Acesso negado para este perfil.");
         } else {
             Json.result(response, HttpServletResponse.SC_UNAUTHORIZED, false, "Faça login para continuar.");
+        }
+    }
+
+    /** Invalida a sessao e manda entrar de novo (pagina) ou responde 401 com restaurada=true (API). */
+    private static void restaurada(HttpServletRequest request, HttpServletResponse response, HttpSession session,
+            String path) throws IOException {
+        try {
+            session.invalidate();
+        } catch (IllegalStateException ja) {
+            // ja invalidada
+        }
+        if (response.isCommitted()) {
+            return;
+        }
+        if (path.endsWith(".jsp") || path.equals("/FinalizarCompraServlet") || path.equals("/registrar-produto")) {
+            response.sendRedirect(request.getContextPath() + "/login.jsp?restaurada=1");
+        } else {
+            Map<String, Object> corpo = new LinkedHashMap<>();
+            corpo.put("success", false);
+            corpo.put("restaurada", true);
+            corpo.put("message", "A demonstração foi restaurada; entre novamente.");
+            Json.write(response, HttpServletResponse.SC_UNAUTHORIZED, corpo);
         }
     }
 

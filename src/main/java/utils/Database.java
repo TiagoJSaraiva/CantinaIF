@@ -98,12 +98,70 @@ public final class Database {
         }
     }
 
-    /** Conexao do pool; deve ser fechada pelo chamador (try-with-resources). */
+    /** Tempo maximo (s) que um acesso ao banco espera por uma restauracao da demo em andamento. */
+    static final long ESPERA_TRAVA_SEGUNDOS = 10;
+
+    /**
+     * Conexao do pool; deve ser fechada pelo chamador (try-with-resources). Enquanto estiver aberta ela segura a
+     * trava de LEITURA de {@link DbGate} (a restauracao da demo espera as conexoes abertas e as novas esperam a
+     * restauracao, ambos por pouco tempo). Se a sessao desta requisicao e de uma geracao anterior da base, lanca
+     * {@link BaseRestauradaException} antes de qualquer acesso (nada e lido nem gravado com um usuario que pode ter
+     * deixado de existir).
+     */
     public static Connection getConnection() throws SQLException {
         if (dataSource == null) {
             init();
         }
+        java.util.concurrent.locks.Lock leitura = DbGate.leitura();
+        try {
+            if (!leitura.tryLock(ESPERA_TRAVA_SEGUNDOS, java.util.concurrent.TimeUnit.SECONDS)) {
+                throw new SQLException("Banco ocupado (restauração da demonstração em andamento); tente novamente.");
+            }
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw new SQLException("Interrompido ao aguardar o banco.", e);
+        }
+        try {
+            Long daRequisicao = GeracaoDaRequisicao.atual();
+            if (daRequisicao != null && daRequisicao != GERACAO.get()) {
+                throw new BaseRestauradaException();
+            }
+            return comTrava(dataSource.getConnection(), leitura);
+        } catch (SQLException | RuntimeException e) {
+            leitura.unlock();
+            throw e;
+        }
+    }
+
+    /** Conexao do pool SEM a trava de leitura (uso exclusivo de quem ja detem a trava de escrita, ex.: o reset). */
+    public static Connection getConnectionSemTrava() throws SQLException {
+        if (dataSource == null) {
+            init();
+        }
         return dataSource.getConnection();
+    }
+
+    /** Proxy que libera a trava de leitura ao fechar a conexao (uma unica vez). */
+    private static Connection comTrava(Connection real, java.util.concurrent.locks.Lock trava) {
+        java.util.concurrent.atomic.AtomicBoolean liberada = new java.util.concurrent.atomic.AtomicBoolean(false);
+        return (Connection) java.lang.reflect.Proxy.newProxyInstance(Database.class.getClassLoader(),
+                new Class<?>[] { Connection.class }, (proxy, metodo, args) -> {
+                    if (metodo.getName().equals("close") && (args == null || args.length == 0)) {
+                        try {
+                            real.close();
+                        } finally {
+                            if (liberada.compareAndSet(false, true)) {
+                                trava.unlock();
+                            }
+                        }
+                        return null;
+                    }
+                    try {
+                        return metodo.invoke(real, args);
+                    } catch (java.lang.reflect.InvocationTargetException e) {
+                        throw e.getCause();
+                    }
+                });
     }
 
     public static long geracao() {

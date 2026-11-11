@@ -18,7 +18,6 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
 import dao.PedidoDAO;
-import utils.DbGate;
 import dao.ProductDao;
 import dao.UserDao;
 import model.ItemCarrinho;
@@ -266,13 +265,12 @@ class DemoDataSeederTest {
                 }
             }));
         }
-        for (int i = 0; i < 3; i++) { // checkouts COM a trava de leitura (como o filtro faz)
+        for (int i = 0; i < 3; i++) { // checkouts: a trava de leitura esta no proprio acesso ao banco
             threads.add(new Thread(() -> {
                 PedidoDAO pedidos = new PedidoDAO();
                 Produto p = new Produto();
                 p.setId(1);
                 while (!parar.get()) {
-                    DbGate.leitura().lock();
                     try {
                         pedidos.criarPedido(DemoDataSeeder.COMPRADOR_PRONTUARIO, List.of(new ItemCarrinho(p, 1)));
                         checkouts.incrementAndGet();
@@ -280,20 +278,13 @@ class DemoDataSeederTest {
                         // estoque insuficiente: esperado ocasionalmente
                     } catch (Exception e) {
                         falha.compareAndSet(null, "checkout: " + e);
-                    } finally {
-                        DbGate.leitura().unlock();
                     }
                 }
             }));
         }
         threads.forEach(Thread::start);
         for (int i = 0; i < 8; i++) {
-            DbGate.escrita().lock();
-            try (Connection c = Database.getConnection()) {
-                DemoDataSeeder.aplicar(c, plano, AGORA);
-            } finally {
-                DbGate.escrita().unlock();
-            }
+            assertTrue(utils.DemoReset.aplicarComTrava(plano, AGORA, 30_000), "o reset deve conseguir a trava");
             Thread.sleep(40);
         }
         parar.set(true);

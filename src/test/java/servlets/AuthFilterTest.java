@@ -139,4 +139,44 @@ class AuthFilterTest {
         filtro.doFilter(requisicao("POST", "/FinalizarCompraServlet", vendedor), res2, cadeia);
         verify(res2).setStatus(403);
     }
+
+    @Test
+    void baseRestauradaNoMeioDaRequisicaoViraRedirecionamentoOu401NuncaErro500() throws Exception {
+        long geracao = Database.geracao();
+        HttpSession comprador = sessao("comprador", new Comprador(), geracao);
+
+        FilterChain estoura = mock(FilterChain.class);
+        doThrow(new utils.BaseRestauradaException()).when(estoura).doFilter(any(), any());
+
+        HttpServletResponse resPagina = resposta(new StringWriter());
+        filtro.doFilter(requisicao("GET", "/home.jsp", comprador), resPagina, estoura);
+        verify(comprador).invalidate();
+        verify(resPagina).sendRedirect("/login.jsp?restaurada=1");
+
+        HttpSession vendedor = sessao("vendedor", new Vendedor(), geracao);
+        StringWriter corpo = new StringWriter();
+        HttpServletResponse resApi = resposta(corpo);
+        filtro.doFilter(requisicao("POST", "/atualizarEstoque", vendedor), resApi, estoura);
+        verify(resApi).setStatus(401);
+        assertTrue(corpo.toString().contains("\"restaurada\":true"));
+        assertNull(utils.GeracaoDaRequisicao.atual(), "a geracao da thread e sempre limpa");
+
+        // a excecao vinda embrulhada em ServletException (como o Jasper faz) tambem e tratada
+        FilterChain embrulhada = mock(FilterChain.class);
+        doThrow(new jakarta.servlet.ServletException("jsp", new utils.BaseRestauradaException())).when(embrulhada).doFilter(any(), any());
+        HttpSession outra = sessao("comprador", new Comprador(), geracao);
+        HttpServletResponse res3 = resposta(new StringWriter());
+        filtro.doFilter(requisicao("GET", "/Carrinho.jsp", outra), res3, embrulhada);
+        verify(res3).sendRedirect("/login.jsp?restaurada=1");
+    }
+
+    @Test
+    void outrasExcecoesContinuamPropagando() throws Exception {
+        HttpSession comprador = sessao("comprador", new Comprador(), Database.geracao());
+        FilterChain estoura = mock(FilterChain.class);
+        doThrow(new IllegalStateException("outra")).when(estoura).doFilter(any(), any());
+        assertThrows(IllegalStateException.class,
+                () -> filtro.doFilter(requisicao("GET", "/home.jsp", comprador), resposta(new StringWriter()), estoura));
+        assertNull(utils.GeracaoDaRequisicao.atual());
+    }
 }

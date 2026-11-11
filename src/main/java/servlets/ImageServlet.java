@@ -57,6 +57,8 @@ public class ImageServlet extends HttpServlet {
             }
         } catch (NumberFormatException e) {
             response.sendError(HttpServletResponse.SC_BAD_REQUEST, "ID do produto inválido.");
+        } catch (utils.BaseRestauradaException e) {
+            throw e;
         } catch (Exception e) {
             System.err.println("Erro ao servir imagem: " + e.getMessage());
             response.sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR, "Erro interno ao carregar a imagem.");

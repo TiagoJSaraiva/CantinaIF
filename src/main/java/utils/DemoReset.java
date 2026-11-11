@@ -51,21 +51,49 @@ public final class DemoReset {
         }
     }
 
+    /** Tempo maximo (s) para obter a trava de escrita; se estourar, a restauracao e reagendada. */
+    static final long ESPERA_RESET_SEGUNDOS = 10;
+    /** Atraso (s) para tentar de novo quando nao foi possivel restaurar agora. */
+    static final long REAGENDAR_SEGUNDOS = 30;
+
+    /**
+     * Aplica o seed segurando a trava de escrita. Retorna false (sem fazer nada) se as conexoes abertas nao
+     * terminarem dentro de {@code timeoutMs}; os leitores nunca ficam esperando alem do proprio tempo limite.
+     */
+    public static boolean aplicarComTrava(DemoDataSeeder.Plano plano, LocalDateTime agora, long timeoutMs)
+            throws Exception {
+        if (!DbGate.escrita().tryLock(timeoutMs, TimeUnit.MILLISECONDS)) {
+            return false;
+        }
+        try (java.sql.Connection conn = Database.getConnectionSemTrava()) {
+            DemoDataSeeder.aplicar(conn, plano, agora);
+            Database.novaGeracao();
+            return true;
+        } finally {
+            DbGate.escrita().unlock();
+        }
+    }
+
     /** Apaga e recria os dados de demonstracao. Nunca propaga excecao (para nao cancelar o agendamento). */
     static void restaurar() {
         try {
-            // trabalho pesado (BCrypt, leitura das imagens) ANTES de segurar a trava
+            // trabalho pesado (BCrypt, leitura das imagens) ANTES de pedir a trava
             DemoDataSeeder.Plano plano = DemoDataSeeder.preparar();
-            DbGate.escrita().lock();
-            try (java.sql.Connection conn = Database.getConnection()) {
-                DemoDataSeeder.Resultado r = DemoDataSeeder.aplicar(conn, plano, LocalDateTime.now());
-                Database.novaGeracao();
-                System.out.println("[demo] base restaurada: " + r.produtos() + " produtos, " + r.pedidos() + " pedidos.");
-            } finally {
-                DbGate.escrita().unlock();
+            if (aplicarComTrava(plano, LocalDateTime.now(), ESPERA_RESET_SEGUNDOS * 1000)) {
+                System.out.println("[demo] base restaurada.");
+            } else {
+                System.err.println("[demo] ha conexoes abertas ha mais de " + ESPERA_RESET_SEGUNDOS
+                        + " s; restauracao adiada em " + REAGENDAR_SEGUNDOS + " s.");
+                reagendar();
             }
         } catch (Throwable t) {
             System.err.println("[demo] falha ao restaurar a base: " + t);
+        }
+    }
+
+    private static synchronized void reagendar() {
+        if (agendador != null) {
+            agendador.schedule(DemoReset::restaurar, REAGENDAR_SEGUNDOS, TimeUnit.SECONDS);
         }
     }
 }

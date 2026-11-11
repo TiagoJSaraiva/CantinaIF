@@ -44,6 +44,8 @@ public class AtualizarEstoqueServlet extends HttpServlet {
             }
         } catch (NumberFormatException e) {
             Json.result(response, HttpServletResponse.SC_BAD_REQUEST, false, "Parâmetros inválidos.");
+        } catch (utils.BaseRestauradaException e) {
+            throw e; // tratada pelo AuthFilter (redireciona ao login)
         } catch (Exception e) {
             e.printStackTrace();
             Json.result(response, HttpServletResponse.SC_INTERNAL_SERVER_ERROR, false, "Erro ao atualizar o estoque.");
