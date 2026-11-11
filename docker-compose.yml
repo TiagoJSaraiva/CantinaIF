@@ -1,0 +1,41 @@
+# Aplicacao + MySQL com persistencia. Configuracao lida do arquivo .env (copie de .env.example).
+#   docker compose up --build
+# Para a demo "tudo em memoria" (H2, sem MySQL) basta:  docker build -t cantinaif . && docker run -p 8080:8080 cantinaif
+services:
+  app:
+    build: .
+    ports:
+      - "${PORT:-8080}:${PORT:-8080}"
+    environment:
+      PORT: ${PORT:-8080}
+      CANTINA_DB_URL: jdbc:mysql://mysql:3306/${MYSQL_DATABASE:-cantinaif}?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
+      CANTINA_DB_USER: ${MYSQL_USER:-cantina}
+      CANTINA_DB_PASSWORD: ${MYSQL_PASSWORD:?defina MYSQL_PASSWORD no arquivo .env}
+      # semeia os dados de demonstracao somente se o banco estiver vazio
+      CANTINA_SEED_IF_EMPTY: ${CANTINA_SEED_IF_EMPTY:-true}
+      CANTINA_COOKIE_SECURE: ${CANTINA_COOKIE_SECURE:-false}
+    depends_on:
+      mysql:
+        condition: service_healthy
+    restart: unless-stopped
+
+  mysql:
+    image: mysql:8.4
+    environment:
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-cantinaif}
+      MYSQL_USER: ${MYSQL_USER:-cantina}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:?defina MYSQL_PASSWORD no arquivo .env}
+      MYSQL_RANDOM_ROOT_PASSWORD: "yes"
+    volumes:
+      - mysql-data:/var/lib/mysql
+      # cria as tabelas na primeira inicializacao do volume
+      - ./db/schema.sql:/docker-entrypoint-initdb.d/01-schema.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -u$$MYSQL_USER -p$$MYSQL_PASSWORD --silent"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    restart: unless-stopped
+
+volumes:
+  mysql-data:
