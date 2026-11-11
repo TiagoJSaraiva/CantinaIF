@@ -1,4 +1,4 @@
-<%@ page language="java" contentType="text/html; charset=UTF-8" pageEncoding="UTF-8"%>
+<%@ page language="java" contentType="text/html; charset=UTF-8" pageEncoding="UTF-8" session="false"%>
 <%@ taglib uri="jakarta.tags.core" prefix="c" %>
 <!DOCTYPE html>
 <html lang="pt-br">
@@ -17,7 +17,7 @@
         </c:if>
 
         <form action="register" method="post" novalidate data-validar>
-            <input type="hidden" name="_csrf" value="<c:out value='${sessionScope.csrfToken}'/>">
+            <input type="hidden" name="_csrf" value="<c:out value='${requestScope.csrfForm}'/>">
 
             <div class="field">
                 <label for="prontuario">Prontuário</label>

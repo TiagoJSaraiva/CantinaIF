@@ -73,6 +73,9 @@ public class LoginServlet extends HttpServlet {
                 response.sendRedirect("home.jsp");
                 return;
             }
+        } catch (IllegalStateException e) { // limite de sessoes ativas atingido (maxActiveSessions)
+            servidorOcupado(request, response);
+            return;
         } catch (SQLException e) {
             e.printStackTrace();
             falhar(request, response, "Não foi possível entrar agora. Tente novamente em instantes.");
@@ -80,6 +83,13 @@ public class LoginServlet extends HttpServlet {
         }
         guarda.falha(ip, prontuario);
         falhar(request, response, "Usuário ou senha inválidos.");
+    }
+
+    private void servidorOcupado(HttpServletRequest request, HttpServletResponse response)
+            throws ServletException, IOException {
+        response.setStatus(HttpServletResponse.SC_SERVICE_UNAVAILABLE);
+        response.setHeader("Retry-After", "30");
+        falhar(request, response, "O servidor está com muitas sessões abertas no momento. Tente novamente em instantes.");
     }
 
     /** Reaproveita a sessao (preservando o token CSRF) trocando o id para evitar fixacao de sessao. */

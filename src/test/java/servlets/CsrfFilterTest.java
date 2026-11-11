@@ -76,32 +76,105 @@ class CsrfFilterTest {
     }
 
     @Test
-    void visitanteAnonimoSoGanhaSessaoNasTelasDeLoginECadastroEElaEhCurta() throws Exception {
+    void visitanteAnonimoNuncaGanhaSessaoEOTokenDasTelasDeLoginViraCookieDuploSubmit() throws Exception {
         FilterChain cadeia = mock(FilterChain.class);
 
-        HttpSession nova = sessaoComToken(null);
         HttpServletRequest login = req("GET", "/login.jsp", null);
-        when(login.getSession(true)).thenReturn(nova);
-        filtro.doFilter(login, mock(HttpServletResponse.class), cadeia);
-        verify(nova).setMaxInactiveInterval(300);
-        assertNotNull(nova.getAttribute(CsrfFilter.ATTR));
+        HttpServletResponse resp = mock(HttpServletResponse.class);
+        filtro.doFilter(login, resp, cadeia);
+        verify(login, never()).getSession(true);
+        verify(login, never()).getSession();
+        org.mockito.ArgumentCaptor<jakarta.servlet.http.Cookie> cookie = org.mockito.ArgumentCaptor.forClass(jakarta.servlet.http.Cookie.class);
+        verify(resp).addCookie(cookie.capture());
+        assertEquals("csrf_anon", cookie.getValue().getName());
+        assertTrue(cookie.getValue().isHttpOnly());
+        assertEquals("Strict", cookie.getValue().getAttribute("SameSite"));
+        ArgumentCaptorHelper.verificaAtributoDoFormulario(login, cookie.getValue().getValue());
 
-        HttpServletRequest erroJsp = req("GET", "/erro.jsp", null);
-        filtro.doFilter(erroJsp, mock(HttpServletResponse.class), cadeia);
-        verify(erroJsp, never()).getSession(true);
+        for (String caminho : new String[] { "/erro.jsp", "/health", "/image", "/home.jsp" }) {
+            HttpServletRequest r = req("GET", caminho, null);
+            filtro.doFilter(r, mock(HttpServletResponse.class), cadeia);
+            verify(r, never()).getSession(true);
+            verify(r, never()).getSession();
+        }
+    }
 
-        HttpServletRequest health = req("GET", "/health", null);
-        filtro.doFilter(health, mock(HttpServletResponse.class), cadeia);
-        verify(health, never()).getSession(true);
-        verify(health, never()).getSession();
+    @Test
+    void milharesDeGetsAnonimosNaoCriamSessoes() throws Exception {
+        FilterChain cadeia = mock(FilterChain.class);
+        HttpServletRequest r = req("GET", "/login.jsp", null);
+        for (int i = 0; i < 5000; i++) {
+            filtro.doFilter(r, mock(HttpServletResponse.class), cadeia);
+        }
+        verify(r, never()).getSession(true);
+        verify(r, never()).getSession();
+    }
+
+    @Test
+    void cookieAnonimoJaValidoEReaproveitadoSemNovoCookie() throws Exception {
+        String token = "A".repeat(43);
+        HttpServletRequest r = req("GET", "/cadastro.jsp", null);
+        when(r.getCookies()).thenReturn(new jakarta.servlet.http.Cookie[] { new jakarta.servlet.http.Cookie("csrf_anon", token) });
+        HttpServletResponse resp = mock(HttpServletResponse.class);
+        filtro.doFilter(r, resp, mock(FilterChain.class));
+        verify(resp, never()).addCookie(any());
+        ArgumentCaptorHelper.verificaAtributoDoFormulario(r, token);
+    }
+
+    @Test
+    void loginECadastroAceitamDuploSubmitSemSessaoMasOutrasRotasNao() throws Exception {
+        String token = "B".repeat(43);
+        jakarta.servlet.http.Cookie[] cookies = { new jakarta.servlet.http.Cookie("csrf_anon", token) };
+        FilterChain cadeia = mock(FilterChain.class);
+
+        for (String caminho : new String[] { "/login", "/register" }) {
+            HttpServletRequest ok = req("POST", caminho, null);
+            when(ok.getCookies()).thenReturn(cookies);
+            when(ok.getParameter("_csrf")).thenReturn(token);
+            HttpServletResponse r = mock(HttpServletResponse.class);
+            filtro.doFilter(ok, r, cadeia);
+            verify(cadeia).doFilter(ok, r);
+            verify(ok, never()).getSession(true);
+            ArgumentCaptorHelper.verificaAtributoDoFormulario(ok, token);
+        }
+
+        HttpServletRequest errado = req("POST", "/login", null);
+        when(errado.getCookies()).thenReturn(cookies);
+        when(errado.getParameter("_csrf")).thenReturn("C".repeat(43));
+        HttpServletResponse r1 = mock(HttpServletResponse.class);
+        filtro.doFilter(errado, r1, cadeia);
+        verify(r1).sendError(eq(403), anyString());
+
+        HttpServletRequest semCookie = req("POST", "/login", null);
+        when(semCookie.getParameter("_csrf")).thenReturn(token);
+        HttpServletResponse r2 = mock(HttpServletResponse.class);
+        filtro.doFilter(semCookie, r2, cadeia);
+        verify(r2).sendError(eq(403), anyString());
+
+        // o cookie anonimo nao vale para rotas que alteram estado depois do login
+        HttpServletRequest carrinho = req("POST", "/carrinho", null);
+        when(carrinho.getCookies()).thenReturn(cookies);
+        when(carrinho.getHeader("X-CSRF-Token")).thenReturn(token);
+        HttpServletResponse r3 = mock(HttpServletResponse.class);
+        filtro.doFilter(carrinho, r3, cadeia);
+        verify(r3).sendError(eq(403), anyString());
+    }
+
+    /** Auxiliar para conferir o atributo que os formularios usam. */
+    static final class ArgumentCaptorHelper {
+        static void verificaAtributoDoFormulario(HttpServletRequest r, String esperado) {
+            verify(r).setAttribute(CsrfFilter.ATTR_FORM, esperado);
+        }
     }
 
     @Test
     void paginaComSessaoExistenteRecebeTokenSeAindaNaoTiver() throws Exception {
         FilterChain cadeia = mock(FilterChain.class);
         HttpSession existente = sessaoComToken(null);
-        filtro.doFilter(req("GET", "/home.jsp", existente), mock(HttpServletResponse.class), cadeia);
+        HttpServletRequest r = req("GET", "/home.jsp", existente);
+        filtro.doFilter(r, mock(HttpServletResponse.class), cadeia);
         assertNotNull(existente.getAttribute(CsrfFilter.ATTR));
+        verify(r).setAttribute(eq(CsrfFilter.ATTR_FORM), anyString());
     }
 
     @Test
