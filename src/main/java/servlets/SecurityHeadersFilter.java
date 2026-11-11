@@ -31,7 +31,8 @@ public class SecurityHeadersFilter implements Filter {
         response.setHeader("X-Frame-Options", "DENY");
         response.setHeader("Referrer-Policy", "same-origin");
         response.setHeader("Permissions-Policy", "camera=(), microphone=(), geolocation=()");
-        boolean https = request.isSecure() || "https".equalsIgnoreCase(request.getHeader("X-Forwarded-Proto"));
+        // isSecure() ja reflete o RemoteIpValve (apenas proxies confiaveis); o cabecalho cru nao e usado
+        boolean https = request.isSecure();
         if (https) {
             response.setHeader("Strict-Transport-Security", "max-age=31536000");
         }
