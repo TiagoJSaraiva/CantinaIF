@@ -1,50 +1,36 @@
-<%@ page contentType="text/html;charset=UTF-8" %>
+<%@ page language="java" contentType="text/html; charset=UTF-8" pageEncoding="UTF-8"%>
 <%@ taglib uri="jakarta.tags.core" prefix="c" %>
-
+<c:set var="pagina" value="home"/>
 <!DOCTYPE html>
 <html lang="pt-br">
 <head>
-    <meta charset="UTF-8">
-    <meta name="csrf-token" content="<c:out value='${sessionScope.csrfToken}'/>">
-    <title>Home - Cantina Universitária</title>
-    <link rel="stylesheet" href="css/user.css"> <!-- Link do CSS -->
+    <%@ include file="/WEB-INF/jspf/head.jspf" %>
+    <title>Vitrine - CantinaIF</title>
 </head>
 <body>
+<%@ include file="/WEB-INF/jspf/navbar.jspf" %>
+<main class="container" id="conteudo">
+    <div class="page-head"><h1>Vitrine</h1></div>
 
-<!-- Barra superior com logo, prontuário do usuário e links -->
-<div class="navbar">
-    <div class="logo">
-        	<a href="home.jsp"><img src="img/Logo.png" alt="Logo" style="height: 40px;"></a>
-    </div>    
-    <div class="info">
-        <!-- Mostra o prontuário do comprador salvo na sessão -->
-        <span>Prontuário: <c:out value="${sessionScope.comprador.prontuario}"/></span>
-        <a href="Carrinho.jsp" style="
-        font-weight: bold;
-		text-decoration: none;
-  		color: white;">Carrinho</a>
-        <form action="logout" method="post" class="logout-form"><input type="hidden" name="_csrf" value="<c:out value='${sessionScope.csrfToken}'/>"><button type="submit" class="link-button">Logout</button></form>
+    <div class="toolbar">
+        <div class="busca">
+            <label for="busca" class="sr-only">Buscar produtos</label>
+            <input type="search" id="busca" placeholder="Buscar produto..." autocomplete="off">
+        </div>
+        <div class="chips" role="group" aria-label="Filtrar por categoria">
+            <button type="button" class="chip" data-filter="todos" aria-pressed="true">Todos</button>
+            <button type="button" class="chip" data-filter="salgado" aria-pressed="false">Salgados</button>
+            <button type="button" class="chip" data-filter="lanche" aria-pressed="false">Lanches</button>
+            <button type="button" class="chip" data-filter="doce" aria-pressed="false">Doces</button>
+            <button type="button" class="chip" data-filter="bebida" aria-pressed="false">Bebidas</button>
+        </div>
     </div>
-</div>
 
-<!-- Botões de filtro por categoria -->
-<div class="filters">
-    <button class="filter-btn active" data-filter="todos">Todos</button>
-    <button class="filter-btn" data-filter="salgado">Salgados</button>
-    <button class="filter-btn" data-filter="doce">Doces</button>
-    <button class="filter-btn" data-filter="lanche">Lanches</button>
-    <button class="filter-btn" data-filter="bebida">Bebidas</button>
-</div>
-
-<!-- Lista de produtos renderizados dinamicamente -->
-<div id="mensagem" role="status" style="display: none;"></div>
-<div id="productContainer" class="produtosPai">
-        
-</div>
-
-<!-- Script JS para controlar o filtro por categoria -->
+    <div id="mensagem" role="status" aria-live="polite" hidden></div>
+    <div id="estado" class="estado carregando" role="status">Carregando produtos...</div>
+    <div id="productContainer" class="grade" hidden></div>
+</main>
 <script src="js/util.js"></script>
 <script src="js/filtro.js"></script>
-
 </body>
 </html>

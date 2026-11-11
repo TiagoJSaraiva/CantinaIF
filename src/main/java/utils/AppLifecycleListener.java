@@ -27,6 +27,7 @@ public class AppLifecycleListener implements ServletContextListener {
             ctx.setAttribute("demoSenha", DemoDataSeeder.SENHA_DEMO);
             double horas = DemoReset.horasConfiguradas();
             ctx.setAttribute("demoResetHoras", horas);
+            ctx.setAttribute("demoResetTexto", horas == Math.rint(horas) ? String.valueOf((long) horas) : String.valueOf(horas));
             DemoReset.iniciar(horas);
         }
     }

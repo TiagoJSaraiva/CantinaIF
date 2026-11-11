@@ -1,43 +1,102 @@
-// Tela do carrinho: lista os itens da sessao e mostra o total. Depende de util.js.
+// Tela do carrinho: lista, altera quantidade, remove itens e mostra o total. Depende de util.js.
 document.addEventListener('DOMContentLoaded', function() {
+	const estado = document.getElementById('estado');
 	const container = document.getElementById('carrinho-container');
+	const resumo = document.getElementById('resumo');
 	const total = document.getElementById('display-total');
+	const mensagem = document.getElementById('mensagem');
+	const badge = document.getElementById('badge-carrinho');
 
-	fetch('carrinho')
-		.then(response => {
-			if (!response.ok) {
-				throw new Error('Resposta inesperada do servidor: ' + response.status);
-			}
-			return response.json();
-		})
-		.then(itens => {
-			container.replaceChildren();
-			let totalGeral = 0;
-			if (!Array.isArray(itens) || itens.length === 0) {
-				container.appendChild(criar('p', { texto: 'Seu carrinho está vazio.' }));
-				total.textContent = formatarPreco(0);
-				return;
-			}
-			itens.forEach(item => {
-				totalGeral += item.preco * item.quantidade;
-				const imagem = criar('img', { attrs: { src: urlImagem(item), alt: item.nome || 'Produto' } });
-				imagem.style.cssText = 'width: 100px; height: 100px; object-fit: cover;';
-				const detalhes = criar('div', {}, [
-					criar('h3', { texto: item.nome }),
-					criar('p', { texto: item.descricao || '' }),
-					criar('p', { texto: 'Preço unitário: ' + formatarPreco(item.preco) }),
-					criar('p', { texto: 'Quantidade: ' + item.quantidade }),
-					criar('p', {}, [criar('strong', { texto: 'Subtotal: ' + formatarPreco(item.preco * item.quantidade) })])
-				]);
-				const linha = criar('div', {}, [imagem, detalhes]);
-				linha.style.cssText = 'display: flex; gap: 10px; margin-bottom: 16px;';
-				container.appendChild(criar('div', { classe: 'item-carrinho' }, [linha]));
-			});
-			total.textContent = formatarPreco(totalGeral);
-		})
-		.catch(error => {
-			console.error('Erro ao carregar carrinho:', error);
-			container.replaceChildren(criar('p', { texto: 'Erro ao carregar o carrinho.' }));
-			total.textContent = formatarPreco(0);
+	function carregar() {
+		mostrarEstado(estado, 'Carregando carrinho...', 'carregando');
+		container.hidden = true;
+		resumo.hidden = true;
+		requisitar('carrinho')
+			.then(({ ok, corpo }) => {
+				if (!ok || !Array.isArray(corpo)) throw new Error('resposta inesperada');
+				renderizar(corpo);
+			})
+			.catch(() => mostrarEstado(estado, 'Erro ao carregar o carrinho.', 'erro', { texto: 'Tentar novamente', fn: carregar }));
+	}
+
+	function renderizar(itens) {
+		container.replaceChildren();
+		if (badge) badge.textContent = String(itens.reduce((s, i) => s + i.quantidade, 0));
+		if (itens.length === 0) {
+			container.hidden = true;
+			resumo.hidden = true;
+			estado.replaceChildren();
+			estado.className = 'estado';
+			estado.hidden = false;
+			estado.appendChild(document.createTextNode('Seu carrinho está vazio.'));
+			estado.appendChild(document.createElement('br'));
+			estado.appendChild(criar('a', { classe: 'btn', texto: 'Ver produtos', attrs: { href: 'home.jsp' } }));
+			return;
+		}
+		mostrarEstado(estado, '', 'vazio');
+		let totalGeral = 0;
+		itens.forEach(item => {
+			totalGeral += item.preco * item.quantidade;
+			container.appendChild(criarItem(item));
 		});
+		total.textContent = formatarPreco(totalGeral);
+		container.hidden = false;
+		resumo.hidden = false;
+	}
+
+	function criarItem(item) {
+		const imagem = criar('img', { attrs: { src: urlImagem(item), alt: item.nome || 'Produto', loading: 'lazy' } });
+		const campo = criar('input', {
+			attrs: { type: 'number', min: '1', max: String(item.estoque), value: String(item.quantidade), inputmode: 'numeric', 'aria-label': 'Quantidade de ' + item.nome }
+		});
+		const definir = quantidade => {
+			if (!Number.isInteger(quantidade) || quantidade < 1) { campo.value = String(item.quantidade); return; }
+			requisitar('carrinho', {
+				method: 'PUT',
+				headers: cabecalhosCsrf({ 'Content-Type': 'application/json' }),
+				body: JSON.stringify({ produtoId: item.id, quantidade: quantidade })
+			}).then(({ ok, corpo }) => {
+				if (ok) { mostrarMensagem(mensagem, '', false); carregar(); }
+				else { mostrarMensagem(mensagem, corpo.message || 'Não foi possível alterar a quantidade.', true); campo.value = String(item.quantidade); }
+			}).catch(() => mostrarMensagem(mensagem, 'Erro de comunicação com o servidor.', true));
+		};
+		const menos = criar('button', { texto: '−', attrs: { type: 'button', 'aria-label': 'Diminuir quantidade de ' + item.nome } });
+		const mais = criar('button', { texto: '+', attrs: { type: 'button', 'aria-label': 'Aumentar quantidade de ' + item.nome } });
+		if (item.quantidade <= 1) menos.disabled = true;
+		menos.addEventListener('click', () => definir(item.quantidade - 1));
+		mais.addEventListener('click', () => definir(item.quantidade + 1));
+		campo.addEventListener('change', () => definir(parseInt(campo.value, 10)));
+
+		const remover = criar('button', { classe: 'btn btn-perigo btn-pequeno', texto: 'Remover', attrs: { type: 'button', 'aria-label': 'Remover ' + item.nome + ' do carrinho' } });
+		remover.addEventListener('click', () => {
+			requisitar('carrinho?produtoId=' + encodeURIComponent(item.id), { method: 'DELETE', headers: cabecalhosCsrf() })
+				.then(({ ok, corpo }) => {
+					if (ok) { mostrarMensagem(mensagem, item.nome + ' removido do carrinho.', false); carregar(); }
+					else mostrarMensagem(mensagem, corpo.message || 'Não foi possível remover o item.', true);
+				})
+				.catch(() => mostrarMensagem(mensagem, 'Erro de comunicação com o servidor.', true));
+		});
+
+		const cartao = criar('article', { classe: 'item-carrinho' }, [
+			imagem,
+			criar('div', {}, [
+				criar('h3', { texto: item.nome }),
+				criar('p', { classe: 'dica', texto: formatarPreco(item.preco) + ' cada' })
+			]),
+			criar('div', { classe: 'item-linha' }, [
+				criar('div', { classe: 'qtd' }, [menos, campo, mais]),
+				remover,
+				criar('span', { classe: 'subtotal', texto: formatarPreco(item.preco * item.quantidade) })
+			])
+		]);
+		return cartao;
+	}
+
+	document.getElementById('form-finalizar').addEventListener('submit', () => {
+		const botao = document.getElementById('btn-finalizar');
+		botao.disabled = true;
+		botao.textContent = 'Enviando pedido...';
+	});
+
+	carregar();
 });

@@ -1,83 +1,39 @@
 <%@ page language="java" contentType="text/html; charset=UTF-8" pageEncoding="UTF-8"%>
 <%@ taglib uri="jakarta.tags.core" prefix="c" %>
+<c:set var="pagina" value="carrinho"/>
 <!DOCTYPE html>
-<html>
+<html lang="pt-br">
 <head>
-    <meta charset="UTF-8">
-    <meta name="csrf-token" content="<c:out value='${sessionScope.csrfToken}'/>">
-    <title>Carrinho de Compras</title>
-    <style>
-        /* ... Seus estilos existentes ... */
-        .mensagem-sucesso {
-            background-color: #d4edda;
-            color: #155724;
-            border: 1px solid #c3e6cb;
-            padding: 10px;
-            margin-bottom: 20px;
-            text-align: center;
-            border-radius: 5px;
-        }
-        .mensagem-erro {
-            background-color: #f8d7da;
-            color: #721c24;
-            border: 1px solid #f5c6cb;
-            padding: 10px;
-            margin-bottom: 20px;
-            text-align: center;
-            border-radius: 5px;
-        }
-    </style>
-    <meta charset="UTF-8">
-    <title>Carrinho - Cantina Universitária</title>
-    <link rel="stylesheet" href="css/user.css">
+    <%@ include file="/WEB-INF/jspf/head.jspf" %>
+    <title>Carrinho - CantinaIF</title>
 </head>
 <body>
+<%@ include file="/WEB-INF/jspf/navbar.jspf" %>
+<main class="container" id="conteudo">
+    <div class="page-head"><h1>Seu carrinho</h1></div>
 
-<div class="navbar">
-    <div class="logo">
-        <a href="home.jsp"><img src="img/Logo.png" alt="Logo" style="height: 40px;"></a>
-    </div>    
-    <div class="info">
-        <span>Prontuário: <c:out value="${sessionScope.comprador.prontuario}"/></span>
-        <a href="Carrinho.jsp" style="font-weight: bold; text-decoration: none; color: white;">Carrinho</a>
-        <form action="logout" method="post" class="logout-form"><input type="hidden" name="_csrf" value="<c:out value='${sessionScope.csrfToken}'/>"><button type="submit" class="link-button">Logout</button></form>
-    </div>
-</div>
+    <c:if test="${not empty requestScope.errorMessage}">
+        <div class="alerta alerta-erro" role="alert"><p><c:out value="${requestScope.errorMessage}"/></p></div>
+    </c:if>
+    <div id="mensagem" role="status" aria-live="polite" hidden></div>
 
-    <h1>Seu Carrinho</h1>
+    <div class="carrinho-layout">
+        <section aria-label="Itens do carrinho">
+            <div id="estado" class="estado carregando" role="status">Carregando carrinho...</div>
+            <div id="carrinho-container" hidden></div>
+        </section>
 
-    <!-- Área para exibir mensagens -->
-    <div id="message-area">
-        <%-- Verifica se há uma mensagem de sucesso na sessão --%>
-        <c:if test="${not empty sessionScope.successMessage}">
-            <div class="mensagem-sucesso">
-                <p><c:out value="${sessionScope.successMessage}"/></p>
-            </div>
-            <%-- Remove a mensagem da sessão para que não apareça novamente na próxima visita --%>
-            <c:remove var="successMessage" scope="session"/>
-        </c:if>
-        
-        <%-- Verifica se há uma mensagem de erro na requisição (do forward do Servlet) --%>
-        <c:if test="${not empty requestScope.errorMessage}">
-            <div class="mensagem-erro">
-                <p><c:out value="${requestScope.errorMessage}"/></p>
-            </div>
-            <%-- Não é necessário remover, pois requestScope é limpo a cada nova requisição --%>
-        </c:if>
-    </div>
-
-  <div id="carrinho-container"></div>
-  <!-- REMOVA ESTA LINHA: <div class="resumo" id="resumo-total"></div> -->
-
-        <div class="finalizar">
-            <p><strong>Total: <span id="display-total">R$ 0,00</span></strong></p> <%-- Este é o único total que vamos usar --%>
-            <form action="FinalizarCompraServlet" method="post">
+        <aside class="resumo" id="resumo" aria-label="Resumo do pedido" hidden>
+            <div class="linha"><span>Total</span><span class="total" id="display-total">R$ 0,00</span></div>
+            <p class="dica">O pagamento é feito no balcão, na retirada do pedido.</p>
+            <form action="FinalizarCompraServlet" method="post" id="form-finalizar">
                 <input type="hidden" name="_csrf" value="<c:out value='${sessionScope.csrfToken}'/>">
-                <button type="submit">FINALIZAR COMPRA</button>
+                <button type="submit" class="btn btn-bloco" id="btn-finalizar">Finalizar pedido</button>
             </form>
-        </div>
-        
-        <script src="js/util.js"></script>
-        <script src="js/Carrinho.js"></script>
+        </aside>
+    </div>
+</main>
+<script src="js/util.js"></script>
+<script src="js/Carrinho.js"></script>
 </body>
 </html>

@@ -1,103 +1,126 @@
-// Painel de pedidos do vendedor. Depende de util.js.
-// Todo texto vindo do servidor entra no DOM via textContent (nunca como HTML).
+// Painel de pedidos do vendedor: agrupados/filtraveis por status, com acoes explicitas de avanco.
+// Depende de util.js.
 document.addEventListener('DOMContentLoaded', function() {
-	const pedidosContainer = document.getElementById('pedidosContainer');
-	const loadingMessage = document.getElementById('loadingMessage');
-	const errorMessage = document.getElementById('errorMessage');
-	const noPedidosMessage = document.getElementById('noPedidosMessage');
+	const estado = document.getElementById('estado');
+	const lista = document.getElementById('lista');
+	const mensagem = document.getElementById('mensagem');
+	const filtros = document.getElementById('filtros-status');
 
-	function criarCartaoPedido(pedido) {
-		const card = criar('div', { classe: 'pedido-card' });
-		const comprador = pedido.comprador || {};
+	const ANDAMENTO = ['PENDENTE', 'EM_PREPARO', 'PRONTO'];
+	const GRUPOS = [
+		{ id: 'andamento', rotulo: 'Em andamento', status: ANDAMENTO },
+		{ id: 'PENDENTE', rotulo: 'Pendentes', status: ['PENDENTE'] },
+		{ id: 'EM_PREPARO', rotulo: 'Em preparo', status: ['EM_PREPARO'] },
+		{ id: 'PRONTO', rotulo: 'Prontos', status: ['PRONTO'] },
+		{ id: 'ENTREGUE', rotulo: 'Entregues', status: ['ENTREGUE'] },
+		{ id: 'CANCELADO', rotulo: 'Cancelados', status: ['CANCELADO'] },
+		{ id: 'todos', rotulo: 'Todos', status: null }
+	];
+	const ACAO = {
+		EM_PREPARO: { texto: 'Iniciar preparo', classe: 'btn btn-pequeno' },
+		PRONTO: { texto: 'Marcar como pronto', classe: 'btn btn-pequeno' },
+		ENTREGUE: { texto: 'Marcar como entregue', classe: 'btn btn-pequeno' },
+		CANCELADO: { texto: 'Cancelar pedido', classe: 'btn btn-perigo btn-pequeno' }
+	};
 
-		card.appendChild(criar('div', { classe: 'pedido-info' }, [
-			criar('strong', { texto: 'Pedido #' + pedido.id }),
-			document.createElement('br'),
-			document.createTextNode('Comprador: '),
-			criar('span', { texto: comprador.nome || '' }),
-			document.createElement('br'),
-			document.createTextNode('Prontuário: '),
-			criar('span', { texto: comprador.prontuario || '' })
-		]));
+	let pedidos = [];
+	let grupoAtual = 'andamento';
 
-		card.appendChild(criar('h4', { texto: 'Itens do Pedido:' }));
-		const lista = criar('ul');
-		if (pedido.itens && pedido.itens.length > 0) {
-			pedido.itens.forEach(item => {
-				lista.appendChild(criar('li', { classe: 'pedido-item' }, [
-					criar('strong', { texto: item.produto.nome }),
-					document.createTextNode(' '),
-					criar('span', { texto: '(Qtd: ' + item.quantidade + ', Preço Unit.: ' + formatarPreco(item.produto.preco) + ')' })
-				]));
-			});
-		} else {
-			lista.appendChild(criar('li', { classe: 'pedido-item', texto: 'Nenhum item neste pedido.' }));
+	function pertence(p, grupo) {
+		return !grupo.status || grupo.status.includes(p.status);
+	}
+
+	function carregar(silencioso) {
+		if (!silencioso) {
+			lista.hidden = true;
+			mostrarEstado(estado, 'Carregando pedidos...', 'carregando');
 		}
-		card.appendChild(lista);
-
-		const botao = criar('button', { classe: 'concluir-btn', texto: 'Concluir Pedido', attrs: { type: 'button' } });
-		botao.addEventListener('click', () => {
-			if (confirm('Tem certeza que deseja concluir o pedido #' + pedido.id + '? Esta ação é irreversível.')) {
-				concluirPedido(pedido.id, botao);
-			}
-		});
-		card.appendChild(botao);
-		return card;
-	}
-
-	function fetchAndRenderPedidos() {
-		loadingMessage.style.display = 'block';
-		errorMessage.style.display = 'none';
-		noPedidosMessage.style.display = 'none';
-		pedidosContainer.querySelectorAll('.pedido-card').forEach(card => card.remove());
-
-		fetch('api/pedidos')
-			.then(response => {
-				if (!response.ok) {
-					throw new Error('Erro HTTP: ' + response.status);
-				}
-				return response.json();
+		requisitar('api/pedidos')
+			.then(({ ok, corpo }) => {
+				if (!ok || !Array.isArray(corpo)) throw new Error('resposta inesperada');
+				pedidos = corpo;
+				desenharFiltros();
+				renderizar();
 			})
-			.then(pedidos => {
-				loadingMessage.style.display = 'none';
-				if (!Array.isArray(pedidos) || pedidos.length === 0) {
-					noPedidosMessage.style.display = 'block';
-					return;
-				}
-				pedidos.forEach(pedido => pedidosContainer.appendChild(criarCartaoPedido(pedido)));
-			})
-			.catch(error => {
-				loadingMessage.style.display = 'none';
-				errorMessage.textContent = 'Erro ao carregar pedidos: ' + error.message;
-				errorMessage.style.display = 'block';
+			.catch(() => {
+				if (!silencioso) mostrarEstado(estado, 'Não foi possível carregar os pedidos.', 'erro', { texto: 'Tentar novamente', fn: () => carregar(false) });
 			});
 	}
 
-	function concluirPedido(pedidoId, botao) {
-		botao.disabled = true;
-		botao.textContent = 'Concluindo...';
+	function desenharFiltros() {
+		filtros.replaceChildren();
+		GRUPOS.forEach(g => {
+			const n = pedidos.filter(p => pertence(p, g)).length;
+			const botao = criar('button', { classe: 'chip', attrs: { type: 'button', 'aria-pressed': String(g.id === grupoAtual) } }, [
+				document.createTextNode(g.rotulo + ' '),
+				criar('span', { classe: 'contagem', texto: '(' + n + ')' })
+			]);
+			botao.addEventListener('click', () => { grupoAtual = g.id; desenharFiltros(); renderizar(); });
+			filtros.appendChild(botao);
+		});
+	}
 
-		fetch('api/deletarPedido', {
+	function renderizar() {
+		const grupo = GRUPOS.find(g => g.id === grupoAtual);
+		const visiveis = pedidos.filter(p => pertence(p, grupo));
+		lista.replaceChildren();
+		if (visiveis.length === 0) {
+			lista.hidden = true;
+			mostrarEstado(estado, 'Nenhum pedido em "' + grupo.rotulo.toLowerCase() + '".', 'vazio');
+			return;
+		}
+		mostrarEstado(estado, '', 'vazio');
+		visiveis.forEach(p => lista.appendChild(criarCartao(p)));
+		lista.hidden = false;
+	}
+
+	function criarCartao(p) {
+		const itens = criar('ul', { classe: 'pedido-itens' });
+		p.itens.forEach(i => itens.appendChild(criar('li', {
+			texto: i.quantidade + ' × ' + i.nome + ' (' + formatarPreco(i.precoUnitario) + ')'
+		})));
+		const c = p.comprador || {};
+		const cartao = criar('article', { classe: 'pedido-card' }, [
+			criar('div', { classe: 'pedido-topo' }, [
+				criar('h2', { texto: 'Pedido #' + p.id }),
+				criar('span', { classe: 'status status-' + p.status, texto: p.statusRotulo })
+			]),
+			criar('p', { classe: 'pedido-meta', texto: formatarData(p.criadoEm) + ' · ' + (c.nome || '') + ' (' + (c.prontuario || '') + ')' }),
+			itens,
+			criar('p', { classe: 'pedido-total', texto: 'Total: ' + formatarPreco(p.total) })
+		]);
+		if (p.proximos.length) {
+			const acoes = criar('div', { classe: 'pedido-acoes' });
+			p.proximos.forEach(novo => {
+				const def = ACAO[novo];
+				const botao = criar('button', { classe: def.classe, texto: def.texto, attrs: { type: 'button' } });
+				botao.addEventListener('click', () => mudarStatus(p, novo, botao));
+				acoes.appendChild(botao);
+			});
+			cartao.appendChild(acoes);
+		}
+		return cartao;
+	}
+
+	function mudarStatus(p, novo, botao) {
+		if (novo === 'CANCELADO' && !confirm('Cancelar o pedido #' + p.id + '? O estoque será devolvido.')) return;
+		botao.disabled = true;
+		requisitar('api/pedidos/status', {
 			method: 'POST',
 			headers: cabecalhosCsrf({ 'Content-Type': 'application/x-www-form-urlencoded' }),
-			body: new URLSearchParams({ id: pedidoId }).toString()
-		})
-			.then(response => response.json().catch(() => ({})).then(corpo => ({ ok: response.ok, corpo })))
-			.then(({ ok, corpo }) => {
-				if (ok && corpo.success) {
-					mostrarMensagem(errorMessage, corpo.message, false);
-					fetchAndRenderPedidos();
-					errorMessage.style.display = 'block';
-				} else {
-					throw new Error(corpo.message || 'Erro ao concluir pedido.');
-				}
-			})
-			.catch(error => {
-				mostrarMensagem(errorMessage, error.message, true);
-				botao.disabled = false;
-				botao.textContent = 'Concluir Pedido';
-			});
+			body: new URLSearchParams({ id: p.id, status: novo }).toString()
+		}).then(({ ok, corpo }) => {
+			mostrarMensagem(mensagem, corpo.message || (ok ? 'Pedido atualizado.' : 'Não foi possível atualizar o pedido.'), !ok);
+			carregar(true);
+		}).catch(() => {
+			mostrarMensagem(mensagem, 'Erro de comunicação com o servidor.', true);
+			botao.disabled = false;
+		});
 	}
 
-	fetchAndRenderPedidos();
+	document.getElementById('btn-atualizar').addEventListener('click', () => carregar(false));
+	// atualizacao periodica enquanto a aba esta visivel
+	setInterval(() => { if (!document.hidden) carregar(true); }, 30000);
+
+	carregar(false);
 });

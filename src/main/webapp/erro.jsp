@@ -6,13 +6,16 @@
 <html lang="pt-br">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="icon" type="image/png" href="img/Logo.png">
+    <link rel="stylesheet" href="css/app.css">
     <title>Ops - CantinaIF</title>
-    <link rel="stylesheet" href="css/login.css">
 </head>
 <body>
-    <section class="login-page">
-        <h1>
+<main class="auth" id="conteudo">
+    <section class="auth-card" aria-labelledby="titulo">
+        <div class="brand-grande"><img src="img/Logo.png" alt=""><span>CantinaIF</span></div>
+        <h1 id="titulo">
             <c:choose>
                 <c:when test="${codigo == 404}">Página não encontrada</c:when>
                 <c:when test="${codigo == 403}">Acesso negado</c:when>
@@ -28,7 +31,10 @@
                 <c:otherwise>Ocorreu um erro inesperado. Tente novamente em instantes.</c:otherwise>
             </c:choose>
         </p>
-        <a href="login.jsp"><button type="button" style="padding: 10px 16px;">Voltar ao início</button></a>
+        <div class="auth-links">
+            <a class="btn btn-bloco" href="login.jsp">Voltar ao início</a>
+        </div>
     </section>
+</main>
 </body>
 </html>

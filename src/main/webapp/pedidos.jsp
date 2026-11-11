@@ -1,35 +1,29 @@
 <%@ page language="java" contentType="text/html; charset=UTF-8" pageEncoding="UTF-8"%>
 <%@ taglib uri="jakarta.tags.core" prefix="c" %>
+<c:set var="pagina" value="pedidos"/>
 <!DOCTYPE html>
-<html>
+<html lang="pt-br">
 <head>
-<meta charset="UTF-8">
-    <meta name="csrf-token" content="<c:out value='${sessionScope.csrfToken}'/>">
-<title>Painel de Pedidos - Vendedor</title>
-<link rel="stylesheet" href="css/user.css">
+    <%@ include file="/WEB-INF/jspf/head.jspf" %>
+    <title>Pedidos - Painel do vendedor</title>
 </head>
 <body>
-    <div class="navbar">
-        <div class="logo">
-            <img src="img/Logo.png" alt="Logo" style="height: 40px;">
-        </div>        
-        <div>Painel do Vendedor</div>
-        <div>
-            <form action="logout" method="post" class="logout-form"><input type="hidden" name="_csrf" value="<c:out value='${sessionScope.csrfToken}'/>"><button type="submit" class="link-button">Logout</button></form>
-            <a href="registroProdutos.jsp" style="color: white;">Menu</a>
-        </div>
+<%@ include file="/WEB-INF/jspf/navbar.jspf" %>
+<main class="container" id="conteudo">
+    <div class="page-head">
+        <h1>Pedidos</h1>
+        <button type="button" class="btn btn-secundario" id="btn-atualizar">Atualizar</button>
     </div>
 
-    <div id="pedidosContainer">
-        <h2>Pedidos Pendentes</h2>
-        <div id="loadingMessage">Carregando pedidos...</div>
-        <div id="errorMessage" style="display: none;"></div>
-        <div id="noPedidosMessage" style="display: none;">Nenhum pedido pendente no momento.</div>
-        <!-- Os pedidos serão inseridos aqui pelo JavaScript -->
+    <div class="toolbar">
+        <div class="chips" role="group" aria-label="Filtrar por status" id="filtros-status"></div>
     </div>
 
-    <script src="js/util.js"></script>
-    <script src="js/pedidos.js">
-    </script>
+    <div id="mensagem" role="status" aria-live="polite" hidden></div>
+    <div id="estado" class="estado carregando" role="status">Carregando pedidos...</div>
+    <div id="lista" class="lista-pedidos" hidden></div>
+</main>
+<script src="js/util.js"></script>
+<script src="js/pedidos.js"></script>
 </body>
 </html>

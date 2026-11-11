@@ -1,130 +1,165 @@
-// Painel do vendedor: lista todos os produtos, edita dados e ajusta estoque.
-// Depende de util.js.
+// Painel do vendedor - produtos: listar, criar, editar (inclui imagem) e ajustar estoque. Depende de util.js.
 
-function carregarProdutosADM(categoria = 'todos') {
-	fetch('apiAdm/produtos?categoria=' + encodeURIComponent(categoria))
-		.then(response => {
-			if (!response.ok) {
-				throw new Error('Resposta inesperada do servidor: ' + response.status);
-			}
-			return response.json();
-		})
-		.then(produtos => {
-			const container = document.getElementById('productContainer');
-			container.replaceChildren();
-			if (produtos.length === 0) {
-				container.appendChild(criar('p', { texto: 'Nenhum produto cadastrado nesta categoria.' }));
-				return;
-			}
-			produtos.forEach(produto => container.appendChild(criarCartaoADM(produto)));
-		})
-		.catch(error => {
-			console.error('Erro ao buscar produtos:', error);
-			const container = document.getElementById('productContainer');
-			container.replaceChildren(criar('p', { texto: 'Não foi possível carregar os produtos. Tente novamente mais tarde.' }));
-		});
-}
+const ROTULO_CATEGORIA = { salgado: 'Salgado', lanche: 'Lanche', doce: 'Doce', bebida: 'Bebida' };
+const TAMANHO_MAX_IMAGEM = 2 * 1024 * 1024;
 
-function postForm(url, dados) {
-	return fetch(url, {
-		method: 'POST',
-		headers: cabecalhosCsrf({ 'Content-Type': 'application/x-www-form-urlencoded' }),
-		body: new URLSearchParams(dados).toString()
-	}).then(response => response.json().catch(() => ({})).then(corpo => ({ ok: response.ok, corpo })));
-}
-
-function criarCartaoADM(produto) {
-	const mensagem = document.getElementById('mensagem');
-	const cartao = criar('div', { classe: 'product' });
-	cartao.dataset.type = produto.categoria ? produto.categoria.toLowerCase() : 'outros';
-
-	const imagem = criar('img', { classe: 'product-image', attrs: { src: urlImagem(produto), alt: produto.nome || 'Produto' } });
-	cartao.appendChild(criar('div', { classe: 'product-image-wrapper' }, [imagem]));
-
-	cartao.appendChild(criar('div', { classe: 'product-info' }, [
-		criar('h3', { texto: produto.nome }),
-		criar('p', { texto: produto.descricao || '' }),
-		criar('p', {}, [criar('strong', { texto: 'Preço: ' }), document.createTextNode(formatarPreco(produto.preco))])
-	]));
-
-	// Ajuste rapido de estoque
-	const campoEstoque = criar('input', { attrs: { type: 'number', min: '0', value: String(produto.estoque), 'aria-label': 'Estoque' } });
-	campoEstoque.id = 'qty-' + produto.id;
-	const salvarEstoque = valor => {
-		if (!Number.isInteger(valor) || valor < 0) return;
-		postForm('atualizarEstoque', { id: produto.id, estoque: valor }).then(({ ok, corpo }) => {
-			if (ok) campoEstoque.value = String(valor);
-			mostrarMensagem(mensagem, corpo.message || (ok ? 'Estoque atualizado.' : 'Erro ao atualizar o estoque.'), !ok);
-		}).catch(() => mostrarMensagem(mensagem, 'Erro de comunicação com o servidor.', true));
-	};
-	const menos = criar('button', { classe: 'save-qty-btn', texto: '-', attrs: { type: 'button', 'aria-label': 'Diminuir estoque' } });
-	const mais = criar('button', { classe: 'save-qty-btn', texto: '+', attrs: { type: 'button', 'aria-label': 'Aumentar estoque' } });
-	menos.addEventListener('click', () => salvarEstoque(parseInt(campoEstoque.value, 10) - 1));
-	mais.addEventListener('click', () => salvarEstoque(parseInt(campoEstoque.value, 10) + 1));
-	campoEstoque.addEventListener('change', () => salvarEstoque(parseInt(campoEstoque.value, 10)));
-	cartao.appendChild(criar('div', { classe: 'qty-controls' }, [
-		criar('span', { texto: 'Estoque:' }), menos, campoEstoque, mais
-	]));
-
-	// Edicao completa
-	const formulario = criarFormularioEdicao(produto, mensagem);
-	const editar = criar('button', { classe: 'add-to-cart', texto: 'Editar', attrs: { type: 'button' } });
-	editar.addEventListener('click', () => {
-		formulario.style.display = (formulario.style.display === 'block') ? 'none' : 'block';
-	});
-	cartao.appendChild(editar);
-	cartao.appendChild(formulario);
-	return cartao;
-}
-
-function criarFormularioEdicao(produto, mensagem) {
-	const form = criar('form', { classe: 'edit-form' });
-	const nome = criar('input', { attrs: { type: 'text', name: 'nome', required: '', maxlength: '100', 'aria-label': 'Nome' } });
-	nome.value = produto.nome || '';
-	const descricao = criar('textarea', { attrs: { name: 'descricao', maxlength: '400', 'aria-label': 'Descrição' } });
-	descricao.value = produto.descricao || '';
-	const preco = criar('input', { attrs: { type: 'number', name: 'preco', step: '0.01', min: '0', required: '', 'aria-label': 'Preço' } });
-	preco.value = String(produto.preco);
-	const estoque = criar('input', { attrs: { type: 'number', name: 'estoque', min: '0', required: '', 'aria-label': 'Estoque' } });
-	estoque.value = String(produto.estoque);
-	const categoria = criar('select', { attrs: { name: 'categoria', 'aria-label': 'Categoria' } });
-	['salgado', 'doce', 'lanche', 'bebida'].forEach(c => {
-		const opcao = criar('option', { texto: c.charAt(0).toUpperCase() + c.slice(1), attrs: { value: c } });
-		if (c === produto.categoria) opcao.selected = true;
-		categoria.appendChild(opcao);
-	});
-	const salvar = criar('button', { texto: 'Salvar', attrs: { type: 'submit' } });
-	[nome, descricao, preco, estoque, categoria, salvar].forEach(campo => {
-		form.appendChild(campo);
-		form.appendChild(document.createElement('br'));
-	});
-	form.addEventListener('submit', evento => {
-		evento.preventDefault();
-		postForm('editar-produto', {
-			id: produto.id,
-			nome: nome.value,
-			descricao: descricao.value,
-			preco: preco.value,
-			estoque: estoque.value,
-			categoria: categoria.value
-		}).then(({ ok, corpo }) => {
-			mostrarMensagem(mensagem, corpo.message || (ok ? 'Produto atualizado.' : 'Erro ao atualizar o produto.'), !ok);
-			if (ok) {
-				const ativo = document.querySelector('.filter-btn.active');
-				carregarProdutosADM(ativo ? ativo.getAttribute('data-filter') : 'todos');
-			}
-		}).catch(() => mostrarMensagem(mensagem, 'Erro de comunicação com o servidor.', true));
-	});
-	return form;
-}
+const painel = { produtos: [], categoria: 'todos', busca: '' };
 
 document.addEventListener('DOMContentLoaded', function() {
-	document.querySelectorAll('.filter-btn').forEach(botao => {
-		botao.addEventListener('click', function() {
-			document.querySelectorAll('.filter-btn').forEach(btn => btn.classList.remove('active'));
-			this.classList.add('active');
-			carregarProdutosADM(this.getAttribute('data-filter'));
+	const estado = document.getElementById('estado');
+	const container = document.getElementById('productContainer');
+	const mensagem = document.getElementById('mensagem');
+	const dialogo = document.getElementById('dlg-produto');
+	const form = document.getElementById('form-produto');
+	const erroGeral = document.getElementById('erro-geral');
+
+	// ---------- listagem ----------
+	function carregar() {
+		container.hidden = true;
+		mostrarEstado(estado, 'Carregando produtos...', 'carregando');
+		requisitar('apiAdm/produtos?categoria=' + encodeURIComponent(painel.categoria))
+			.then(({ ok, corpo }) => {
+				if (!ok || !Array.isArray(corpo)) throw new Error('resposta inesperada');
+				painel.produtos = corpo;
+				renderizar();
+			})
+			.catch(() => mostrarEstado(estado, 'Não foi possível carregar os produtos.', 'erro', { texto: 'Tentar novamente', fn: carregar }));
+	}
+
+	function renderizar() {
+		const termo = semAcento(painel.busca.trim());
+		const lista = painel.produtos.filter(p => !termo || semAcento(p.nome + ' ' + (p.descricao || '')).includes(termo));
+		container.replaceChildren();
+		if (painel.produtos.length === 0) {
+			container.hidden = true;
+			mostrarEstado(estado, 'Nenhum produto cadastrado nesta categoria.', 'vazio', { texto: 'Cadastrar produto', fn: () => abrirDialogo(null) });
+			return;
+		}
+		if (lista.length === 0) {
+			container.hidden = true;
+			mostrarEstado(estado, 'Nenhum produto encontrado para "' + painel.busca.trim() + '".', 'vazio');
+			return;
+		}
+		mostrarEstado(estado, '', 'vazio');
+		lista.forEach(p => container.appendChild(criarCartao(p)));
+		container.hidden = false;
+	}
+
+	function criarCartao(produto) {
+		const esgotado = produto.estoque < 1;
+		const cartao = criar('article', { classe: 'produto' + (esgotado ? ' esgotado' : '') });
+
+		const areaImagem = criar('div', { classe: 'produto-img' }, [
+			criar('img', { attrs: { src: urlImagem(produto), alt: produto.nome || 'Produto', loading: 'lazy' } })
+		]);
+		if (esgotado) areaImagem.appendChild(criar('span', { classe: 'selo selo-esgotado', texto: 'Esgotado' }));
+		cartao.appendChild(areaImagem);
+
+		const campoEstoque = criar('input', {
+			attrs: { type: 'number', min: '0', value: String(produto.estoque), inputmode: 'numeric', 'aria-label': 'Estoque de ' + produto.nome }
+		});
+		const salvarEstoque = valor => {
+			if (!Number.isInteger(valor) || valor < 0) { campoEstoque.value = String(produto.estoque); return; }
+			requisitar('atualizarEstoque', {
+				method: 'POST',
+				headers: cabecalhosCsrf({ 'Content-Type': 'application/x-www-form-urlencoded' }),
+				body: new URLSearchParams({ id: produto.id, estoque: valor }).toString()
+			}).then(({ ok, corpo }) => {
+				mostrarMensagem(mensagem, ok ? 'Estoque de ' + produto.nome + ' atualizado para ' + valor + '.' : (corpo.message || 'Erro ao atualizar o estoque.'), !ok);
+				if (ok) { produto.estoque = valor; carregar(); } else campoEstoque.value = String(produto.estoque);
+			}).catch(() => mostrarMensagem(mensagem, 'Erro de comunicação com o servidor.', true));
+		};
+		const menos = criar('button', { texto: '−', attrs: { type: 'button', 'aria-label': 'Diminuir estoque de ' + produto.nome } });
+		const mais = criar('button', { texto: '+', attrs: { type: 'button', 'aria-label': 'Aumentar estoque de ' + produto.nome } });
+		menos.addEventListener('click', () => salvarEstoque(produto.estoque - 1));
+		mais.addEventListener('click', () => salvarEstoque(produto.estoque + 1));
+		campoEstoque.addEventListener('change', () => salvarEstoque(parseInt(campoEstoque.value, 10)));
+
+		const editar = criar('button', { classe: 'btn btn-secundario btn-pequeno', texto: 'Editar', attrs: { type: 'button', 'aria-label': 'Editar ' + produto.nome } });
+		editar.addEventListener('click', () => abrirDialogo(produto));
+
+		cartao.appendChild(criar('div', { classe: 'produto-corpo' }, [
+			criar('span', { classe: 'categoria-rotulo', texto: ROTULO_CATEGORIA[produto.categoria] || '' }),
+			criar('h3', { classe: 'produto-nome', texto: produto.nome }),
+			criar('p', { classe: 'produto-desc', texto: produto.descricao || '' }),
+			criar('span', { classe: 'preco', texto: formatarPreco(produto.preco) }),
+			criar('div', { classe: 'produto-acoes' }, [
+				criar('div', { classe: 'qtd' }, [menos, campoEstoque, mais]),
+				editar
+			])
+		]));
+		return cartao;
+	}
+
+	// ---------- dialogo criar/editar ----------
+	function abrirDialogo(produto) {
+		limparErros(form);
+		form.reset();
+		document.getElementById('dlg-titulo').textContent = produto ? 'Editar produto' : 'Novo produto';
+		document.getElementById('produto-id').value = produto ? produto.id : '';
+		if (produto) {
+			document.getElementById('produto-nome').value = produto.nome || '';
+			document.getElementById('produto-descricao').value = produto.descricao || '';
+			document.getElementById('produto-preco').value = Number(produto.preco).toFixed(2);
+			document.getElementById('produto-estoque').value = String(produto.estoque);
+			document.getElementById('produto-categoria').value = produto.categoria || '';
+		}
+		document.getElementById('dica-imagem').hidden = !produto;
+		dialogo.showModal();
+		document.getElementById('produto-nome').focus();
+	}
+
+	document.getElementById('btn-novo').addEventListener('click', () => abrirDialogo(null));
+	document.getElementById('btn-cancelar-dlg').addEventListener('click', () => dialogo.close());
+
+	document.getElementById('produto-imagem').addEventListener('change', e => {
+		const arquivo = e.target.files[0];
+		e.target.setCustomValidity(arquivo && arquivo.size > TAMANHO_MAX_IMAGEM ? 'A imagem deve ter no máximo 2 MB.' : '');
+		marcarErro(e.target, e.target.validationMessage);
+	});
+
+	form.addEventListener('submit', evento => {
+		evento.preventDefault();
+		if (!validarFormulario(form)) return;
+		const id = document.getElementById('produto-id').value;
+		const dados = new FormData(form);
+		if (!id) dados.delete('id');
+		const botao = document.getElementById('btn-salvar');
+		botao.disabled = true;
+		erroGeral.hidden = true;
+
+		requisitar(id ? 'editar-produto' : 'registrar-produto', { method: 'POST', headers: cabecalhosCsrf(), body: dados })
+			.then(({ ok, corpo }) => {
+				if (ok) {
+					dialogo.close();
+					mostrarMensagem(mensagem, corpo.message || 'Produto salvo.', false);
+					carregar();
+				} else if (corpo.erros) {
+					mostrarErrosServidor(form, corpo.erros);
+				} else {
+					erroGeral.textContent = corpo.message || 'Não foi possível salvar o produto.';
+					erroGeral.hidden = false;
+				}
+			})
+			.catch(() => {
+				erroGeral.textContent = 'Erro de comunicação com o servidor.';
+				erroGeral.hidden = false;
+			})
+			.finally(() => { botao.disabled = false; });
+	});
+
+	// ---------- filtros ----------
+	document.querySelectorAll('.chip[data-filter]').forEach(botao => {
+		botao.addEventListener('click', () => {
+			document.querySelectorAll('.chip[data-filter]').forEach(b => b.setAttribute('aria-pressed', String(b === botao)));
+			painel.categoria = botao.dataset.filter;
+			carregar();
 		});
 	});
-	carregarProdutosADM('todos');
+	document.getElementById('busca').addEventListener('input', debounce(e => {
+		painel.busca = e.target.value;
+		if (painel.produtos.length) renderizar();
+	}, 150));
+
+	carregar();
 });

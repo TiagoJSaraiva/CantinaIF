@@ -10,6 +10,8 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.sql.SQLException;
+import java.util.LinkedHashMap;
+import java.util.Map;
 import java.util.regex.Pattern;
 
 /** Cadastro de comprador com validacao basica e tratamento de duplicidade. */
@@ -32,40 +34,47 @@ public class UserRegisterServlet extends HttpServlet {
         String nome = valor(request, "nome");
         String senha = request.getParameter("senha");
 
-        String erro = validar(prontuario, email, nome, senha);
-        if (erro == null) {
+        Map<String, String> erros = validar(prontuario, email, nome, senha);
+        String erro = null;
+        if (erros.isEmpty()) {
             try {
                 if (userDao.create(new Comprador(prontuario, email, senha, nome))) {
                     response.sendRedirect("login.jsp?cadastro=ok");
                     return;
                 }
                 erro = "Prontuário ou e-mail já cadastrado.";
+                erros.put("prontuario", "Este prontuário ou e-mail já está cadastrado.");
             } catch (SQLException e) {
                 e.printStackTrace();
                 erro = "Não foi possível concluir o cadastro. Tente novamente em instantes.";
             }
+        } else {
+            erro = "Corrija os campos destacados.";
         }
         request.setAttribute("error", erro);
+        request.setAttribute("erros", erros);
         request.setAttribute("prontuario", prontuario);
         request.setAttribute("email", email);
         request.setAttribute("nome", nome);
         request.getRequestDispatcher("cadastro.jsp").forward(request, response);
     }
 
-    static String validar(String prontuario, String email, String nome, String senha) {
+    /** Valida os campos; retorna mensagens por campo (vazio quando tudo e valido). */
+    static Map<String, String> validar(String prontuario, String email, String nome, String senha) {
+        Map<String, String> erros = new LinkedHashMap<>();
         if (!PRONTUARIO.matcher(prontuario).matches()) {
-            return "O prontuário deve ter de 1 a 10 letras ou números.";
+            erros.put("prontuario", "Use de 1 a 10 letras ou números.");
         }
         if (email.length() > 100 || !EMAIL.matcher(email).matches()) {
-            return "Informe um e-mail válido.";
+            erros.put("email", "Informe um e-mail válido.");
         }
         if (nome.isEmpty() || nome.length() > 75) {
-            return "Informe seu nome (até 75 caracteres).";
+            erros.put("nome", "Informe seu nome (até 75 caracteres).");
         }
         if (senha == null || senha.length() < SENHA_MINIMA || senha.length() > 72) {
-            return "A senha deve ter de " + SENHA_MINIMA + " a 72 caracteres.";
+            erros.put("senha", "A senha deve ter de " + SENHA_MINIMA + " a 72 caracteres.");
         }
-        return null;
+        return erros;
     }
 
     private static String valor(HttpServletRequest request, String nome) {
