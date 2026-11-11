@@ -247,7 +247,7 @@ The repository includes a Render Blueprint (`render.yaml`): one Docker web servi
 1. Create an account at [render.com](https://render.com) and connect your GitHub account.
 2. **New → Blueprint**, choose this repository and confirm. Render builds the Dockerfile and deploys.
 3. When the deploy is live, open the service URL and sign in with the demo accounts.
-4. Replace the `<!-- DEMO_URL -->` line in this README with the public address.
+4. Put the public address in the "Live demo" line at the top of this README.
 
 Free plan caveats (stated honestly):
 - the service **spins down after about 15 minutes without traffic** and takes **around 1 minute** to wake up on the next request;

@@ -247,7 +247,7 @@ O repositório inclui um Blueprint do Render (`render.yaml`): um web service Doc
 1. Crie uma conta em [render.com](https://render.com) e conecte sua conta do GitHub.
 2. **New → Blueprint**, escolha este repositório e confirme. O Render constrói o Dockerfile e publica.
 3. Quando o deploy terminar, abra a URL do serviço e entre com as contas de demonstração.
-4. Troque a linha `<!-- DEMO_URL -->` neste README pelo endereço público.
+4. Coloque o endereço público na linha "Demo online" no topo deste arquivo.
 
 Avisos honestos do plano gratuito:
 - o serviço **hiberna após cerca de 15 minutos sem tráfego** e leva **cerca de 1 minuto** para acordar na próxima requisição;
