@@ -4,6 +4,7 @@ import dao.UserDao;
 import dao.VendedorDao;
 import model.Comprador;
 import model.Vendedor;
+import utils.LoginRateLimiter;
 
 import jakarta.servlet.ServletException;
 import jakarta.servlet.annotation.WebServlet;
@@ -38,9 +39,21 @@ public class LoginServlet extends HttpServlet {
         }
         prontuario = prontuario.trim();
 
+        String chave = request.getRemoteAddr();
+        LoginRateLimiter limite = LoginRateLimiter.PADRAO;
+        if (limite.bloqueado(chave)) {
+            long segundos = limite.segundosParaLiberar(chave);
+            response.setStatus(429);
+            response.setHeader("Retry-After", String.valueOf(segundos));
+            falhar(request, response, "Muitas tentativas de login. Tente novamente em "
+                    + Math.max(1, (segundos + 59) / 60) + " minuto(s).");
+            return;
+        }
+
         try {
             Vendedor vendedor = vendedorDao.autenticar(prontuario, senha);
             if (vendedor != null) {
+                limite.sucesso(chave);
                 HttpSession session = novaSessao(request);
                 session.setAttribute("vendedor", vendedor);
                 response.sendRedirect("registroProdutos.jsp");
@@ -49,6 +62,7 @@ public class LoginServlet extends HttpServlet {
 
             Comprador comprador = userDao.autenticar(prontuario, senha);
             if (comprador != null) {
+                limite.sucesso(chave);
                 HttpSession session = novaSessao(request);
                 session.setAttribute("comprador", comprador);
                 response.sendRedirect("home.jsp");
@@ -59,6 +73,7 @@ public class LoginServlet extends HttpServlet {
             falhar(request, response, "Não foi possível entrar agora. Tente novamente em instantes.");
             return;
         }
+        limite.falha(chave);
         falhar(request, response, "Usuário ou senha inválidos.");
     }
 
