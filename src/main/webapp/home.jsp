@@ -1,11 +1,11 @@
 <%@ page contentType="text/html;charset=UTF-8" %>
-<%@ page import="model.Comprador" %> <!-- Importa classe Comprador para uso na sessão -->
-<%@ page import="model.Produto" %>
+<%@ taglib uri="jakarta.tags.core" prefix="c" %>
 
 <!DOCTYPE html>
 <html lang="pt-br">
 <head>
     <meta charset="UTF-8">
+    <meta name="csrf-token" content="<c:out value='${sessionScope.csrfToken}'/>">
     <title>Home - Cantina Universitária</title>
     <link rel="stylesheet" href="css/user.css"> <!-- Link do CSS -->
 </head>
@@ -18,15 +18,12 @@
     </div>    
     <div class="info">
         <!-- Mostra o prontuário do comprador salvo na sessão -->
-        <span>Prontuário: ${sessionScope.comprador.prontuario}</span>
+        <span>Prontuário: <c:out value="${sessionScope.comprador.prontuario}"/></span>
         <a href="Carrinho.jsp" style="
         font-weight: bold;
 		text-decoration: none;
   		color: white;">Carrinho</a>
-        <a href="logout" style="
-        font-weight: bold;
-		text-decoration: none;
-  		color: white;">Logout</a>
+        <form action="logout" method="post" class="logout-form"><input type="hidden" name="_csrf" value="<c:out value='${sessionScope.csrfToken}'/>"><button type="submit" class="link-button">Logout</button></form>
     </div>
 </div>
 

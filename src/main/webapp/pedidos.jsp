@@ -1,8 +1,10 @@
 <%@ page language="java" contentType="text/html; charset=UTF-8" pageEncoding="UTF-8"%>
+<%@ taglib uri="jakarta.tags.core" prefix="c" %>
 <!DOCTYPE html>
 <html>
 <head>
 <meta charset="UTF-8">
+    <meta name="csrf-token" content="<c:out value='${sessionScope.csrfToken}'/>">
 <title>Painel de Pedidos - Vendedor</title>
 <link rel="stylesheet" href="css/user.css">
 </head>
@@ -13,7 +15,7 @@
         </div>        
         <div>Painel do Vendedor</div>
         <div>
-            <a href="logout" style="color: white;">Logout</a>
+            <form action="logout" method="post" class="logout-form"><input type="hidden" name="_csrf" value="<c:out value='${sessionScope.csrfToken}'/>"><button type="submit" class="link-button">Logout</button></form>
             <a href="registroProdutos.jsp" style="color: white;">Menu</a>
         </div>
     </div>
@@ -26,6 +28,7 @@
         <!-- Os pedidos serão inseridos aqui pelo JavaScript -->
     </div>
 
+    <script src="js/util.js"></script>
     <script src="js/pedidos.js">
     </script>
 </body>

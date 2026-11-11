@@ -146,3 +146,21 @@ body {
 	color: #721c24;
 	border: 1px solid #f5c6cb;
 }
+
+
+.logout-form {
+	display: inline;
+	margin: 0;
+}
+
+.link-button {
+	background: none;
+	border: none;
+	color: white;
+	font: inherit;
+	font-weight: bold;
+	cursor: pointer;
+	padding: 0;
+	margin-left: 20px;
+	text-decoration: underline;
+}

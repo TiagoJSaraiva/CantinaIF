@@ -36,6 +36,7 @@
         </c:if>
 
         <form class="login-form" action="login" method="post">
+            <input type="hidden" name="_csrf" value="<c:out value='${sessionScope.csrfToken}'/>">
             <label for="prontuario">Prontuário</label>
             <input type="text" id="prontuario" name="prontuario" required maxlength="10">
 

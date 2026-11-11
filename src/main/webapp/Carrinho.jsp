@@ -4,6 +4,7 @@
 <html>
 <head>
     <meta charset="UTF-8">
+    <meta name="csrf-token" content="<c:out value='${sessionScope.csrfToken}'/>">
     <title>Carrinho de Compras</title>
     <style>
         /* ... Seus estilos existentes ... */
@@ -37,9 +38,9 @@
         <a href="home.jsp"><img src="img/Logo.png" alt="Logo" style="height: 40px;"></a>
     </div>    
     <div class="info">
-        <span>Prontuário: ${sessionScope.comprador.prontuario}</span>
+        <span>Prontuário: <c:out value="${sessionScope.comprador.prontuario}"/></span>
         <a href="Carrinho.jsp" style="font-weight: bold; text-decoration: none; color: white;">Carrinho</a>
-        <a href="logout" style="font-weight: bold; text-decoration: none; color: white;">Logout</a>
+        <form action="logout" method="post" class="logout-form"><input type="hidden" name="_csrf" value="<c:out value='${sessionScope.csrfToken}'/>"><button type="submit" class="link-button">Logout</button></form>
     </div>
 </div>
 
@@ -50,7 +51,7 @@
         <%-- Verifica se há uma mensagem de sucesso na sessão --%>
         <c:if test="${not empty sessionScope.successMessage}">
             <div class="mensagem-sucesso">
-                <p>${sessionScope.successMessage}</p>
+                <p><c:out value="${sessionScope.successMessage}"/></p>
             </div>
             <%-- Remove a mensagem da sessão para que não apareça novamente na próxima visita --%>
             <c:remove var="successMessage" scope="session"/>
@@ -59,7 +60,7 @@
         <%-- Verifica se há uma mensagem de erro na requisição (do forward do Servlet) --%>
         <c:if test="${not empty requestScope.errorMessage}">
             <div class="mensagem-erro">
-                <p>${requestScope.errorMessage}</p>
+                <p><c:out value="${requestScope.errorMessage}"/></p>
             </div>
             <%-- Não é necessário remover, pois requestScope é limpo a cada nova requisição --%>
         </c:if>
@@ -71,6 +72,7 @@
         <div class="finalizar">
             <p><strong>Total: <span id="display-total">R$ 0,00</span></strong></p> <%-- Este é o único total que vamos usar --%>
             <form action="FinalizarCompraServlet" method="post">
+                <input type="hidden" name="_csrf" value="<c:out value='${sessionScope.csrfToken}'/>">
                 <button type="submit">FINALIZAR COMPRA</button>
             </form>
         </div>

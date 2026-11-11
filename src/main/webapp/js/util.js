@@ -19,6 +19,17 @@ function criar(tag, opcoes = {}, filhos = []) {
 	return e;
 }
 
+// Token CSRF da sessao (renderizado pelo servidor em <meta name="csrf-token">).
+function csrfToken() {
+	const meta = document.querySelector('meta[name="csrf-token"]');
+	return meta ? meta.content : '';
+}
+
+// Cabecalhos de requisicoes que alteram estado: inclui o token CSRF.
+function cabecalhosCsrf(extra = {}) {
+	return Object.assign({ 'X-CSRF-Token': csrfToken() }, extra);
+}
+
 function urlImagem(produto) {
 	return produto.temImagem ? 'image?id=' + encodeURIComponent(produto.id) : 'img/placeholder.svg';
 }

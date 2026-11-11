@@ -60,7 +60,7 @@ function adicionarAoCarrinho(produtoId, campoQuantidade) {
 	}
 	fetch('carrinho', {
 		method: 'POST',
-		headers: { 'Content-Type': 'application/json' },
+		headers: cabecalhosCsrf({ 'Content-Type': 'application/json' }),
 		body: JSON.stringify({ produtoId: produtoId, quantidade: quantidade })
 	})
 		.then(response => response.json().catch(() => ({})).then(corpo => ({ ok: response.ok, corpo })))

@@ -28,7 +28,7 @@ function carregarProdutosADM(categoria = 'todos') {
 function postForm(url, dados) {
 	return fetch(url, {
 		method: 'POST',
-		headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+		headers: cabecalhosCsrf({ 'Content-Type': 'application/x-www-form-urlencoded' }),
 		body: new URLSearchParams(dados).toString()
 	}).then(response => response.json().catch(() => ({})).then(corpo => ({ ok: response.ok, corpo })));
 }

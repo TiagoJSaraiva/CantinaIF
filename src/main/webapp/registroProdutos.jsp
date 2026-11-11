@@ -1,9 +1,11 @@
 <%@ page contentType="text/html;charset=UTF-8"%>
+<%@ taglib uri="jakarta.tags.core" prefix="c" %>
 
 <!DOCTYPE html>
 <html lang="pt-br">
 <head>
     <meta charset="UTF-8">
+    <meta name="csrf-token" content="<c:out value='${sessionScope.csrfToken}'/>">
     <title>Painel do Vendedor</title>
     <link rel="stylesheet" href="css/user.css">
 </head>
@@ -15,7 +17,7 @@
         <div>Painel do Vendedor</div>
         <div>
             <button class="new-product-btn" onclick="toggleNewProductForm()">+ Novo Produto</button>
-            <a href="logout" style="color: white; margin-left: 20px;">Logout</a>
+            <form action="logout" method="post" class="logout-form"><input type="hidden" name="_csrf" value="<c:out value='${sessionScope.csrfToken}'/>"><button type="submit" class="link-button">Logout</button></form>
             <a href="pedidos.jsp" style="color: white; margin-left: 20px;">Pedidos</a>
         </div>
     </div>
@@ -29,7 +31,8 @@
     </div>
     
     <div id="new-product-form" class="new-product-form">
-        <form action="registrar-produto" method="post" enctype="multipart/form-data"> <h3>Novo Produto</h3>
+        <form action="registrar-produto" method="post" enctype="multipart/form-data">
+            <input type="hidden" name="_csrf" value="<c:out value='${sessionScope.csrfToken}'/>"> <h3>Novo Produto</h3>
         
             <input type="text" name="nome" placeholder="Nome do produto" required><br><br>
         
@@ -48,12 +51,14 @@
             </select><br><br>
 
             <label for="imagem">Imagem do Produto:</label>
-            <input type="file" id="imagem" name="imagem" accept="image/*" required><br><br>
+            <input type="file" id="imagem" name="imagem" accept="image/jpeg,image/png,image/gif,image/webp" required><br><br>
         
             <button type="submit">Criar</button>
         </form>
     </div>
     
+    <c:if test="${not empty requestScope.errorMessage}"><div class="mensagem-erro" role="alert"><c:out value="${requestScope.errorMessage}"/></div></c:if>
+    <c:if test="${param.produto == 'ok'}"><div class="mensagem-sucesso" role="status">Produto cadastrado com sucesso.</div></c:if>
     <div id="mensagem" role="status" style="display: none;"></div>
     <div id="productContainer" class="produtosPai">
         </div>

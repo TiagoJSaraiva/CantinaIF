@@ -8,7 +8,6 @@ import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.ServletRequest;
 import jakarta.servlet.ServletResponse;
-import jakarta.servlet.annotation.WebFilter;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.servlet.http.HttpSession;
@@ -17,7 +16,6 @@ import jakarta.servlet.http.HttpSession;
  * Controle de acesso por perfil. Rotas do vendedor exigem "vendedor" na sessao; rotas do comprador
  * exigem "comprador". Paginas redirecionam ao login; APIs respondem 401 (sem sessao) ou 403 (perfil errado).
  */
-@WebFilter("/*")
 public class AuthFilter implements Filter {
 
     /** Rotas exclusivas do vendedor (prefixo terminado em "/" ou caminho exato). */
