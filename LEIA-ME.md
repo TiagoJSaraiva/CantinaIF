@@ -64,10 +64,15 @@ São contas fictícias de demonstração, não são segredos. Existem no modo de
 Se houver uma demo pública publicada, tenha em mente (tudo isso é proposital, para manter uma demo gratuita e exposta à internet segura e barata):
 
 - **Contas compartilhadas com senha pública.** Qualquer pessoa pode entrar como o aluno ou o vendedor de demonstração e criar, editar ou cancelar qualquer coisa. Não digite dados pessoais reais; tudo é fictício.
-- **Limites** (padrões no modo demonstração, configuráveis, veja a tabela de variáveis): 60 produtos, 200 cadastros, 100 pedidos em aberto, 12 MB de imagens no total. Ao atingir um limite o app avisa ("limite da demonstração atingido; a base é restaurada periodicamente"). Há também limite de taxa para operações de escrita, cadastros e logins.
+- **Limites** (padrões no modo demonstração, configuráveis, veja a tabela de variáveis): 60 produtos, 200 cadastros, 100 pedidos em aberto (e 5 por comprador), 12 MB de imagens no total. Ao atingir um limite o app avisa ("limite da demonstração atingido; a base é restaurada periodicamente"). Há também limite de taxa para operações de escrita, cadastros e logins.
 - **Restauração periódica.** O banco é em memória e volta ao seed a cada reinício e a cada `CANTINA_DEMO_RESET_HOURS` horas (padrão 6). Tudo que os visitantes criarem desaparece.
 - **Sessões na restauração.** Uma sessão iniciada antes da restauração é invalidada: o próximo clique leva ao login com a mensagem "A demonstração foi restaurada; entre novamente." (uma conta criada antes da restauração deixa de existir).
-- **Uploads são recodificados** (JPEG, até 640 px / 150 KB), então um visitante não consegue encher a memória com arquivos grandes.
+- **Uploads são recodificados.** Imagens com mais de cerca de 5 megapixels (lidos do cabeçalho do arquivo, antes de decodificar) são rejeitadas; as demais são decodificadas com subamostragem, reduzidas a no máximo 640 px e recomprimidas em JPEG de até 150 KB. Só uma imagem é processada por vez em toda a aplicação; uploads simultâneos esperam até 3 s e depois recebem 503 ("tente novamente em instantes"). Os limites da demo (produtos, bytes de imagem) são verificados antes de qualquer processamento.
+- **Limites de tamanho de requisição.** Todo corpo de requisição é limitado: 16 KB para JSON e formulários e cerca de 2,1 MB para uploads de imagem (HTTP 413 acima disso, também para requisições chunked sem `Content-Length`), e o conector do Tomcat acrescenta limites próprios (`maxPostSize`, `maxSwallowSize`, `maxParameterCount`, tamanho de cabeçalho, tempos limite curtos, no máximo 60 threads).
+- **Sessões.** Visitantes anônimos nunca ganham sessão: os formulários de login e cadastro usam um cookie CSRF de envio duplo (aleatório, `SameSite=Strict`). A sessão só nasce num login bem-sucedido (e o número de sessões ativas tem teto; ao atingi-lo a tela de login responde 503 com uma mensagem amigável em vez de erro).
+- **A restauração nunca mostra um banco pela metade.** Ela espera as conexões abertas com o banco (até 10 s, depois tenta de novo 30 s mais tarde) e a trava só é mantida enquanto há conexões em uso, nunca durante uma requisição HTTP inteira; assim clientes lentos não congelam a aplicação e o `/health` não depende do banco.
+- **Limite por comprador.** Um comprador pode ter no máximo 5 pedidos em aberto ao mesmo tempo no modo demo, e o carrinho só aceita quantidades inteiras (1,5 é rejeitado).
+- **Riscos residuais, com honestidade.** É uma demo com vendedor público, restaurada periodicamente: um visitante mal-intencionado ainda pode bagunçar os dados (criar, editar ou cancelar qualquer coisa dentro dos limites acima) até a próxima restauração, pode consumir os limites de escrita do próprio IP e pode travar uma conta que não seja de demo por alguns minutos errando o login de propósito. Ataques de conexão lenta são apenas mitigados (tempos limite curtos, pool de threads limitado), não eliminados, e tudo é em memória e por instância. Não use esta configuração com dados reais.
 
 ## Capturas de tela
 
@@ -96,7 +101,7 @@ src/main/java/
   model/                      objetos de domínio, DTOs de JSON, enum de status do pedido
   seed/DemoDataSeeder.java    dados de demonstração determinísticos (boot em H2, comando manual nos demais)
   servlets/                   controladores, endpoints JSON e filtros (veja abaixo)
-  utils/                      Database (pool), configuração, BCrypt, limite de login, reset da demo, detecção de imagem
+  utils/                      Database (pool e trava da restauração), configuração, BCrypt, proteção de login e limitador de taxa, IP do cliente, tetos da demo, reset da demo, processamento de imagem
 src/main/resources/seed/img/  ilustrações dos produtos de demonstração (PNG)
 src/main/webapp/              páginas JSP, WEB-INF/jspf (head/navbar), css/app.css, js/, img/
 src/test/java/                testes JUnit 5 (rodam em H2)
@@ -105,7 +110,7 @@ docs/screenshots/             capturas de tela do README
 Dockerfile, docker-compose.yml, render.yaml, .env.example, .github/workflows/ci.yml
 ```
 
-Fluxo de uma requisição: `SecurityHeadersFilter` (CSP e demais cabeçalhos) → `DbGateFilter` (trava de leitura, para ninguém ver o banco no meio de uma restauração da demo) → `WriteRateFilter` (limite de taxa das operações de escrita) → `AuthFilter` (controle de acesso por perfil: rotas do vendedor e do comprador; também descarta sessões de antes de uma restauração) → `CsrfFilter` (token em toda requisição que altera estado) → servlet → DAO → pool do `Database`. As regras de negócio (estoque, transições de status) ficam no `PedidoDAO`, dentro de transações. Os endpoints JSON devolvem DTOs (nunca entidades brutas nem bytes de imagem).
+Fluxo de uma requisição: `BodyLimitFilter` (limite de tamanho da requisição, 413) → `SecurityHeadersFilter` (CSP e demais cabeçalhos) → `WriteRateFilter` (limite de taxa das operações de escrita) → `AuthFilter` (controle de acesso por perfil: rotas do vendedor e do comprador; também descarta sessões de antes de uma restauração) → `CsrfFilter` (token em toda requisição que altera estado; cookie de envio duplo no login/cadastro anônimos) → servlet → DAO → pool do `Database`. A trava que mantém a restauração da demo atômica fica em `Database.getConnection()` (mantida só enquanto uma conexão está aberta); uma requisição cuja sessão é anterior a uma restauração é redirecionada ao login. As regras de negócio (estoque, transições de status) ficam no `PedidoDAO`, dentro de transações. Os endpoints JSON devolvem DTOs (nunca entidades brutas nem bytes de imagem).
 
 ## Modelo de dados
 
@@ -205,10 +210,12 @@ Crie o banco (`CREATE DATABASE cantinaif CHARACTER SET utf8mb4 COLLATE utf8mb4_u
 | `CANTINA_MAX_PRODUTOS` | `60` no modo demonstração, sem limite nos demais | Número máximo de produtos (`0` = sem limite). |
 | `CANTINA_MAX_COMPRADORES` | `200` no modo demonstração, sem limite nos demais | Número máximo de alunos cadastrados. |
 | `CANTINA_MAX_PEDIDOS_ABERTOS` | `100` no modo demonstração, sem limite nos demais | Número máximo de pedidos em aberto (pendente, em preparo ou pronto). |
+| `CANTINA_MAX_PEDIDOS_ABERTOS_POR_COMPRADOR` | `5` no modo demonstração, sem limite nos demais | Número máximo de pedidos em aberto por comprador. |
 | `CANTINA_MAX_BYTES_IMAGENS` | `12582912` (12 MB) no modo demonstração, sem limite nos demais | Tamanho total máximo das imagens de produto guardadas. |
 | `CANTINA_COOKIE_SECURE` | `false` | `true` marca o cookie de sessão como `Secure` (use atrás de HTTPS). |
-| `CANTINA_BEHIND_PROXY` | `false` | Imagem Docker: `true` faz o Tomcat confiar em `X-Forwarded-For`/`X-Forwarded-Proto` de proxies confiáveis. |
-| `CANTINA_TRUSTED_PROXIES` | faixas privadas | Imagem Docker: regex Java dos IPs de proxy confiáveis. |
+| `CANTINA_BEHIND_PROXY` | `false` | `true` declara que o app está atrás de um proxy HTTPS confiável: o entrypoint do Docker adiciona o `RemoteIpValve` (aceita `X-Forwarded-For`/`X-Forwarded-Proto` de proxies confiáveis) e `CANTINA_CLIENT_IP_HEADER` passa a valer. |
+| `CANTINA_TRUSTED_PROXIES` | faixas privadas | Imagem Docker: regex Java dos IPs de proxy confiáveis (só vale com `CANTINA_BEHIND_PROXY=true`). |
+| `CANTINA_CLIENT_IP_HEADER` | _(não definida)_ | Opcional, só com `CANTINA_BEHIND_PROXY=true`: nome de um cabeçalho de IP do cliente definido pela borda (ex.: `True-Client-IP`). Sem ele, quem decide é o `RemoteIpValve` (`X-Forwarded-For` de proxies confiáveis). O log informa qual origem está em uso. |
 | `PORT` | `8080` | Imagem Docker: porta HTTP. |
 | `MYSQL_DATABASE`, `MYSQL_USER`, `MYSQL_PASSWORD` | `cantinaif`, `cantina`, _(obrigatória)_ | Somente `docker compose`. |
 
@@ -228,7 +235,7 @@ Todos os dados são fictícios.
 
 Como é restaurado:
 - a cada reinício da aplicação (o H2 é em memória);
-- periodicamente, a cada `CANTINA_DEMO_RESET_HOURS` horas (padrão 6). A restauração é atômica: hashes e imagens são preparados antes, depois tudo é apagado e reinserido em uma única transação enquanto as requisições esperam numa trava; sessões de antes da restauração são invalidadas;
+- periodicamente, a cada `CANTINA_DEMO_RESET_HOURS` horas (padrão 6). A restauração é atômica: hashes e imagens são preparados antes, depois a trava é obtida com tempo limite (se as conexões continuarem abertas, tenta de novo 30 s depois) e tudo é apagado e reinserido em uma única transação; sessões de antes da restauração são invalidadas;
 - manualmente, no banco configurado (isto **apaga** produtos, compradores, vendedores e pedidos):
 
 ```bash
@@ -250,7 +257,7 @@ java tools/GerarImagensSeed.java src/main/resources/seed/img
 ./mvnw verify
 ```
 
-88 testes JUnit 5 rodam em H2 em memória (e Mockito para os filtros): DAOs (usuários, vendedores, produtos, pedidos), BCrypt, domínio de pedidos (total calculado no servidor, baixa de estoque, estoque insuficiente com rollback, mudança de preço no checkout, cancelamento devolvendo estoque, transições de status inválidas, edição de estoque por compara-e-troca), carrinho (estouro, concorrência), seed (rodar duas vezes gera dados idênticos; totais, estoque e estoque inicial consistentes; leitores e checkouts concorrentes durante restaurações repetidas nunca veem o banco vazio ou inconsistente), `AuthFilter` e `CsrfFilter`, proteção de login (por conta e por IP), limitador de taxa, tetos da demo, redimensionamento e detecção do tipo de imagem e validação do cadastro.
+114 testes JUnit 5 rodam em H2 em memória (e Mockito para os filtros): DAOs (usuários, vendedores, produtos, pedidos), BCrypt, domínio de pedidos (total calculado no servidor, baixa de estoque, estoque insuficiente com rollback, mudança de preço no checkout, cancelamento devolvendo estoque, transições de status inválidas, edição de estoque por compara-e-troca), carrinho (estouro, concorrência, quantidades inteiras estritas), seed (rodar duas vezes gera dados idênticos; totais, estoque e estoque inicial consistentes; leitores e checkouts concorrentes durante restaurações repetidas nunca veem o banco vazio ou inconsistente), a trava do banco (tempos limite, geração da sessão, sem vazamento de trava), `BodyLimitFilter`, `AuthFilter`, `CsrfFilter` (inclusive milhares de requisições anônimas sem criar sessão), proteção de login (por conta e por IP), resolução do IP do cliente, limitador de taxa, tetos da demo, redimensionamento de imagem (bomba de pixels, concorrência) e detecção do tipo, e validação do cadastro.
 
 O GitHub Actions (`.github/workflows/ci.yml`) tem dois jobs a cada push e pull request na `main`: `./mvnw -B verify` com JDK 21 (o WAR fica como artefato) e um job Docker que constrói a imagem, executa com `PORT=10000`, `CANTINA_BEHIND_PROXY=true` e limite de 512 MB e roda `tools/smoke-proxy.sh` (health check, cookie `Secure`, HSTS, IP real do cliente no limitador de login, página de erro sem detalhes do servidor) mais a verificação de usuário não-root. `tools/test-entrypoint.sh` executa o entrypoint de verdade contra uma cópia local do Tomcat 10.1 (sem Docker). Não há testes automatizados de navegador.
 
@@ -272,15 +279,25 @@ Atrás do proxy HTTPS do Render: com `CANTINA_BEHIND_PROXY=true` o entrypoint ad
 
 O que foi realmente testado: a imagem foi construída e executada localmente com Docker (`--memory=512m`, `PORT=10000`, `CANTINA_BEHIND_PROXY=true`, `CANTINA_COOKIE_SECURE=true`) e requisições com cabeçalhos `X-Forwarded-*` simulados, vindas do gateway do Docker (endereço privado), mostraram o cookie `Secure`, o HSTS e o limite de login por IP de cliente; o entrypoint também foi executado contra um Tomcat 10.1.28 local. O que **não** foi testado: o próprio Render. Não se verificou se os endereços de borda do Render caem nas faixas confiáveis padrão; se o cookie não vier `Secure` ou se todos os visitantes parecerem ter o mesmo IP no Render, ajuste `CANTINA_TRUSTED_PROXIES`.
 
+### Verificação pós-deploy
+
+O IP usado pelos limites de login e de escrita depende de como o proxy da plataforma repassa o endereço do cliente, o que não dá para testar localmente. Depois do primeiro deploy:
+
+1. Abra os logs do serviço (Render: **Logs**). Na inicialização há uma linha INFO `[ip] origem do IP do cliente: ...` que diz qual origem está em uso (`RemoteIpValve ...`, `cabecalho <nome> ...` ou `socket direto`).
+2. Acesse o site de duas redes diferentes (por exemplo o computador e o celular em dados móveis) e, em cada uma, erre o login 6 vezes para o mesmo prontuário que não seja de demo (senha errada, ex.: `CJ0000001`; a sexta tentativa é bloqueada). Cada tentativa bloqueada registra `[limite] bloqueio de login para o IP <ip> (origem do IP: ...)`. Se as duas redes mostrarem IPs **diferentes**, não é preciso fazer mais nada.
+3. Se todos os visitantes aparecerem com o **mesmo** IP (normalmente um endereço privado ou da borda), a cadeia de proxies tem um salto não confiável. Defina `CANTINA_CLIENT_IP_HEADER` com o nome do cabeçalho que a borda preenche com o endereço do cliente, ou defina `CANTINA_TRUSTED_PROXIES` (regex Java) para incluir os endereços de borda vistos nos logs. Mudar essas variáveis de ambiente (e reiniciar o serviço) não exige alterar código.
+4. Se o cookie de sessão não for `Secure` nas ferramentas do navegador, o cabeçalho `X-Forwarded-Proto` não está sendo aceito: ajuste `CANTINA_TRUSTED_PROXIES` do mesmo modo (ou mantenha `CANTINA_COOKIE_SECURE=true`, que já força o atributo).
+5. As contas de demonstração sempre conseguem entrar, mesmo que todos compartilhem um IP, então um colapso de IPs nunca derruba a demo; ele só afeta os limites das demais contas.
+
 ## Segurança
 
 - Senhas guardadas como hash BCrypt; a sessão nunca guarda senha; o id da sessão é trocado no login; o logout invalida a sessão (POST + CSRF).
 - Controle de acesso por perfil no `AuthFilter` para páginas e APIs (vendedor × comprador), 401/403 nas APIs e redirecionamento ao login nas páginas.
-- CSRF: token por sessão exigido em todo POST/PUT/DELETE (cabeçalho `X-CSRF-Token` ou campo `_csrf`).
+- CSRF: token por sessão exigido em todo POST/PUT/DELETE (cabeçalho `X-CSRF-Token` ou campo `_csrf`); os formulários anônimos de login e cadastro usam um cookie de envio duplo (aleatório, `HttpOnly`, `SameSite=Strict`) para que visitantes anônimos nunca criem sessões.
 - Cabeçalhos: Content-Security-Policy estrita (sem scripts nem estilos inline), `X-Frame-Options: DENY`, `X-Content-Type-Options: nosniff`, `Referrer-Policy`, `Permissions-Policy`, HSTS em HTTPS.
-- Cookie de sessão `HttpOnly` e `SameSite=Lax`, `Secure` quando configurado ou quando a requisição é HTTPS (conforme resolvido pelo servidor, não por um cabeçalho cru). O token CSRF é renovado no login. Visitantes anônimos só recebem sessão nas telas de login e cadastro, e ela dura 5 minutos; no máximo 5000 sessões ativas ao mesmo tempo e as sessões não são persistidas entre reinícios. POST com o perfil errado recebe 403.
-- Limite de login em duas camadas: 5 falhas em 3 minutos por conta (prontuário) e um teto bem mais alto de 40 falhas em 5 minutos por IP de cliente, para quem divide um NAT não ser bloqueado junto. No modo demonstração as duas contas de demo (senha pública) ficam fora do bloqueio por conta (continuam sob o teto por IP). Contrapartida conhecida: alguém pode travar a conta de outra pessoa por alguns minutos errando de propósito. As operações de escrita também têm limite por IP (90 por minuto; 6 cadastros a cada 10 minutos). Tudo em memória, por instância.
-- Uploads: limite de tamanho (2 MB), tipo detectado pelos bytes iniciais e então decodificado, redimensionado e recomprimido em JPEG (sem metadados; quantidades enormes de pixels são rejeitadas antes de decodificar); servido com `nosniff` e `ETag`.
+- Cookie de sessão `HttpOnly` e `SameSite=Lax`, `Secure` quando configurado ou quando a requisição é HTTPS (conforme resolvido pelo servidor, não por um cabeçalho cru). O token CSRF é renovado no login. Visitantes anônimos não ganham sessão alguma; no máximo 5000 sessões ativas ao mesmo tempo (com a casa cheia a tela de login responde 503) e as sessões não são persistidas entre reinícios. POST com o perfil errado recebe 403.
+- Limite de login em duas camadas: 5 falhas em 3 minutos por conta (prontuário) e um teto bem mais alto de 40 falhas em 5 minutos por IP de cliente, para quem divide um NAT não ser bloqueado junto. No modo demonstração as duas contas de demo (senha pública) nunca são bloqueadas, nem pelo teto por IP (se todos os visitantes colapsassem em um IP, um só visitante travaria o login de todos). Contrapartida conhecida: alguém pode travar a conta (que não seja de demo) de outra pessoa por alguns minutos errando de propósito. As operações de escrita também têm limite por IP (90 por minuto; 6 cadastros a cada 10 minutos). Tudo em memória, por instância.
+- Corpos de requisição: 16 KB (JSON/formulários) ou cerca de 2,1 MB (uploads), HTTP 413 acima disso, com os mesmos limites também em requisições chunked. Uploads: tipo detectado pelos bytes iniciais e então decodificado (imagens acima de ~5 megapixels rejeitadas pelo cabeçalho), redimensionado e recomprimido em JPEG (sem metadados), uma por vez; servido com `nosniff` e `ETag`.
 - Escape de saída em toda parte (`<c:out>`, `textContent`); `PreparedStatement` em todo o SQL; páginas de erro amigáveis, sem stack trace.
 
 ## Detalhes de implementação e limitações conhecidas
@@ -288,9 +305,10 @@ O que foi realmente testado: a imagem foi construída e executada localmente com
 - Não há pagamento online: o pedido é reservado e pago no balcão.
 - O estoque é baixado na criação do pedido e devolvido no cancelamento (`UPDATE ... WHERE estoque >= ?` atômico dentro da transação do pedido).
 - O formulário de cadastro pede prontuário, nome, e-mail e senha. A coluna CPF existe, mas só é preenchida pelos dados de demonstração. A ideia original de validar prontuários na base da instituição e de suportar vários campi/cantinas **não está implementada**: há uma única cantina.
-- O Docker foi exercitado localmente (Docker 28): a imagem constrói e roda como não-root com limite de 512 MB (cerca de 150 MB em repouso e cerca de 200 MB após 30 uploads de imagens de 1,4 MB, que foram barrados pelos limites da demo), e o `docker compose` com MySQL 8.4 sobe, carrega o seed (`CANTINA_SEED_IF_EMPTY`), permite o login do vendedor e cria produtos com o id seguinte ao do seed. Não foi executado no Render. O comando manual do seed (`exec:java`) só foi executado contra arquivos H2; no MySQL o caminho foi exercitado pelo boot do compose.
+- O Docker foi exercitado localmente (Docker 28). A imagem constrói e roda como não-root com limite de 512 MB e foi atacada com quatro abusos baratos que antes matavam ou congelavam o contêiner; agora ele sobrevive a todos, com 0 reinícios: um corpo de requisição de 300 MB (413 na hora, pico de memória de cerca de 160 MiB), quatro uploads simultâneos de um PNG 4999×4999 de 73 KB (400 "dimensões grandes demais", pico de cerca de 156 MiB), 5.600 requisições anônimas à tela de login em 4 s (todas 200, nenhuma sessão criada, login continua funcionando) e um cliente lento combinado com restaurações a cada ~11 s (`/health` sempre 200 em poucos milissegundos). O `docker compose` com MySQL 8.4 sobe, carrega o seed (`CANTINA_SEED_IF_EMPTY`), permite o login do vendedor e cria produtos com o id seguinte ao do seed. Não foi executado no Render. O comando manual do seed (`exec:java`) só foi executado contra arquivos H2; no MySQL o caminho foi exercitado pelo boot do compose.
 - Bancos criados com o schema antigo precisam de `ALTER TABLE`: adicionar `Comprador.cpf VARCHAR(11) UNIQUE`; adicionar `Pedido.status VARCHAR(12) NOT NULL DEFAULT 'PENDENTE'`, `Pedido.criado_em TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP` e `Pedido.total DECIMAL(10,2) NOT NULL DEFAULT 0`; adicionar `Pedido_Produto.preco_unitario DECIMAL(10,2) NOT NULL DEFAULT 0`. Senhas antigas em texto puro não são hashes BCrypt válidos, então esses usuários precisam ser recriados.
 - O carrinho fica na sessão HTTP (em memória); o limitador de login é por instância; as imagens são guardadas como BLOB; as listas não têm paginação; o painel do vendedor atualiza por polling.
+- Não exercitado de ponta a ponta: o 503 amigável na tela de login quando o teto de 5000 sessões ativas é atingido (exigiria milhares de logins bem-sucedidos; o caminho de código existe, mas só a parte de sessões anônimas foi testada) e o comportamento real atrás da cadeia de proxies do Render.
 - As datas são exibidas no fuso horário do navegador.
 
 ## Créditos
