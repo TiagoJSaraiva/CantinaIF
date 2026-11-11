@@ -63,7 +63,7 @@ public final class DemoDataSeeder {
 
     private static final List<Prod> CATALOGO = List.of(
         // salgados
-        p("coxinha", "Coxinha de Frango", "Massa crocante recheada com frango desfiado temperado e catupiry.", "6.50", 40, "salgado"),
+        p("coxinha", "Coxinha de Frango", "Massa crocante recheada com frango desfiado temperado e requeijão cremoso.", "6.50", 40, "salgado"),
         p("pastel-queijo", "Pastel de Queijo", "Pastel frito na hora, com muito queijo mussarela derretido.", "7.00", 25, "salgado"),
         p("pastel-carne", "Pastel de Carne", "Pastel frito na hora, recheado com carne moída refogada com cebola.", "7.00", 0, "salgado"),
         p("pao-de-queijo", "Pão de Queijo (porção com 5)", "Pãozinho mineiro quentinho, feito com queijo minas.", "6.00", 30, "salgado"),
@@ -89,7 +89,7 @@ public final class DemoDataSeeder {
         p("pudim", "Pudim de Leite (fatia)", "Pudim cremoso de leite condensado com calda de caramelo.", "7.00", 12, "doce"),
         p("cookie", "Cookie de Chocolate", "Cookie macio com gotas de chocolate meio amargo.", "5.50", 28, "doce"),
         new Prod("pacoca", "Paçoca", "Paçoca de amendoim tradicional, rolha.", "2.00", 80, "doce", false),
-        p("donut", "Donut Glaceado", "Rosquinha com cobertura de glacê rosa e confeitos coloridos.", "6.00", 0, "doce"),
+        p("donut", "Rosquinha Glaceada", "Rosquinha com cobertura de glacê rosa e confeitos coloridos.", "6.00", 0, "doce"),
         // bebidas
         p("suco-laranja", "Suco de Laranja 300 ml", "Suco natural de laranja, sem açúcar.", "5.00", 30, "bebida"),
         p("suco-maracuja", "Suco de Maracujá 300 ml", "Suco de maracujá com polpa da fruta, levemente adoçado.", "5.00", 26, "bebida"),
