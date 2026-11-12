@@ -6,7 +6,7 @@
 
 Sistema de pedidos antecipados para a cantina de um campus do IFSP (Instituto Federal de São Paulo): o aluno consulta os produtos do dia pelo celular, reserva itens antes do intervalo e retira (e paga) no balcão; o responsável pela cantina gerencia produtos, estoque e pedidos.
 
-Demo online: _aguardando publicação_ <!-- DEMO_URL -->
+Demo online: **https://cantinaif-ubt0.onrender.com** (instância gratuita do Render: o primeiro acesso depois de 15 minutos sem uso pode levar cerca de um minuto)
 
 ![Vitrine](docs/screenshots/vitrine.png)
 
@@ -286,6 +286,7 @@ O IP usado pelos limites de login e de escrita depende de como o proxy da plataf
 1. Abra os logs do serviço (Render: **Logs**). Na inicialização há uma linha INFO `[ip] origem do IP do cliente: ...` que diz qual origem está em uso (`RemoteIpValve ...`, `cabecalho <nome> ...` ou `socket direto`).
 2. Acesse o site de duas redes diferentes (por exemplo o computador e o celular em dados móveis) e, em cada uma, erre o login 6 vezes para o mesmo prontuário que não seja de demo (senha errada, ex.: `CJ0000001`; a sexta tentativa é bloqueada). Cada tentativa bloqueada registra `[limite] bloqueio de login para o IP <ip> (origem do IP: ...)`. Se as duas redes mostrarem IPs **diferentes**, não é preciso fazer mais nada.
 3. Se todos os visitantes aparecerem com o **mesmo** IP (normalmente um endereço privado ou da borda), a cadeia de proxies tem um salto não confiável. Defina `CANTINA_CLIENT_IP_HEADER` com o nome do cabeçalho que a borda preenche com o endereço do cliente, ou defina `CANTINA_TRUSTED_PROXIES` (regex Java) para incluir os endereços de borda vistos nos logs. Mudar essas variáveis de ambiente (e reiniciar o serviço) não exige alterar código.
+   No Render, especificamente, o proxy apenas acrescenta ao `X-Forwarded-For` (o cliente pode forjá-lo) e a cadeia passa por endereços de borda do Cloudflare que variam; por isso, só com o `RemoteIpValve`, o limite de login por IP nunca disparava (verificado em 2026-11-12). O `render.yaml` define `CANTINA_CLIENT_IP_HEADER=True-Client-IP`.
 4. Se o cookie de sessão não for `Secure` nas ferramentas do navegador, o cabeçalho `X-Forwarded-Proto` não está sendo aceito: ajuste `CANTINA_TRUSTED_PROXIES` do mesmo modo (ou mantenha `CANTINA_COOKIE_SECURE=true`, que já força o atributo).
 5. As contas de demonstração sempre conseguem entrar, mesmo que todos compartilhem um IP, então um colapso de IPs nunca derruba a demo; ele só afeta os limites das demais contas.
 

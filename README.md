@@ -6,7 +6,7 @@
 
 Pre-ordering system for a school canteen at an IFSP campus (Instituto Federal de São Paulo): students browse the day's products on their phone, reserve items ahead of the break, and pick them up (and pay) at the counter; the canteen operator manages products, stock and orders.
 
-Live demo: _pending deployment_ <!-- DEMO_URL -->
+Live demo: **https://cantinaif-ubt0.onrender.com** (free Render instance: the first request after 15 minutes of inactivity can take about a minute)
 
 ![Storefront](docs/screenshots/vitrine.png)
 
@@ -286,6 +286,7 @@ The IP used by the login and write limits depends on how the platform proxy forw
 1. Open the service logs (Render: **Logs**). At startup there is an INFO line `[ip] origem do IP do cliente: ...` that says which source is in use (`RemoteIpValve ...`, `cabecalho <name> ...` or `socket direto`).
 2. Open the site from two different networks (for example your computer and your phone on mobile data) and, on each one, fail the login 6 times for the same non-demo ID (wrong password, e.g. `CJ0000001`; the sixth attempt is blocked). Each blocked attempt logs `[limite] bloqueio de login para o IP <ip> (origem do IP: ...)`. If the two networks show **different** IPs, nothing else is needed.
 3. If every visitor shows the **same** IP (usually a private or edge address), the proxy chain has an untrusted hop. Either set `CANTINA_CLIENT_IP_HEADER` to the header the edge fills with the client address, or set `CANTINA_TRUSTED_PROXIES` (a Java regex) to include the edge addresses seen in the logs. Changing these environment variables (and restarting the service) needs no code change.
+   On Render specifically, the proxy only appends to `X-Forwarded-For` (a client can forge it) and the chain passes through rotating Cloudflare edge addresses, so with the `RemoteIpValve` alone the per-IP login limit never triggered (checked on 2026-11-12). `render.yaml` therefore sets `CANTINA_CLIENT_IP_HEADER=True-Client-IP`.
 4. If the session cookie is not `Secure` in the browser dev tools, the `X-Forwarded-Proto` header is not being trusted: fix `CANTINA_TRUSTED_PROXIES` the same way (or keep `CANTINA_COOKIE_SECURE=true`, which already forces it).
 5. The demo accounts can always sign in, even if everybody shares one IP, so a collapsed IP never takes the demo down; it only affects the limits for other accounts.
 
