@@ -17,6 +17,9 @@ services:
       # o Render termina o TLS: confia em X-Forwarded-* vindos do proxy (ver docker-entrypoint.sh)
       - key: CANTINA_BEHIND_PROXY
         value: "true"
-      # Opcional, depois do deploy: se o log mostrar todos os visitantes com o mesmo IP, defina
-      #   CANTINA_CLIENT_IP_HEADER (cabecalho de IP do cliente da borda) ou CANTINA_TRUSTED_PROXIES.
+      # O proxy do Render apenas ACRESCENTA ao X-Forwarded-For (o cliente pode forja-lo) e a cadeia passa
+      # pela borda do Cloudflare, cujos IPs variam: verificado em 2026-11-12 que, so com o RemoteIpValve, o
+      # limite de login por IP nunca disparava. A borda preenche True-Client-IP com o IP real do visitante.
       #   Veja "Verificacao pos-deploy" no README.
+      - key: CANTINA_CLIENT_IP_HEADER
+        value: True-Client-IP
