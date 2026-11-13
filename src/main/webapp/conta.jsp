@@ -37,8 +37,18 @@
         </c:choose>
         <%@ include file="/WEB-INF/jspf/form-vinculo.jspf" %>
     </section>
+
+    <section class="painel" id="advertencias" aria-labelledby="titulo-adv">
+        <div class="painel-topo">
+            <h2 id="titulo-adv">Advertências</h2>
+            <button type="button" class="btn btn-secundario btn-pequeno" id="btn-lidas" hidden>Marcar como lidas</button>
+        </div>
+        <div id="estado-adv" class="estado carregando" role="status">Carregando...</div>
+        <ul id="lista-adv" class="lista-advertencias" hidden></ul>
+    </section>
 </main>
 <script src="js/util.js"></script>
 <script src="js/vinculo.js"></script>
+<script src="js/advertencias.js"></script>
 </body>
 </html>

@@ -45,6 +45,10 @@ function requisitar(url, opcoes) {
 				// a base de demonstracao foi restaurada: a sessao nao vale mais
 				window.location.href = 'login.jsp?restaurada=1';
 			}
+			if (resposta.status === 403 && corpo.desativada && !/conta-desativada\.jsp$/.test(window.location.pathname)) {
+				// o vendedor desativou esta conta: so resta ver o aviso
+				window.location.href = 'conta-desativada.jsp';
+			}
 			return { ok: resposta.ok, status: resposta.status, corpo };
 		}));
 }

@@ -92,6 +92,14 @@ public class AuthFilter implements Filter {
                         return;
                     }
                     request.setAttribute(Sessao.ESTADO, estado);
+                    if (!estado.ativo() && !liberadoParaDesativado(request, path)) {
+                        desativado(request, response, path);
+                        return;
+                    }
+                    if (estado.ativo() && path.equals(PAGINA_DESATIVADA)) {
+                        response.sendRedirect(request.getContextPath() + "/home.jsp");
+                        return;
+                    }
                 }
                 chain.doFilter(req, res);
             } catch (java.sql.SQLException e) {
@@ -127,6 +135,29 @@ public class AuthFilter implements Filter {
         } else {
             Json.result(response, HttpServletResponse.SC_UNAUTHORIZED, false, "Faça login para continuar.");
         }
+    }
+
+    /** Pagina que o comprador desativado ve (aviso e advertencias). */
+    static final String PAGINA_DESATIVADA = "/conta-desativada.jsp";
+
+    /** Conta desativada so acessa o aviso e a lista de advertencias (e pode sair). */
+    private static boolean liberadoParaDesativado(HttpServletRequest request, String path) {
+        return path.equals(PAGINA_DESATIVADA)
+                || (path.equals("/apiUser/advertencias") && "GET".equals(request.getMethod()));
+    }
+
+    /** Pagina: vai para o aviso de conta desativada; API: 403 {desativada: true}. */
+    private static void desativado(HttpServletRequest request, HttpServletResponse response, String path)
+            throws IOException {
+        if (path.endsWith(".jsp") || path.equals("/FinalizarCompraServlet")) {
+            response.sendRedirect(request.getContextPath() + PAGINA_DESATIVADA);
+            return;
+        }
+        Map<String, Object> corpo = new LinkedHashMap<>();
+        corpo.put("success", false);
+        corpo.put("desativada", true);
+        corpo.put("message", "Sua conta foi desativada pelo vendedor.");
+        Json.write(response, HttpServletResponse.SC_FORBIDDEN, corpo);
     }
 
     /** Invalida a sessao e manda entrar de novo (pagina) ou responde 401 com restaurada=true (API). */

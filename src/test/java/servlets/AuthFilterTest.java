@@ -180,4 +180,74 @@ class AuthFilterTest {
                 () -> filtro.doFilter(requisicao("GET", "/home.jsp", comprador), resposta(new StringWriter()), estoura));
         assertNull(utils.GeracaoDaRequisicao.atual());
     }
+
+    private static Comprador compradorCom(String prontuario) {
+        Comprador c = new Comprador();
+        c.setProntuario(prontuario);
+        return c;
+    }
+
+    @Test
+    void compradorDesativadoSoVeOAvisoEAsAdvertencias() throws Exception {
+        AuthFilter comDesativado = new AuthFilter(p -> new model.EstadoComprador(false, "V1", "Cantina", 1));
+        HttpSession sessao = sessao("comprador", compradorCom("CJ9"), Database.geracao());
+        FilterChain cadeia = mock(FilterChain.class);
+
+        // paginas vao para o aviso, inclusive sessoes abertas antes da desativacao
+        for (String pagina : new String[] { "/home.jsp", "/Carrinho.jsp", "/meus-pedidos.jsp", "/conta.jsp" }) {
+            HttpServletResponse res = resposta(new StringWriter());
+            comDesativado.doFilter(requisicao("GET", pagina, sessao), res, cadeia);
+            verify(res).sendRedirect("/conta-desativada.jsp");
+        }
+        // APIs: 403 com a marca "desativada"
+        for (String[] api : new String[][] { { "GET", "/apiUser/produtos" }, { "POST", "/carrinho" },
+                { "POST", "/apiUser/vinculo" }, { "POST", "/FinalizarCompraServlet" }, { "POST", "/apiUser/pedidos/cancelar" } }) {
+            StringWriter corpo = new StringWriter();
+            HttpServletResponse res = resposta(corpo);
+            comDesativado.doFilter(requisicao(api[0], api[1], sessao), res, cadeia);
+            if (api[1].equals("/FinalizarCompraServlet")) {
+                verify(res).sendRedirect("/conta-desativada.jsp");
+            } else {
+                verify(res).setStatus(403);
+                assertTrue(corpo.toString().contains("\"desativada\":true"), api[1]);
+            }
+        }
+        verifyNoInteractions(cadeia);
+
+        // o aviso e a lista de advertencias continuam acessiveis
+        HttpServletRequest aviso = requisicao("GET", "/conta-desativada.jsp", sessao);
+        HttpServletResponse resAviso = resposta(new StringWriter());
+        comDesativado.doFilter(aviso, resAviso, cadeia);
+        verify(cadeia).doFilter(aviso, resAviso);
+        HttpServletRequest lista = requisicao("GET", "/apiUser/advertencias", sessao);
+        HttpServletResponse resLista = resposta(new StringWriter());
+        comDesativado.doFilter(lista, resLista, cadeia);
+        verify(cadeia).doFilter(lista, resLista);
+        // marcar como lidas nao
+        HttpServletResponse resLidas = resposta(new StringWriter());
+        comDesativado.doFilter(requisicao("POST", "/apiUser/advertencias/lidas", sessao), resLidas, cadeia);
+        verify(resLidas).setStatus(403);
+    }
+
+    @Test
+    void compradorAtivoNaPaginaDeContaDesativadaVoltaParaAVitrine() throws Exception {
+        HttpSession sessao = sessao("comprador", compradorCom("CJ8"), Database.geracao());
+        FilterChain cadeia = mock(FilterChain.class);
+        HttpServletResponse res = resposta(new StringWriter());
+        filtro.doFilter(requisicao("GET", "/conta-desativada.jsp", sessao), res, cadeia);
+        verify(res).sendRedirect("/home.jsp");
+        verifyNoInteractions(cadeia);
+    }
+
+    @Test
+    void contaQueNaoExisteMaisEInvalidada() throws Exception {
+        AuthFilter semConta = new AuthFilter(p -> null);
+        HttpSession sessao = sessao("comprador", compradorCom("SUMIU"), Database.geracao());
+        FilterChain cadeia = mock(FilterChain.class);
+        HttpServletResponse res = resposta(new StringWriter());
+        semConta.doFilter(requisicao("GET", "/home.jsp", sessao), res, cadeia);
+        verify(sessao).invalidate();
+        verify(res).sendRedirect("/login.jsp?restaurada=1");
+        verifyNoInteractions(cadeia);
+    }
 }

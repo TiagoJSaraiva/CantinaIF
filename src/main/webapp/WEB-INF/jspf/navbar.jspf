@@ -19,7 +19,8 @@
                     <a href="Carrinho.jsp" <c:if test="${pagina == 'carrinho'}">aria-current="page"</c:if>>Carrinho
                         <span class="badge-carrinho" id="badge-carrinho" aria-label="itens no carrinho"><c:out value="${empty sessionScope.carrinho ? 0 : sessionScope.carrinho.quantidadeTotal}"/></span></a>
                     <a href="meus-pedidos.jsp" <c:if test="${pagina == 'meus-pedidos'}">aria-current="page"</c:if>>Meus pedidos</a>
-                    <a href="conta.jsp" <c:if test="${pagina == 'conta'}">aria-current="page"</c:if>>Minha conta</a>
+                    <a href="conta.jsp" <c:if test="${pagina == 'conta'}">aria-current="page"</c:if>>Minha conta<c:if test="${requestScope.estadoComprador.naoLidas > 0}">
+                        <span class="badge-avisos" aria-label="advertências não lidas"><c:out value="${requestScope.estadoComprador.naoLidas}"/></span></c:if></a>
                 </c:otherwise>
             </c:choose>
         </nav>

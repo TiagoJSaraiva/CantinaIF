@@ -23,6 +23,12 @@ final class Json {
         response.getWriter().write(GSON.toJson(body));
     }
 
+    /** Data/hora local em ISO-8601 com o deslocamento do fuso do servidor (null se nula). */
+    static String iso(java.time.LocalDateTime data) {
+        return data == null ? null
+                : data.atZone(java.time.ZoneId.systemDefault()).format(java.time.format.DateTimeFormatter.ISO_OFFSET_DATE_TIME);
+    }
+
     /** Resposta padrao {success, message}. */
     static void result(HttpServletResponse response, int status, boolean success, String message) throws IOException {
         Map<String, Object> body = new LinkedHashMap<>();

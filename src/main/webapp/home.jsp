@@ -26,6 +26,13 @@
             <div class="page-head">
                 <h1>Vitrine <span class="subtitulo">· <c:out value="${estado.vendedorNome}"/></span></h1>
             </div>
+            <c:if test="${estado.naoLidas > 0}">
+                <div class="alerta alerta-aviso js-faixa-advertencias" role="status">
+                    <p>Você tem <strong><c:out value="${estado.naoLidas}"/></strong>
+                        <c:out value="${estado.naoLidas == 1 ? 'advertência nova' : 'advertências novas'}"/> da cantina.
+                        <a href="conta.jsp#advertencias">Ler agora</a></p>
+                </div>
+            </c:if>
 
             <div class="toolbar">
                 <div class="busca">
