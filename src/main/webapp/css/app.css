@@ -714,10 +714,10 @@ fieldset.modelos .chip { text-align: left; border-radius: 8px; white-space: norm
 /* ---------- botao de tema (sol/lua) ---------- */
 .btn-tema {
 	display: inline-flex; align-items: center; justify-content: center; width: 2.25rem; height: 2.25rem; padding: 0;
-	border-radius: 8px; border: 1px solid rgba(255, 255, 255, .7); background: transparent; color: #fff; cursor: pointer;
+	border-radius: 8px; border: 0; background: transparent; color: #fff; cursor: pointer; opacity: .85;
 }
-.btn-tema:hover { background: rgba(255, 255, 255, .15); border-color: #fff; }
-.btn-tema svg { width: 1.15rem; height: 1.15rem; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.btn-tema:hover { opacity: 1; }
+.btn-tema svg { width: 1.35rem; height: 1.35rem; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
 .btn-tema .icone-sol { display: none; }
 :root[data-tema="escuro"] .btn-tema .icone-sol { display: block; }
 :root[data-tema="escuro"] .btn-tema .icone-lua { display: none; }
@@ -726,8 +726,8 @@ fieldset.modelos .chip { text-align: left; border-radius: 8px; white-space: norm
 	:root:not([data-tema="claro"]) .btn-tema .icone-lua { display: none; }
 }
 .auth-card { position: relative; }
-.auth-card > .btn-tema { position: absolute; top: 1rem; right: 1rem; border-color: var(--borda); color: var(--texto-suave); }
-.auth-card > .btn-tema:hover { background: var(--superficie-2); color: var(--texto); }
+.auth-card > .btn-tema { position: absolute; top: 1rem; right: 1rem; color: var(--texto-suave); }
+.auth-card > .btn-tema:hover { color: var(--texto); }
 
 /* imagens "sem foto" (placeholder claro) e fotos ficam menos ofuscantes no escuro */
 :root[data-tema="escuro"] .produto-img img[src$="placeholder.svg"] { filter: brightness(.35) saturate(.8); }
