@@ -12,12 +12,14 @@
                 <c:when test="${not empty sessionScope.vendedor}">
                     <a href="registroProdutos.jsp" <c:if test="${pagina == 'produtos'}">aria-current="page"</c:if>>Produtos</a>
                     <a href="pedidos.jsp" <c:if test="${pagina == 'pedidos'}">aria-current="page"</c:if>>Pedidos</a>
+                    <a href="compradores.jsp" <c:if test="${pagina == 'compradores'}">aria-current="page"</c:if>>Compradores</a>
                 </c:when>
                 <c:otherwise>
                     <a href="home.jsp" <c:if test="${pagina == 'home'}">aria-current="page"</c:if>>Vitrine</a>
                     <a href="Carrinho.jsp" <c:if test="${pagina == 'carrinho'}">aria-current="page"</c:if>>Carrinho
                         <span class="badge-carrinho" id="badge-carrinho" aria-label="itens no carrinho"><c:out value="${empty sessionScope.carrinho ? 0 : sessionScope.carrinho.quantidadeTotal}"/></span></a>
                     <a href="meus-pedidos.jsp" <c:if test="${pagina == 'meus-pedidos'}">aria-current="page"</c:if>>Meus pedidos</a>
+                    <a href="conta.jsp" <c:if test="${pagina == 'conta'}">aria-current="page"</c:if>>Minha conta</a>
                 </c:otherwise>
             </c:choose>
         </nav>
@@ -25,8 +27,8 @@
         <div class="usuario">
             <span class="usuario-nome">
                 <c:choose>
-                    <c:when test="${not empty sessionScope.vendedor}">Vendedor <c:out value="${sessionScope.vendedor.prontuario}"/></c:when>
-                    <c:otherwise>Olá, <c:out value="${sessionScope.comprador.nome}"/></c:otherwise>
+                    <c:when test="${not empty sessionScope.vendedor}"><c:out value="${sessionScope.vendedor.nome}"/> (<c:out value="${sessionScope.vendedor.prontuario}"/>)</c:when>
+                    <c:otherwise>Olá, <c:out value="${sessionScope.comprador.nome}"/><c:if test="${requestScope.estadoComprador.vinculado}"> · <c:out value="${requestScope.estadoComprador.vendedorNome}"/></c:if></c:otherwise>
                 </c:choose>
             </span>
             <form action="logout" method="post">

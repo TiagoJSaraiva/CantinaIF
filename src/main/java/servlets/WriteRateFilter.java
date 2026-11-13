@@ -14,7 +14,8 @@ import utils.ClientIp;
 import utils.RateLimiter;
 
 /**
- * Limite de taxa para operacoes de escrita (cadastro, produtos, estoque, carrinho, checkout, status de pedido),
+ * Limite de taxa para operacoes de escrita (cadastro, produtos, estoque, carrinho, checkout, status de pedido,
+ * vinculo com vendedor, gestao de compradores),
  * por IP do cliente (o IP real quando atras de proxy confiavel; veja RemoteIpValve). Em memoria, por instancia.
  */
 public class WriteRateFilter implements Filter {
@@ -26,7 +27,8 @@ public class WriteRateFilter implements Filter {
 
     private static final Set<String> CAMINHOS = Set.of(
             "/register", "/registrar-produto", "/editar-produto", "/atualizarEstoque", "/carrinho",
-            "/FinalizarCompraServlet", "/apiUser/pedidos/cancelar", "/api/pedidos/status");
+            "/FinalizarCompraServlet", "/apiUser/pedidos/cancelar", "/api/pedidos/status", "/api/vinculo/codigo",
+            "/apiUser/vinculo", "/api/compradores/situacao", "/api/compradores/advertencia", "/apiUser/advertencias/lidas");
 
     @Override
     public void doFilter(ServletRequest req, ServletResponse res, FilterChain chain)

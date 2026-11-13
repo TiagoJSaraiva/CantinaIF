@@ -176,6 +176,21 @@ a { color: var(--verde-hover); }
 .campo-erro { display: block; color: var(--erro); font-size: .9rem; margin-top: .25rem; min-height: 0; }
 .campo-erro:empty { display: none; }
 .dica { color: var(--texto-suave); font-size: .85rem; margin-top: .25rem; }
+.dica { display: block; }
+.opcional { font-weight: 400; color: var(--texto-suave); }
+fieldset.perfil-campos { border: 0; margin: 0; padding: 0; min-width: 0; }
+.segmento { display: flex; border: 0; margin: 0 0 1rem; padding: 0; gap: 0; }
+.segmento legend { font-weight: 600; margin-bottom: .35rem; padding: 0; }
+.segmento label {
+    flex: 1; display: flex; align-items: center; justify-content: center; gap: .4rem; min-height: 2.75rem;
+    border: 1px solid var(--borda); background: #fff; cursor: pointer; font-weight: 600; padding: .4rem .75rem;
+}
+.segmento label:first-of-type { border-radius: 8px 0 0 8px; }
+.segmento label:last-of-type { border-radius: 0 8px 8px 0; border-left: 0; }
+.segmento label:has(input:checked) { background: var(--verde-escuro); border-color: var(--verde-escuro); color: #fff; }
+.segmento input { accent-color: var(--verde); }
+.codigo-input { text-transform: uppercase; letter-spacing: .25em; font-family: ui-monospace, Consolas, monospace; }
+.codigo-input::placeholder { letter-spacing: normal; text-transform: none; font-family: inherit; }
 .busca { position: relative; }
 
 /* ---------- botoes ---------- */
@@ -416,4 +431,34 @@ dialog::backdrop { background: rgba(0, 0, 0, .5); }
 @media (min-width: 1024px) {
 	.grade { grid-template-columns: repeat(4, 1fr); }
 	.lista-pedidos { grid-template-columns: repeat(3, 1fr); }
+}
+
+/* ---------- multivendedor: vinculo, conta, compradores ---------- */
+.subtitulo { font-weight: 600; color: var(--texto-suave); font-size: .8em; }
+.container-estreito { max-width: 44rem; }
+.painel {
+    background: #fff; border: 1px solid var(--borda); border-radius: var(--raio); padding: 1rem;
+    margin-bottom: 1rem;
+}
+.cartao-vinculo {
+    background: #fff; border: 1px solid var(--borda); border-radius: var(--raio); padding: 1.25rem;
+    max-width: 34rem; margin: 1rem auto;
+}
+.linha-vinculo { display: flex; gap: .5rem; flex-wrap: wrap; }
+.linha-vinculo input { flex: 1 1 10rem; min-width: 0; }
+.dados { display: grid; grid-template-columns: max-content 1fr; gap: .35rem 1rem; margin: 0; }
+.dados dt { font-weight: 600; color: var(--texto-suave); }
+.dados dd { margin: 0; overflow-wrap: anywhere; }
+.cantina-atual { font-size: 1.15rem; }
+.painel-codigo { display: grid; gap: 1rem; align-items: center; }
+.codigo-area { display: flex; flex-direction: column; align-items: center; gap: .5rem; text-align: center; }
+.codigo-grande {
+    font-family: ui-monospace, Consolas, monospace; font-size: 2.4rem; font-weight: 800; letter-spacing: .3em;
+    padding: .4rem .6rem .4rem .9rem; border: 2px dashed var(--verde); border-radius: var(--raio);
+    color: var(--verde-escuro); background: var(--verde-claro); user-select: all;
+}
+.codigo-grande.expirado { opacity: .45; text-decoration: line-through; border-color: var(--borda); }
+.codigo-tempo { margin: 0; font-weight: 600; color: var(--texto-suave); font-variant-numeric: tabular-nums; }
+@media (min-width: 768px) {
+    .painel-codigo { grid-template-columns: 1fr auto; }
 }

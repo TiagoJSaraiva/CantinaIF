@@ -1,5 +1,6 @@
 <%@ page language="java" contentType="text/html; charset=UTF-8" pageEncoding="UTF-8" session="false"%>
 <%@ taglib uri="jakarta.tags.core" prefix="c" %>
+<c:set var="vendedor" value="${requestScope.perfil == 'vendedor' or (empty requestScope.perfil and param.perfil == 'vendedor')}"/>
 <!DOCTYPE html>
 <html lang="pt-br">
 <head>
@@ -16,8 +17,14 @@
             <div class="alerta alerta-erro" role="alert"><p><c:out value="${requestScope.error}"/></p></div>
         </c:if>
 
-        <form action="register" method="post" novalidate data-validar>
+        <form action="register" method="post" novalidate data-validar id="form-cadastro">
             <input type="hidden" name="_csrf" value="<c:out value='${requestScope.csrfForm}'/>">
+
+            <fieldset class="segmento">
+                <legend>Tipo de conta</legend>
+                <label><input type="radio" name="perfil" value="aluno" <c:if test="${not vendedor}">checked</c:if>> Sou aluno</label>
+                <label><input type="radio" name="perfil" value="vendedor" <c:if test="${vendedor}">checked</c:if>> Sou vendedor</label>
+            </fieldset>
 
             <div class="field">
                 <label for="prontuario">Prontuário</label>
@@ -28,13 +35,26 @@
                 <span class="campo-erro" id="erro-prontuario"><c:out value="${requestScope.erros.prontuario}"/></span>
             </div>
 
-            <div class="field">
-                <label for="nome">Seu nome</label>
-                <input type="text" id="nome" name="nome" required maxlength="75" autocomplete="name"
-                       value="<c:out value='${requestScope.nome}'/>"
-                       <c:if test="${not empty requestScope.erros.nome}">aria-invalid="true" aria-describedby="erro-nome"</c:if>>
-                <span class="campo-erro" id="erro-nome"><c:out value="${requestScope.erros.nome}"/></span>
-            </div>
+            <fieldset class="perfil-campos" data-perfil="aluno" <c:if test="${vendedor}">hidden disabled</c:if>>
+                <div class="field">
+                    <label for="nome">Seu nome</label>
+                    <input type="text" id="nome" name="nome" required maxlength="75" autocomplete="name"
+                           value="<c:out value='${requestScope.nome}'/>"
+                           <c:if test="${not empty requestScope.erros.nome}">aria-invalid="true" aria-describedby="erro-nome"</c:if>>
+                    <span class="campo-erro" id="erro-nome"><c:out value="${requestScope.erros.nome}"/></span>
+                </div>
+            </fieldset>
+
+            <fieldset class="perfil-campos" data-perfil="vendedor" <c:if test="${not vendedor}">hidden disabled</c:if>>
+                <div class="field">
+                    <label for="loja">Nome da cantina</label>
+                    <input type="text" id="loja" name="loja" required minlength="2" maxlength="75" autocomplete="organization"
+                           value="<c:out value='${requestScope.loja}'/>"
+                           <c:if test="${not empty requestScope.erros.loja}">aria-invalid="true" aria-describedby="erro-loja"</c:if>>
+                    <span class="dica">É o nome que os seus compradores vão ver.</span>
+                    <span class="campo-erro" id="erro-loja"><c:out value="${requestScope.erros.loja}"/></span>
+                </div>
+            </fieldset>
 
             <div class="field">
                 <label for="email">E-mail institucional</label>
@@ -51,6 +71,16 @@
                 <span class="dica">Mínimo de 8 caracteres.</span>
                 <span class="campo-erro" id="erro-senha"><c:out value="${requestScope.erros.senha}"/></span>
             </div>
+
+            <fieldset class="perfil-campos" data-perfil="aluno" <c:if test="${vendedor}">hidden disabled</c:if>>
+                <div class="field">
+                    <label for="codigo">Código do vendedor <span class="opcional">(opcional)</span></label>
+                    <input type="text" id="codigo" name="codigo" maxlength="9" autocomplete="off" autocapitalize="characters"
+                           class="codigo-input" value="<c:out value='${requestScope.codigo}'/>">
+                    <span class="dica">Peça o código à cantina: ele vale por 1 minuto. Sem ele você pode criar a conta
+                        e se vincular depois, mas só verá produtos após o vínculo.</span>
+                </div>
+            </fieldset>
 
             <button type="submit" class="btn btn-bloco">Cadastrar</button>
         </form>

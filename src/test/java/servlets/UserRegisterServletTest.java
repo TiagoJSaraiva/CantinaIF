@@ -28,4 +28,14 @@ class UserRegisterServletTest {
         assertFalse(UserRegisterServlet.validar("CJ1", "a@b.co", "Ana", "curta").isEmpty());
         assertFalse(UserRegisterServlet.validar("CJ1", "a@b.co", "Ana", null).isEmpty());
     }
+
+    @Test
+    void vendedorPrecisaDoNomeDaCantina() {
+        assertTrue(UserRegisterServlet.validarVendedor("VEND9", "v@b.co", "Cantina Nova", "senha1234").isEmpty());
+        assertEquals(java.util.Set.of("loja"),
+                UserRegisterServlet.validarVendedor("VEND9", "v@b.co", "", "senha1234").keySet());
+        assertTrue(UserRegisterServlet.validarVendedor("VEND9", "v@b.co", "x".repeat(76), "senha1234").containsKey("loja"));
+        assertEquals(java.util.Set.of("prontuario", "email", "loja", "senha"),
+                UserRegisterServlet.validarVendedor("", "x", "a", "1").keySet());
+    }
 }

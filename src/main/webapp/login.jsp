@@ -15,8 +15,19 @@
         <c:if test="${param.restaurada == '1'}">
             <div class="alerta alerta-aviso" role="status"><p>A demonstração foi restaurada; entre novamente.</p></div>
         </c:if>
-        <c:if test="${param.cadastro == 'ok'}">
+        <c:if test="${param.cadastro == 'ok' and empty param.vinculo}">
             <div class="alerta alerta-ok" role="status"><p>Cadastro realizado. Faça login para continuar.</p></div>
+        </c:if>
+        <c:if test="${param.cadastro == 'ok' and param.vinculo == 'ok'}">
+            <div class="alerta alerta-ok" role="status"><p>Cadastro realizado e conta vinculada à cantina. Faça login para ver os produtos.</p></div>
+        </c:if>
+        <c:if test="${param.cadastro == 'ok' and param.vinculo == 'falhou'}">
+            <div class="alerta alerta-aviso" role="status"><p>Conta criada, mas o código do vendedor era inválido ou expirou.
+                Entre e peça um novo código para se vincular.</p></div>
+        </c:if>
+        <c:if test="${param.cadastro == 'vendedor'}">
+            <div class="alerta alerta-ok" role="status"><p>Conta de vendedor criada. Entre para cadastrar seus produtos
+                e gerar códigos de vínculo para os seus compradores.</p></div>
         </c:if>
         <c:if test="${not empty requestScope.error}">
             <div class="alerta alerta-erro" role="alert"><p><c:out value="${requestScope.error}"/></p></div>
@@ -60,7 +71,8 @@
             <button type="submit" class="btn btn-bloco">Entrar</button>
         </form>
         <div class="auth-links">
-            <a class="btn btn-secundario btn-bloco" href="cadastro.jsp">Criar uma conta de aluno</a>
+            <a class="btn btn-secundario btn-bloco" href="cadastro.jsp">Criar conta de aluno</a>
+            <a class="btn btn-secundario btn-bloco" href="cadastro.jsp?perfil=vendedor">Criar conta de vendedor</a>
         </div>
     </section>
 </main>

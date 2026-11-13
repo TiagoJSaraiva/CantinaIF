@@ -13,4 +13,10 @@ public record EstadoComprador(boolean ativo, String vendedorProntuario, String v
     public boolean vinculado() {
         return vendedorProntuario != null;
     }
+
+    // getters no estilo JavaBean: o EL do Tomcat 10.1 (EL 5.0) nao le componentes de record
+    public boolean isAtivo() { return ativo; }
+    public boolean isVinculado() { return vinculado(); }
+    public String getVendedorNome() { return vendedorNome; }
+    public int getNaoLidas() { return naoLidas; }
 }

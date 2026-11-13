@@ -1,0 +1,14 @@
+<%-- Formulario do codigo de vinculo (comprador). Comportamento em js/vinculo.js. --%>
+<form class="form-vinculo js-vinculo" novalidate>
+    <div class="field">
+        <label for="codigo-vinculo">Código do vendedor</label>
+        <div class="linha-vinculo">
+            <input type="text" id="codigo-vinculo" name="codigo" required maxlength="9" autocomplete="off"
+                   autocapitalize="characters" spellcheck="false" class="codigo-input" placeholder="Ex.: K7P2QX"
+                   aria-describedby="dica-codigo">
+            <button type="submit" class="btn">Vincular</button>
+        </div>
+        <span class="dica" id="dica-codigo">Peça o código à cantina. Ele vale por 1 minuto e só pode ser usado uma vez.</span>
+    </div>
+    <div data-vinculo-msg role="status" aria-live="polite" hidden></div>
+</form>

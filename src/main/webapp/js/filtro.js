@@ -13,6 +13,10 @@ function carregarProdutosUser(categoria) {
 
 	requisitar('apiUser/produtos?categoria=' + encodeURIComponent(categoria))
 		.then(({ ok, corpo }) => {
+			if (corpo && corpo.semVendedor) { // o vinculo mudou em outra aba: a pagina mostra como se vincular
+				window.location.reload();
+				return;
+			}
 			if (!ok || !Array.isArray(corpo)) throw new Error('resposta inesperada');
 			vitrine.produtos = corpo;
 			renderizar();
@@ -116,6 +120,7 @@ function adicionarAoCarrinho(produto, campo) {
 }
 
 document.addEventListener('DOMContentLoaded', function() {
+	if (!document.getElementById('productContainer')) return; // sem vinculo: a pagina mostra o formulario do codigo
 	document.querySelectorAll('.chip[data-filter]').forEach(botao => {
 		botao.addEventListener('click', function() {
 			document.querySelectorAll('.chip[data-filter]').forEach(b => b.setAttribute('aria-pressed', String(b === botao)));

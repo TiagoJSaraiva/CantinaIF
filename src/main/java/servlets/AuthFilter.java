@@ -44,12 +44,13 @@ public class AuthFilter implements Filter {
 
     /** Rotas exclusivas do vendedor (prefixo terminado em "/" ou caminho exato). */
     private static final List<String> VENDEDOR = List.of(
-            "/registroProdutos.jsp", "/pedidos.jsp", "/apiAdm/", "/api/",
+            "/registroProdutos.jsp", "/pedidos.jsp", "/compradores.jsp", "/apiAdm/", "/api/",
             "/registrar-produto", "/editar-produto", "/atualizarEstoque");
 
     /** Rotas exclusivas do comprador. */
     private static final List<String> COMPRADOR = List.of(
-            "/home.jsp", "/Carrinho.jsp", "/meus-pedidos.jsp", "/carrinho", "/FinalizarCompraServlet", "/apiUser/");
+            "/home.jsp", "/Carrinho.jsp", "/meus-pedidos.jsp", "/conta.jsp", "/conta-desativada.jsp", "/carrinho",
+            "/FinalizarCompraServlet", "/apiUser/");
 
     @Override
     public void doFilter(ServletRequest req, ServletResponse res, FilterChain chain)
