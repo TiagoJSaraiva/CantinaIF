@@ -49,6 +49,12 @@ public class PedidoDto {
     public final List<String> proximos = new ArrayList<>();
     /** O comprador so pode cancelar enquanto o pedido esta pendente. */
     public final boolean podeCancelar;
+    /** Cantina que recebeu o pedido. */
+    public final String vendedorNome;
+    /** "COMPRADOR" ou "VENDEDOR" quando cancelado; null caso contrario. */
+    public final String canceladoPor;
+    /** Motivo informado pelo vendedor ao cancelar (null se o comprador cancelou). */
+    public final String motivoCancelamento;
 
     public PedidoDto(Pedido p, boolean incluirComprador) {
         this.id = p.getId();
@@ -65,5 +71,8 @@ public class PedidoDto {
             proximos.add(s.name());
         }
         this.podeCancelar = p.getStatus() == StatusPedido.PENDENTE;
+        this.vendedorNome = p.getVendedorNome();
+        this.canceladoPor = p.getCanceladoPor();
+        this.motivoCancelamento = p.getMotivoCancelamento();
     }
 }

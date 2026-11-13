@@ -507,3 +507,8 @@ fieldset.modelos .chip { text-align: left; border-radius: 8px; white-space: norm
     .tabela-compradores .acoes-linha { flex-wrap: nowrap; }
     .tabela-compradores td[data-rotulo="Último pedido"] { white-space: nowrap; }
 }
+.pedido-cancelamento { font-size: .9rem; color: var(--texto-suave); font-style: italic; margin: 0; overflow-wrap: anywhere; }
+.pedido-motivo { margin: 0; padding: .5rem .75rem; }
+.pedido-motivo p:first-child { font-weight: 700; }
+.motivo-texto { overflow-wrap: anywhere; white-space: pre-line; }
+

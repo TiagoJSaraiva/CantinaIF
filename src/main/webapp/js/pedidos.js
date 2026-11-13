@@ -89,6 +89,14 @@ document.addEventListener('DOMContentLoaded', function() {
 			itens,
 			criar('p', { classe: 'pedido-total', texto: 'Total: ' + formatarPreco(p.total) })
 		]);
+		if (p.status === 'CANCELADO') {
+			cartao.appendChild(criar('p', {
+				classe: 'pedido-cancelamento',
+				texto: p.canceladoPor === 'VENDEDOR'
+					? 'Cancelado por você: ' + (p.motivoCancelamento || '')
+					: 'Cancelado pelo aluno.'
+			}));
+		}
 		if (p.proximos.length) {
 			const acoes = criar('div', { classe: 'pedido-acoes' });
 			p.proximos.forEach(novo => {
@@ -103,20 +111,69 @@ document.addEventListener('DOMContentLoaded', function() {
 	}
 
 	function mudarStatus(p, novo, botao) {
-		if (novo === 'CANCELADO' && !confirm('Cancelar o pedido #' + p.id + '? O estoque será devolvido.')) return;
+		if (novo === 'CANCELADO') {
+			abrirCancelamento(p);
+			return;
+		}
 		botao.disabled = true;
-		requisitar('api/pedidos/status', {
+		enviarStatus(p, novo, null).catch(() => { botao.disabled = false; });
+	}
+
+	// resolve com { ok, corpo }; rejeita em erro de comunicacao (ja mostrado)
+	function enviarStatus(p, novo, motivo) {
+		const dados = { id: p.id, status: novo };
+		if (motivo) dados.motivo = motivo;
+		return requisitar('api/pedidos/status', {
 			method: 'POST',
 			headers: cabecalhosCsrf({ 'Content-Type': 'application/x-www-form-urlencoded' }),
-			body: new URLSearchParams({ id: p.id, status: novo }).toString()
-		}).then(({ ok, corpo }) => {
-			mostrarMensagem(mensagem, corpo.message || (ok ? 'Pedido atualizado.' : 'Não foi possível atualizar o pedido.'), !ok);
-			carregar(true);
-		}).catch(() => {
+			body: new URLSearchParams(dados).toString()
+		}).then(r => {
+			if (r.ok || !motivo) {
+				mostrarMensagem(mensagem, r.corpo.message || (r.ok ? 'Pedido atualizado.' : 'Não foi possível atualizar o pedido.'), !r.ok);
+				carregar(true);
+			}
+			return r;
+		}, e => {
 			mostrarMensagem(mensagem, 'Erro de comunicação com o servidor.', true);
-			botao.disabled = false;
+			throw e;
 		});
 	}
+
+	// ---------- cancelamento com motivo obrigatorio ----------
+	const dialogo = document.getElementById('dlg-cancelar');
+	const form = document.getElementById('form-cancelar');
+	const campoMotivo = document.getElementById('motivo');
+	const botaoConfirmar = document.getElementById('btn-cancelar-confirmar');
+	let pedidoCancelando = null;
+
+	function abrirCancelamento(p) {
+		pedidoCancelando = p;
+		limparErros(form);
+		campoMotivo.value = '';
+		const c = p.comprador || {};
+		document.getElementById('dlg-cancelar-info').textContent =
+			'Pedido #' + p.id + ' de ' + (c.nome || c.prontuario || '') + ' · ' + formatarPreco(p.total);
+		dialogo.showModal();
+		campoMotivo.focus();
+	}
+	document.querySelectorAll('.js-motivo').forEach(b => b.addEventListener('click', () => {
+		campoMotivo.value = b.textContent.trim();
+		marcarErro(campoMotivo, '');
+		campoMotivo.focus();
+	}));
+	document.getElementById('btn-cancelar-voltar').addEventListener('click', () => dialogo.close());
+	form.addEventListener('submit', evento => {
+		evento.preventDefault();
+		if (!pedidoCancelando || !validarFormulario(form)) return;
+		botaoConfirmar.disabled = true;
+		enviarStatus(pedidoCancelando, 'CANCELADO', campoMotivo.value.trim())
+			.then(({ ok, corpo }) => {
+				if (ok) dialogo.close();
+				else marcarErro(campoMotivo, corpo.message || 'Não foi possível cancelar.');
+			})
+			.catch(() => dialogo.close())
+			.finally(() => { botaoConfirmar.disabled = false; });
+	});
 
 	document.getElementById('btn-atualizar').addEventListener('click', () => carregar(false));
 	// atualizacao periodica enquanto a aba esta visivel

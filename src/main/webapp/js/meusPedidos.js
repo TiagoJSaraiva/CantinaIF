@@ -45,7 +45,7 @@ document.addEventListener('DOMContentLoaded', function() {
 				criar('h2', { texto: 'Pedido #' + p.id }),
 				criar('span', { classe: 'status status-' + p.status, texto: p.statusRotulo })
 			]),
-			criar('p', { classe: 'pedido-meta', texto: formatarData(p.criadoEm) }),
+			criar('p', { classe: 'pedido-meta', texto: formatarData(p.criadoEm) + (p.vendedorNome ? ' · ' + p.vendedorNome : '') }),
 			itens,
 			criar('p', { classe: 'pedido-total', texto: 'Total: ' + formatarPreco(p.total) })
 		]);
@@ -59,7 +59,17 @@ document.addEventListener('DOMContentLoaded', function() {
 			})));
 			cartao.appendChild(passos);
 		}
-		if (p.status === 'PRONTO') {
+		if (p.status === 'CANCELADO') {
+			if (p.canceladoPor === 'VENDEDOR') {
+				cartao.appendChild(criar('div', { classe: 'alerta alerta-erro pedido-motivo' }, [
+					criar('p', { texto: 'Cancelado pela cantina. Motivo:' }),
+					criar('p', { classe: 'motivo-texto', texto: p.motivoCancelamento || '(não informado)' })
+				]));
+			} else if (p.canceladoPor === 'COMPRADOR') {
+				cartao.appendChild(criar('p', { classe: 'pedido-cancelamento', texto: 'Você cancelou este pedido.' }));
+			}
+		}
+				if (p.status === 'PRONTO') {
 			cartao.appendChild(criar('p', { classe: 'alerta alerta-ok', texto: 'Seu pedido está pronto! Retire no balcão.' }));
 		}
 		if (p.podeCancelar) {
