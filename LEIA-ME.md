@@ -38,6 +38,9 @@ O projeto foi depois modernizado (segurança, domínio de pedidos, dados de demo
 
 **Aluno (comprador)**
 - Cadastro com prontuário, nome, e-mail e senha; login e logout.
+- **Vínculo com uma cantina por código do vendedor.** O vendedor gera um código de 6 caracteres que vale por 1 minuto e para um único aluno. O aluno digita o código no cadastro (opcional) ou depois, em "Minha conta"; até lá a vitrine não mostra produtos, só o formulário do código. Cada conta fica vinculada a uma cantina por vez; um código novo troca de cantina (o carrinho é esvaziado e os pedidos antigos continuam no histórico).
+- Advertências enviadas pelo vendedor aparecem numa faixa na vitrine, num contador no menu e numa lista em "Minha conta" (marcar como lidas). Uma conta desativada ainda entra, mas só vê o aviso e as advertências: sem produtos, carrinho, pedidos nem troca de cantina, inclusive em sessões que já estavam abertas.
+- Pedidos cancelados pela cantina mostram o motivo informado pelo vendedor.
 - Vitrine com busca por texto e filtro por categoria (salgados, lanches, doces, bebidas). Produtos esgotados aparecem, mas não podem ser comprados; selo "Última unidade" quando o estoque é 1.
 - Carrinho com alteração de quantidade, remoção de itens, subtotal e total (até 99 unidades por item); o estoque é conferido considerando o que já está no carrinho.
 - Finalizar pedido cria o pedido e baixa o estoque na mesma transação do banco. Se algum item não tiver estoque, nada é gravado e o aluno é avisado de qual item faltou. Se o preço mudou desde que o item entrou no carrinho, também não se grava nada: o carrinho é atualizado e o aluno precisa confirmar de novo.
@@ -45,6 +48,9 @@ O projeto foi depois modernizado (segurança, domínio de pedidos, dados de demo
 - Cancelamento enquanto o pedido está *Pendente* (o estoque volta).
 
 **Vendedor (responsável pela cantina)**
+- Qualquer pessoa pode criar uma conta de vendedor (cadastro, "Sou vendedor", com o nome da cantina). Cada vendedor só vê e altera os próprios produtos, pedidos e compradores.
+- Página "Compradores": geração de códigos de vínculo (contagem regressiva de 60 s, uso único, gerar outro invalida o anterior não usado) e tabela dos alunos vinculados (pedidos, cancelamentos feitos pelo aluno e pelo vendedor, último pedido, advertências, situação) com busca e filtro. Ações: **enviar advertência** (mensagens prontas, como "Cancelamentos estão ocorrendo com frequência. Se continuar, você poderá ser multado.", ou texto livre de até 500 caracteres) e **desativar/reativar** o aluno.
+- Cancelar um pedido exige um motivo (3 a 300 caracteres, com motivos comuns prontos); o aluno vê o motivo.
 - Painel de pedidos agrupado/filtrável por status (em andamento, pendentes, em preparo, prontos, entregues, cancelados), com contagens e atualização periódica.
 - Ações explícitas de status: *Pendente → Em preparo → Pronto → Entregue*; cancelamento a partir de qualquer status não final (devolve o estoque). Transições inválidas são recusadas pelo servidor.
 - Gestão de produtos: criar, editar (nome, descrição, preço, categoria, imagem), ajuste rápido de estoque, busca e filtro por categoria. A edição de estoque é "compara e troca" no SQL: se um pedido mudou o estoque nesse meio tempo, o painel informa o conflito (HTTP 409) em vez de sobrescrever.
@@ -57,14 +63,17 @@ São contas fictícias de demonstração, não são segredos. Existem no modo de
 | Perfil | Prontuário | Senha |
 |--------|------------|-------|
 | Aluno | `CJ3000001` | `demo1234` |
-| Vendedor | `VEND001` | `demo1234` |
+| Vendedor (Cantina Central) | `VEND001` | `demo1234` |
+| Vendedor (Lanchonete do Bloco B) | `VEND002` | `demo1234` |
+
+O aluno de demonstração está vinculado à Cantina Central. Para testar o vínculo, crie uma conta de aluno e use um código gerado por um dos vendedores na página "Compradores".
 
 ## A demo pública: o que esperar
 
 Se houver uma demo pública publicada, tenha em mente (tudo isso é proposital, para manter uma demo gratuita e exposta à internet segura e barata):
 
 - **Contas compartilhadas com senha pública.** Qualquer pessoa pode entrar como o aluno ou o vendedor de demonstração e criar, editar ou cancelar qualquer coisa. Não digite dados pessoais reais; tudo é fictício.
-- **Limites** (padrões no modo demonstração, configuráveis, veja a tabela de variáveis): 60 produtos, 200 cadastros, 100 pedidos em aberto (e 5 por comprador), 12 MB de imagens no total. Ao atingir um limite o app avisa ("limite da demonstração atingido; a base é restaurada periodicamente"). Há também limite de taxa para operações de escrita, cadastros e logins.
+- **Limites** (padrões no modo demonstração, configuráveis, veja a tabela de variáveis): 300 produtos (40 por vendedor), 30 contas de vendedor, 200 cadastros de aluno, 50 advertências por aluno, 100 pedidos em aberto (e 5 por comprador), 12 MB de imagens no total. Ao atingir um limite o app avisa ("limite da demonstração atingido; a base é restaurada periodicamente"). Há também limite de taxa para operações de escrita, cadastros e logins.
 - **Restauração periódica.** O banco é em memória e volta ao seed a cada reinício e a cada `CANTINA_DEMO_RESET_HOURS` horas (padrão 6). Tudo que os visitantes criarem desaparece.
 - **Sessões na restauração.** Uma sessão iniciada antes da restauração é invalidada: o próximo clique leva ao login com a mensagem "A demonstração foi restaurada; entre novamente." (uma conta criada antes da restauração deixa de existir).
 - **Uploads são recodificados.** Imagens com mais de cerca de 5 megapixels (lidos do cabeçalho do arquivo, antes de decodificar) são rejeitadas; as demais são decodificadas com subamostragem, reduzidas a no máximo 640 px e recomprimidas em JPEG de até 150 KB. Só uma imagem é processada por vez em toda a aplicação; uploads simultâneos esperam até 3 s e depois recebem 503 ("tente novamente em instantes"). Os limites da demo (produtos, bytes de imagem) são verificados antes de qualquer processamento.
@@ -96,6 +105,7 @@ As imagens foram capturadas da aplicação em execução (modo demonstração) n
 
 ```
 db/schema.sql                 schema do banco (MySQL 8 e H2)
+db/migracao-002-multivendedor.sql  ALTER TABLEs para bancos MySQL criados antes do multivendedor
 src/main/java/
   dao/                        acesso a dados via JDBC (usuários, produtos, pedidos) e exceções de regra de negócio
   model/                      objetos de domínio, DTOs de JSON, enum de status do pedido
@@ -115,24 +125,34 @@ Fluxo de uma requisição: `BodyLimitFilter` (limite de tamanho da requisição,
 
 ```mermaid
 erDiagram
+    VENDEDOR ||--o{ PRODUTO : vende
+    VENDEDOR ||--o{ PEDIDO : recebe
+    VENDEDOR |o--o{ COMPRADOR : "vinculado a"
+    VENDEDOR ||--o{ CODIGO_VINCULO : gera
+    VENDEDOR ||--o{ ADVERTENCIA : envia
     COMPRADOR ||--o{ PEDIDO : faz
+    COMPRADOR ||--o{ ADVERTENCIA : recebe
     PEDIDO ||--|{ PEDIDO_PRODUTO : contem
     PRODUTO ||--o{ PEDIDO_PRODUTO : "aparece em"
 
-    COMPRADOR {
-        varchar prontuario PK
-        varchar email UK
-        varchar senha "hash BCrypt"
-        varchar nome
-        varchar cpf UK "opcional, ficticio nos dados de demo"
-    }
     VENDEDOR {
         varchar prontuario PK
         varchar email UK
-        varchar senha "hash BCrypt"
+        varchar senha "BCrypt hash"
+        varchar nome "nome da cantina mostrado aos compradores"
+    }
+    COMPRADOR {
+        varchar prontuario PK
+        varchar email UK
+        varchar senha "BCrypt hash"
+        varchar nome
+        varchar cpf UK "opcional, ficticio nos dados de demonstracao"
+        varchar vendedor_prontuario FK "vendedor vinculado, NULL = nenhum"
+        boolean ativo "FALSE = desativado pelo vendedor"
     }
     PRODUTO {
         int id PK
+        varchar vendedor_prontuario FK
         varchar nome
         varchar descricao
         decimal preco
@@ -143,9 +163,12 @@ erDiagram
     PEDIDO {
         int id PK
         varchar comprador_prontuario FK
+        varchar vendedor_prontuario FK
         varchar status "PENDENTE, EM_PREPARO, PRONTO, ENTREGUE, CANCELADO"
         timestamp criado_em
         decimal total "calculado no servidor"
+        varchar cancelado_por "COMPRADOR ou VENDEDOR"
+        varchar motivo_cancelamento "obrigatorio quando o vendedor cancela"
     }
     PEDIDO_PRODUTO {
         int pedido_id PK
@@ -153,9 +176,23 @@ erDiagram
         int quantidade
         decimal preco_unitario "preco no momento da compra"
     }
+    CODIGO_VINCULO {
+        varchar codigo PK "6 caracteres"
+        varchar vendedor_prontuario FK
+        timestamp expira_em "60 s apos a criacao"
+        varchar usado_por FK "uso unico"
+    }
+    ADVERTENCIA {
+        int id PK
+        varchar comprador_prontuario FK
+        varchar vendedor_prontuario FK
+        varchar mensagem
+        timestamp criada_em
+        timestamp lida_em
+    }
 ```
 
-`VENDEDOR` é independente (há uma única cantina). Dinheiro é `DECIMAL(10,2)` no banco e `BigDecimal` no código. Restrições CHECK garantem preço/estoque/total não negativos, quantidade ≥ 1, a lista de categorias e a lista de status.
+Cada vendedor é uma cantina: produtos e pedidos pertencem a um vendedor, e o comprador fica vinculado a no máximo um vendedor por vez (`Comprador.vendedor_prontuario`). Dinheiro é `DECIMAL(10,2)` no banco e `BigDecimal` no código. Restrições CHECK garantem preço/estoque/total não negativos, quantidade ≥ 1, a lista de categorias, a lista de status e quem cancelou o pedido.
 
 ## Pré-requisitos
 
@@ -206,7 +243,10 @@ Crie o banco (`CREATE DATABASE cantinaif CHARACTER SET utf8mb4 COLLATE utf8mb4_u
 | `CANTINA_SEED_IF_EMPTY` | `false` | `true` carrega os dados de demonstração no boot se não houver vendedor (qualquer banco; não apaga nada). |
 | `CANTINA_DEMO_RESET_HOURS` | `6` | Só no modo demonstração: horas entre restaurações automáticas do seed (aceita fração; `0` desliga). |
 | `CANTINA_SEED_CONFIRMAR` | _(não definida)_ | `SIM` confirma o comando manual de seed (alternativa a `--confirmar-apagar`). |
-| `CANTINA_MAX_PRODUTOS` | `60` no modo demonstração, sem limite nos demais | Número máximo de produtos (`0` = sem limite). |
+| `CANTINA_MAX_PRODUTOS` | `300` no modo demonstração, sem limite nos demais | Número máximo de produtos, somando todos os vendedores (`0` = sem limite). |
+| `CANTINA_MAX_PRODUTOS_POR_VENDEDOR` | `40` no modo demonstração, sem limite nos demais | Número máximo de produtos por vendedor. |
+| `CANTINA_MAX_VENDEDORES` | `30` no modo demonstração, sem limite nos demais | Número máximo de contas de vendedor. |
+| `CANTINA_MAX_ADVERTENCIAS_POR_COMPRADOR` | `50` no modo demonstração, sem limite nos demais | Número máximo de advertências guardadas por aluno. |
 | `CANTINA_MAX_COMPRADORES` | `200` no modo demonstração, sem limite nos demais | Número máximo de alunos cadastrados. |
 | `CANTINA_MAX_PEDIDOS_ABERTOS` | `100` no modo demonstração, sem limite nos demais | Número máximo de pedidos em aberto (pendente, em preparo ou pronto). |
 | `CANTINA_MAX_PEDIDOS_ABERTOS_POR_COMPRADOR` | `5` no modo demonstração, sem limite nos demais | Número máximo de pedidos em aberto por comprador. |
@@ -225,10 +265,11 @@ As variáveis também podem ser passadas como propriedades de sistema da JVM com
 No modo demonstração a aplicação já nasce populada, para sempre haver o que mostrar. O seeder (`seed.DemoDataSeeder`) é determinístico (semente fixa `20260610`) e todas as datas são relativas ao momento da execução, então os dados nunca parecem velhos.
 
 Conteúdo:
-- **30 produtos** (8 salgados, 8 lanches, 7 doces, 7 bebidas) com nomes, descrições e preços realistas em reais. Casos extremos: 3 produtos esgotados, 1 com estoque 1, 1 com nome muito longo, 1 sem imagem.
+- **36 produtos**: 30 da Cantina Central (8 salgados, 8 lanches, 7 doces, 7 bebidas) e 6 da Lanchonete do Bloco B, com nomes, descrições e preços realistas em reais. Casos extremos: 3 produtos esgotados, 1 com estoque 1, 1 com nome muito longo, 1 sem imagem.
 - **Fotos reais** para 29 produtos (JPEG 480×360, até 40 KB cada, versionadas em `src/main/resources/seed/img/`; o seed as carrega como estão, sem a recodificação dos uploads). Vêm da Wikimedia Commons e do Openverse, todas com licença CC0 ou em domínio público e sem marca d'água; origem, autor e licença de cada uma estão em `src/main/resources/seed/img/CREDITOS.md`. Marcas registradas foram evitadas.
-- **1 vendedor e 19 alunos** (o aluno de demonstração, 15 com pedidos e 3 sem nenhum). Os nomes são fictícios e os e-mails usam o domínio `.demo`. Os CPFs são gerados sinteticamente (têm dígitos verificadores válidos, mas nenhuma relação com pessoas reais; qualquer coincidência com um número real é acidental). O CPF fica apenas numa coluna do banco e não é exibido em nenhuma tela nem retornado por nenhuma API.
-- **50 pedidos** nos últimos 30 dias, em todos os status, com totais consistentes com os preços unitários; o aluno de demonstração tem um histórico variado. O estoque segue a regra real (o pedido baixa o estoque ao ser criado, cancelar devolve): o estoque gravado é o final e o seeder calcula o inicial como final + unidades dos pedidos não cancelados, então nenhum pedido aberto excede o estoque inicial.
+- **2 vendedores e 19 alunos** (o aluno de demonstração e outros 15 vinculados à Cantina Central, 2 vinculados à Lanchonete do Bloco B e 1 sem vínculo; um aluno da Cantina Central está desativado). Os nomes são fictícios e os e-mails usam o domínio `.demo`. Os CPFs são gerados sinteticamente (têm dígitos verificadores válidos, mas nenhuma relação com pessoas reais; qualquer coincidência com um número real é acidental). O CPF fica apenas numa coluna do banco e não é exibido em nenhuma tela nem retornado por nenhuma API.
+- **Advertências**: o aluno desativado tem duas, um aluno que cancela muito tem uma, e o aluno de demonstração tem um lembrete não lido (para a faixa e o contador aparecerem).
+- **53 pedidos** (50 da Cantina Central e 3 da Lanchonete do Bloco B) nos últimos 30 dias, em todos os status; os cancelados alternam entre cancelados pelo aluno e pela cantina (sempre com motivo), com totais consistentes com os preços unitários; o aluno de demonstração tem um histórico variado. O estoque segue a regra real (o pedido baixa o estoque ao ser criado, cancelar devolve): o estoque gravado é o final e o seeder calcula o inicial como final + unidades dos pedidos não cancelados, então nenhum pedido aberto excede o estoque inicial.
 
 Todos os dados são fictícios.
 
@@ -287,6 +328,7 @@ O IP usado pelos limites de login e de escrita depende de como o proxy da plataf
 
 - Senhas guardadas como hash BCrypt; a sessão nunca guarda senha; o id da sessão é trocado no login; o logout invalida a sessão (POST + CSRF).
 - Controle de acesso por perfil no `AuthFilter` para páginas e APIs (vendedor × comprador), 401/403 nas APIs e redirecionamento ao login nas páginas.
+- Isolamento entre vendedores: toda consulta ou alteração de produtos, pedidos e compradores é restrita ao vendedor logado no próprio SQL (produto ou pedido de outro vendedor = "não encontrado"); o checkout confere de novo, dentro da transação, se o comprador está ativo, a qual vendedor está vinculado e se cada item é desse vendedor. A situação e o vínculo do comprador são lidos do banco a cada requisição, então a desativação vale na hora. Os códigos de vínculo são aleatórios (`SecureRandom`, 31 símbolos, 6 caracteres), expiram em 60 s, são resgatados uma única vez de forma atômica, e tentativas erradas são limitadas a 5 por conta a cada 10 minutos, além do limite de escrita por IP.
 - CSRF: token por sessão exigido em todo POST/PUT/DELETE (cabeçalho `X-CSRF-Token` ou campo `_csrf`); os formulários anônimos de login e cadastro usam um cookie de envio duplo (aleatório, `HttpOnly`, `SameSite=Strict`) para que visitantes anônimos nunca criem sessões.
 - Cabeçalhos: Content-Security-Policy estrita (sem scripts nem estilos inline), `X-Frame-Options: DENY`, `X-Content-Type-Options: nosniff`, `Referrer-Policy`, `Permissions-Policy`, HSTS em HTTPS.
 - Cookie de sessão `HttpOnly` e `SameSite=Lax`, `Secure` quando configurado ou quando a requisição é HTTPS (conforme resolvido pelo servidor, não por um cabeçalho cru). O token CSRF é renovado no login. Visitantes anônimos não ganham sessão alguma; no máximo 5000 sessões ativas ao mesmo tempo (com a casa cheia a tela de login responde 503) e as sessões não são persistidas entre reinícios. POST com o perfil errado recebe 403.
@@ -298,9 +340,9 @@ O IP usado pelos limites de login e de escrita depende de como o proxy da plataf
 
 - Não há pagamento online: o pedido é reservado e pago no balcão.
 - O estoque é baixado na criação do pedido e devolvido no cancelamento (`UPDATE ... WHERE estoque >= ?` atômico dentro da transação do pedido).
-- O formulário de cadastro pede prontuário, nome, e-mail e senha. A coluna CPF existe, mas só é preenchida pelos dados de demonstração. A ideia original de validar prontuários na base da instituição e de suportar vários campi/cantinas **não está implementada**: há uma única cantina.
+- O formulário de cadastro pede prontuário, nome, e-mail e senha. A coluna CPF existe, mas só é preenchida pelos dados de demonstração. Várias cantinas são suportadas (cada conta de vendedor é uma cantina). Validar prontuários na base da instituição **não está implementado**.
 - O Docker foi exercitado localmente (Docker 28). A imagem constrói e roda como não-root com limite de 512 MB e foi atacada com quatro abusos baratos que antes matavam ou congelavam o contêiner; agora ele sobrevive a todos, com 0 reinícios: um corpo de requisição de 300 MB (413 na hora, pico de memória de cerca de 160 MiB), quatro uploads simultâneos de um PNG 4999×4999 de 73 KB (400 "dimensões grandes demais", pico de cerca de 156 MiB), 5.600 requisições anônimas à tela de login em 4 s (todas 200, nenhuma sessão criada, login continua funcionando) e um cliente lento combinado com restaurações a cada ~11 s (`/health` sempre 200 em poucos milissegundos). O `docker compose` com MySQL 8.4 sobe, carrega o seed (`CANTINA_SEED_IF_EMPTY`), permite o login do vendedor e cria produtos com o id seguinte ao do seed. Não foi executado no Render. O comando manual do seed (`exec:java`) só foi executado contra arquivos H2; no MySQL o caminho foi exercitado pelo boot do compose.
-- Bancos criados com o schema antigo precisam de `ALTER TABLE`: adicionar `Comprador.cpf VARCHAR(11) UNIQUE`; adicionar `Pedido.status VARCHAR(12) NOT NULL DEFAULT 'PENDENTE'`, `Pedido.criado_em TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP` e `Pedido.total DECIMAL(10,2) NOT NULL DEFAULT 0`; adicionar `Pedido_Produto.preco_unitario DECIMAL(10,2) NOT NULL DEFAULT 0`. Senhas antigas em texto puro não são hashes BCrypt válidos, então esses usuários precisam ser recriados.
+- Bancos criados com o schema antigo precisam de `ALTER TABLE`: adicionar `Comprador.cpf VARCHAR(11) UNIQUE`; adicionar `Pedido.status VARCHAR(12) NOT NULL DEFAULT 'PENDENTE'`, `Pedido.criado_em TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP` e `Pedido.total DECIMAL(10,2) NOT NULL DEFAULT 0`; adicionar `Pedido_Produto.preco_unitario DECIMAL(10,2) NOT NULL DEFAULT 0`. Senhas antigas em texto puro não são hashes BCrypt válidos, então esses usuários precisam ser recriados. Bancos MySQL criados antes do multivendedor precisam de `db/migracao-002-multivendedor.sql` (ele atribui produtos, pedidos e compradores existentes ao primeiro vendedor; faça backup antes).
 - O carrinho fica na sessão HTTP (em memória); o limitador de login é por instância; as imagens são guardadas como BLOB; as listas não têm paginação; o painel do vendedor atualiza por polling.
 - Não exercitado de ponta a ponta: o 503 amigável na tela de login quando o teto de 5000 sessões ativas é atingido (exigiria milhares de logins bem-sucedidos; o caminho de código existe, mas só a parte de sessões anônimas foi testada) e o comportamento real atrás da cadeia de proxies do Render.
 - As datas são exibidas no fuso horário do navegador.
