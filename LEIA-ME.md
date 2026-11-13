@@ -349,6 +349,8 @@ O IP usado pelos limites de login e de escrita depende de como o proxy da plataf
 
 ## Créditos
 
+A interface usa a fonte **Open Sans** (a mesma do portal do IFSP), incluída em `src/main/webapp/fonts/` sob a SIL Open Font License 1.1 (`fonts/OFL.txt`). Fotos dos produtos de demonstração: veja `src/main/resources/seed/img/CREDITOS.md`.
+
 Projeto final da disciplina CJOWEB2, IFSP Campos do Jordão, 2025, por:
 
 - Brian Gustavo de Oliveira Brandão

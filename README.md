@@ -349,6 +349,8 @@ The IP used by the login and write limits depends on how the platform proxy forw
 
 ## Credits
 
+The interface uses **Open Sans** (the same typeface as the IFSP portal), bundled in `src/main/webapp/fonts/` under the SIL Open Font License 1.1 (`fonts/OFL.txt`). Demo product photos: see `src/main/resources/seed/img/CREDITOS.md`.
+
 Final project of the CJOWEB2 course, IFSP Campos do Jordão, 2025, by:
 
 - Brian Gustavo de Oliveira Brandão

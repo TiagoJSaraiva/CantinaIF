@@ -4,3 +4,4 @@ mvnw text eol=lf
 *.sh text eol=lf
 *.png binary
 *.jpg binary
+*.woff2 binary
