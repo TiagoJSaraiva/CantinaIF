@@ -4,6 +4,16 @@ public class Vendedor implements java.io.Serializable {
 	private String prontuario;
 	private String email;
 	private String senha;
+	/** Nome da cantina, mostrado aos compradores. */
+	private String nome;
+	
+	public String getNome() {
+		return nome;
+	}
+
+	public void setNome(String nome) {
+		this.nome = nome;
+	}
 	
 	public String getProntuario() {
 		return prontuario;

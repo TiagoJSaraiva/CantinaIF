@@ -9,6 +9,9 @@
 		<welcome-file>login.jsp</welcome-file>
 	</welcome-file-list>
 
+	<!-- Corpo de formularios em UTF-8 mesmo quando um filtro (ex.: CSRF) le um parametro antes do servlet -->
+	<request-character-encoding>UTF-8</request-character-encoding>
+
 	<!-- Fragmentos (.jspf) precisam declarar a codificacao; sem isso o texto acentuado vira mojibake -->
 	<jsp-config>
 		<jsp-property-group>

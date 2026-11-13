@@ -14,6 +14,11 @@ public class Pedido {
     private StatusPedido status = StatusPedido.PENDENTE;
     private LocalDateTime criadoEm;
     private BigDecimal total = BigDecimal.ZERO;
+    private String vendedorProntuario;
+    private String vendedorNome;
+    /** Quem cancelou: "COMPRADOR" ou "VENDEDOR" (null se nao cancelado). */
+    private String canceladoPor;
+    private String motivoCancelamento;
 
     public Pedido() {
     }
@@ -37,4 +42,16 @@ public class Pedido {
 
     public BigDecimal getTotal() { return total; }
     public void setTotal(BigDecimal total) { this.total = total; }
+
+    public String getVendedorProntuario() { return vendedorProntuario; }
+    public void setVendedorProntuario(String vendedorProntuario) { this.vendedorProntuario = vendedorProntuario; }
+
+    public String getVendedorNome() { return vendedorNome; }
+    public void setVendedorNome(String vendedorNome) { this.vendedorNome = vendedorNome; }
+
+    public String getCanceladoPor() { return canceladoPor; }
+    public void setCanceladoPor(String canceladoPor) { this.canceladoPor = canceladoPor; }
+
+    public String getMotivoCancelamento() { return motivoCancelamento; }
+    public void setMotivoCancelamento(String motivoCancelamento) { this.motivoCancelamento = motivoCancelamento; }
 }

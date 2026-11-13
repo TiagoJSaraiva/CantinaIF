@@ -30,7 +30,7 @@ public class AtualizarEstoqueServlet extends HttpServlet {
                 Json.result(response, HttpServletResponse.SC_BAD_REQUEST, false, "O estoque deve estar entre 0 e 1000000.");
                 return;
             }
-            switch (productDao.atualizarEstoque(id, esperado, estoque)) {
+            switch (productDao.atualizarEstoque(Sessao.vendedorProntuario(request), id, esperado, estoque)) {
                 case OK:
                     Json.result(response, HttpServletResponse.SC_OK, true, "Estoque atualizado.");
                     break;

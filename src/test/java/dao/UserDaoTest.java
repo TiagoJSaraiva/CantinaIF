@@ -60,4 +60,29 @@ class UserDaoTest {
         assertFalse(dao.create(new Comprador("CJ3", "outro@x.test", "senha1234", "Outro")));
         assertFalse(dao.create(new Comprador("CJ4", "c@x.test", "senha1234", "Outro")));
     }
+
+    @Test
+    void contaNovaNasceAtivaSemVinculoELoginTrazOVinculo() throws Exception {
+        assertTrue(dao.create(new Comprador("CJ5", "e@x.test", "senha1234", "Eva")));
+        var estado = dao.estado("CJ5");
+        assertTrue(estado.ativo());
+        assertFalse(estado.vinculado());
+        assertNull(dao.estado("NAOEXISTE"));
+
+        TestDb.vendedor("VUSR");
+        TestDb.vincular("CJ5", "VUSR");
+        Comprador logado = dao.autenticar("CJ5", "senha1234");
+        assertEquals("VUSR", logado.getVendedorProntuario());
+        assertEquals("Cantina VUSR", logado.getVendedorNome());
+        assertEquals("Cantina VUSR", dao.estado("CJ5").vendedorNome());
+    }
+
+    @Test
+    void prontuarioNaoPodeRepetirEntreCompradorEVendedor() throws Exception {
+        dao.create(new Comprador("CJ6", "f@x.test", "senha1234", "Fabi"));
+        TestDb.vendedor("VUSR2");
+        assertTrue(UserDao.prontuarioEmUso("CJ6"));
+        assertTrue(UserDao.prontuarioEmUso("VUSR2"));
+        assertFalse(UserDao.prontuarioEmUso("LIVRE1"));
+    }
 }

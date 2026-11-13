@@ -20,7 +20,8 @@ import utils.Database;
 
 class AuthFilterTest {
 
-    private final AuthFilter filtro = new AuthFilter();
+    /** Comprador ativo e vinculado (sem banco). */
+    private final AuthFilter filtro = new AuthFilter(p -> new model.EstadoComprador(true, "V1", "Cantina", 0));
 
     private static HttpServletRequest requisicao(String metodo, String caminho, HttpSession sessao) {
         HttpServletRequest req = mock(HttpServletRequest.class);

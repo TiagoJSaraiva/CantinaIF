@@ -11,7 +11,10 @@ import dao.LimitesDao;
  * Valor 0 (ou negativo) = sem limite.
  *
  * <ul>
- *   <li>CANTINA_MAX_PRODUTOS (padrao da demo: 60)</li>
+ *   <li>CANTINA_MAX_PRODUTOS (padrao da demo: 300, somando todos os vendedores)</li>
+ *   <li>CANTINA_MAX_PRODUTOS_POR_VENDEDOR (padrao da demo: 40)</li>
+ *   <li>CANTINA_MAX_VENDEDORES (padrao da demo: 30)</li>
+ *   <li>CANTINA_MAX_ADVERTENCIAS_POR_COMPRADOR (padrao da demo: 50)</li>
  *   <li>CANTINA_MAX_COMPRADORES (padrao da demo: 200)</li>
  *   <li>CANTINA_MAX_PEDIDOS_ABERTOS (padrao da demo: 100)</li>
  *   <li>CANTINA_MAX_BYTES_IMAGENS (padrao da demo: 12582912 = 12 MB, somando todas as imagens)</li>
@@ -20,7 +23,10 @@ import dao.LimitesDao;
  */
 public final class Limites {
 
-    public static final int PADRAO_PRODUTOS = 60;
+    public static final int PADRAO_PRODUTOS = 300;
+    public static final int PADRAO_PRODUTOS_POR_VENDEDOR = 40;
+    public static final int PADRAO_VENDEDORES = 30;
+    public static final int PADRAO_ADVERTENCIAS_POR_COMPRADOR = 50;
     public static final int PADRAO_COMPRADORES = 200;
     public static final int PADRAO_PEDIDOS_ABERTOS = 100;
     public static final long PADRAO_BYTES_IMAGENS = 12L * 1024 * 1024;
@@ -47,18 +53,32 @@ public final class Limites {
     }
 
     public static long maxProdutos() { return valor("CANTINA_MAX_PRODUTOS", PADRAO_PRODUTOS); }
+    public static long maxProdutosPorVendedor() { return valor("CANTINA_MAX_PRODUTOS_POR_VENDEDOR", PADRAO_PRODUTOS_POR_VENDEDOR); }
+    public static long maxVendedores() { return valor("CANTINA_MAX_VENDEDORES", PADRAO_VENDEDORES); }
+    public static long maxAdvertenciasPorComprador() { return valor("CANTINA_MAX_ADVERTENCIAS_POR_COMPRADOR", PADRAO_ADVERTENCIAS_POR_COMPRADOR); }
     public static long maxCompradores() { return valor("CANTINA_MAX_COMPRADORES", PADRAO_COMPRADORES); }
     public static long maxPedidosAbertos() { return valor("CANTINA_MAX_PEDIDOS_ABERTOS", PADRAO_PEDIDOS_ABERTOS); }
     public static long maxPedidosAbertosPorComprador() { return valor("CANTINA_MAX_PEDIDOS_ABERTOS_POR_COMPRADOR", PADRAO_PEDIDOS_ABERTOS_POR_COMPRADOR); }
     public static long maxBytesImagens() { return valor("CANTINA_MAX_BYTES_IMAGENS", PADRAO_BYTES_IMAGENS); }
 
-    /** Antes de criar um produto (com a imagem ja processada, ou 0 se nao houver). */
-    public static void verificarNovoProduto(long bytesDaImagem) throws SQLException, LimiteAtingidoException {
+    /** Antes de criar um produto do vendedor (com a imagem ja processada, ou 0 se nao houver). */
+    public static void verificarNovoProduto(String vendedor, long bytesDaImagem) throws SQLException, LimiteAtingidoException {
         long max = maxProdutos();
         if (max > 0 && DAO.contarProdutos() >= max) {
             throw new LimiteAtingidoException("produtos", max);
         }
+        long porVendedor = maxProdutosPorVendedor();
+        if (porVendedor > 0 && vendedor != null && DAO.contarProdutosDe(vendedor) >= porVendedor) {
+            throw new LimiteAtingidoException("produtos por vendedor", porVendedor);
+        }
         verificarImagem(bytesDaImagem);
+    }
+
+    public static void verificarNovoVendedor() throws SQLException, LimiteAtingidoException {
+        long max = maxVendedores();
+        if (max > 0 && DAO.contarVendedores() >= max) {
+            throw new LimiteAtingidoException("contas de vendedor", max);
+        }
     }
 
     /** Antes de gravar uma imagem nova (criar ou trocar). */

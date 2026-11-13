@@ -66,14 +66,21 @@ public class CarrinhoServlet extends HttpServlet {
 		}
 
 		Produto produto;
+		model.EstadoComprador estado;
 		try {
+			estado = Sessao.estado(request);
 			produto = productDao.buscarResumo(produtoId);
 		} catch (SQLException e) {
 			e.printStackTrace();
 			Json.result(response, HttpServletResponse.SC_INTERNAL_SERVER_ERROR, false, "Erro ao consultar o produto.");
 			return;
 		}
-		if (produto == null) {
+		if (estado == null || !estado.vinculado()) {
+			Json.result(response, HttpServletResponse.SC_CONFLICT, false, "Vincule sua conta a um vendedor para comprar.");
+			return;
+		}
+		// so produtos do vendedor ao qual o comprador esta vinculado (os de outro vendedor "nao existem" para ele)
+		if (produto == null || !estado.vendedorProntuario().equals(produto.getVendedorProntuario())) {
 			Json.result(response, HttpServletResponse.SC_NOT_FOUND, false, "Produto não encontrado.");
 			return;
 		}

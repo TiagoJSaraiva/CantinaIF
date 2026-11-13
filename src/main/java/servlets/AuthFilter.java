@@ -13,6 +13,9 @@ import jakarta.servlet.ServletResponse;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.servlet.http.HttpSession;
+import dao.UserDao;
+import model.Comprador;
+import model.EstadoComprador;
 import utils.BaseRestauradaException;
 import utils.Database;
 import utils.GeracaoDaRequisicao;
@@ -22,6 +25,22 @@ import utils.GeracaoDaRequisicao;
  * exigem "comprador". Paginas redirecionam ao login; APIs respondem 401 (sem sessao) ou 403 (perfil errado).
  */
 public class AuthFilter implements Filter {
+
+    /** Le o estado atual de um comprador (situacao e vinculo); injetavel nos testes. */
+    @FunctionalInterface
+    interface Estados {
+        EstadoComprador de(String prontuario) throws java.sql.SQLException;
+    }
+
+    private final Estados estados;
+
+    public AuthFilter() {
+        this(prontuario -> new UserDao().estado(prontuario));
+    }
+
+    AuthFilter(Estados estados) {
+        this.estados = estados;
+    }
 
     /** Rotas exclusivas do vendedor (prefixo terminado em "/" ou caminho exato). */
     private static final List<String> VENDEDOR = List.of(
@@ -62,7 +81,21 @@ public class AuthFilter implements Filter {
             Object geracao = session.getAttribute("geracao");
             GeracaoDaRequisicao.definir(geracao instanceof Long ? (Long) geracao : null);
             try {
+                if (perfil.equals("comprador")) {
+                    // o vendedor pode desativar o comprador (ou ele pode trocar de vendedor) a qualquer momento:
+                    // o estado vem do banco a cada requisicao, nao da sessao
+                    Comprador comprador = (Comprador) session.getAttribute("comprador");
+                    EstadoComprador estado = estados.de(comprador.getProntuario());
+                    if (estado == null) { // a conta nao existe mais
+                        restaurada(request, response, session, path);
+                        return;
+                    }
+                    request.setAttribute(Sessao.ESTADO, estado);
+                }
                 chain.doFilter(req, res);
+            } catch (java.sql.SQLException e) {
+                e.printStackTrace();
+                Json.result(response, HttpServletResponse.SC_SERVICE_UNAVAILABLE, false, "Banco indisponível; tente novamente.");
             } catch (BaseRestauradaException e) {
                 restaurada(request, response, session, path);
             } catch (ServletException e) {

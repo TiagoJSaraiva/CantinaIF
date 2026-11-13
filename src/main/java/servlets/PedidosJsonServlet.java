@@ -12,7 +12,7 @@ import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.sql.SQLException;
 
-/** Pedidos para o painel do vendedor; filtro opcional ?status=PENDENTE. */
+/** Pedidos feitos ao vendedor logado, para o painel dele; filtro opcional ?status=PENDENTE. */
 @WebServlet("/api/pedidos")
 public class PedidosJsonServlet extends HttpServlet {
     private static final long serialVersionUID = 1L;
@@ -35,7 +35,7 @@ public class PedidosJsonServlet extends HttpServlet {
         try {
             response.setHeader("Cache-Control", "no-store");
             Json.write(response, HttpServletResponse.SC_OK,
-                    pedidoDAO.listarPedidos(filtro).stream().map(p -> new PedidoDto(p, true)).toList());
+                    pedidoDAO.listarPedidos(Sessao.vendedorProntuario(request), filtro).stream().map(p -> new PedidoDto(p, true)).toList());
         } catch (SQLException e) {
             e.printStackTrace();
             Json.result(response, HttpServletResponse.SC_INTERNAL_SERVER_ERROR, false, "Erro ao carregar os pedidos.");

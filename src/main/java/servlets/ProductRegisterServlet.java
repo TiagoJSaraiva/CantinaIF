@@ -36,7 +36,7 @@ public class ProductRegisterServlet extends HttpServlet {
             return;
         }
         try {
-            Limites.verificarNovoProduto(0); // teto de produtos antes de qualquer processamento
+            Limites.verificarNovoProduto(Sessao.vendedorProntuario(request), 0); // tetos antes de qualquer processamento
         } catch (RegraNegocioException e) {
             Json.result(response, HttpServletResponse.SC_CONFLICT, false, e.getMessage());
             return;
@@ -60,7 +60,9 @@ public class ProductRegisterServlet extends HttpServlet {
             return;
         }
         try {
-            Limites.verificarNovoProduto(form.produto.getImagem() == null ? 0 : form.produto.getImagem().length);
+            String vendedor = Sessao.vendedorProntuario(request);
+            Limites.verificarNovoProduto(vendedor, form.produto.getImagem() == null ? 0 : form.produto.getImagem().length);
+            form.produto.setVendedorProntuario(vendedor);
             productDao.create(form.produto);
             Json.result(response, HttpServletResponse.SC_OK, true, "Produto cadastrado com sucesso.");
         } catch (RegraNegocioException e) {

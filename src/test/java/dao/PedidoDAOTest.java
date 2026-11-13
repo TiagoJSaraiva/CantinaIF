@@ -22,10 +22,15 @@ class PedidoDAOTest {
     private static final ProductDao produtos = new ProductDao();
     private static final PedidoDAO dao = new PedidoDAO();
     private static int seq = 0;
+    private static final String V = "VPED";
+    private static final String OUTRO = "VPED2";
+    private static final String MOTIVO = "Produto acabou";
 
     @BeforeAll
     static void iniciar() throws Exception {
         TestDb.start(PedidoDAOTest.class);
+        TestDb.vendedor(V);
+        TestDb.vendedor(OUTRO);
     }
 
     @AfterAll
@@ -36,11 +41,17 @@ class PedidoDAOTest {
     private static String novoComprador() throws Exception {
         String prontuario = "CJ" + (++seq);
         assertTrue(new UserDao().create(new Comprador(prontuario, prontuario + "@x.test", "senha1234", "Comprador " + seq)));
+        TestDb.vincular(prontuario, V);
         return prontuario;
     }
 
     private static Produto novoProduto(String nome, String preco, int estoque) throws Exception {
+        return novoProduto(V, nome, preco, estoque);
+    }
+
+    private static Produto novoProduto(String vendedor, String nome, String preco, int estoque) throws Exception {
         Produto p = new Produto(nome, "d", new BigDecimal(preco), estoque, Categoria.SALGADO, null);
+        p.setVendedorProntuario(vendedor);
         produtos.create(p);
         return p;
     }
@@ -82,6 +93,7 @@ class PedidoDAOTest {
 
         Produto reajustado = new Produto("Pastel", "d", new BigDecimal("9.99"), 4, Categoria.SALGADO, null);
         reajustado.setId(a.getId());
+        reajustado.setVendedorProntuario(V);
         produtos.atualizar(reajustado);
 
         Pedido lido = dao.buscarPorId(pedido.getId());
@@ -117,7 +129,7 @@ class PedidoDAOTest {
     @Test
     void compradorInexistenteFazRollbackDoEstoque() throws Exception {
         Produto a = novoProduto("Com rollback", "4.00", 5);
-        assertThrows(java.sql.SQLException.class, () -> dao.criarPedido("NAOEXISTE", List.of(new ItemCarrinho(a, 2))));
+        assertThrows(RegraNegocioException.class, () -> dao.criarPedido("NAOEXISTE", List.of(new ItemCarrinho(a, 2))));
         assertEquals(5, estoque(a));
     }
 
@@ -136,11 +148,11 @@ class PedidoDAOTest {
         Pedido pedido = dao.criarPedido(comprador, List.of(new ItemCarrinho(a, 4)));
         assertEquals(2, estoque(a));
 
-        dao.atualizarStatus(pedido.getId(), StatusPedido.CANCELADO);
+        dao.atualizarStatus(pedido.getId(), V, StatusPedido.CANCELADO, MOTIVO);
         assertEquals(6, estoque(a));
         assertEquals(StatusPedido.CANCELADO, dao.buscarPorId(pedido.getId()).getStatus());
 
-        assertThrows(TransicaoInvalidaException.class, () -> dao.atualizarStatus(pedido.getId(), StatusPedido.CANCELADO));
+        assertThrows(TransicaoInvalidaException.class, () -> dao.atualizarStatus(pedido.getId(), V, StatusPedido.CANCELADO, MOTIVO));
         assertEquals(6, estoque(a), "cancelar de novo nao devolve estoque em dobro");
     }
 
@@ -150,13 +162,13 @@ class PedidoDAOTest {
         Produto a = novoProduto("Ciclo", "2.00", 6);
         Pedido pedido = dao.criarPedido(comprador, List.of(new ItemCarrinho(a, 1)));
 
-        dao.atualizarStatus(pedido.getId(), StatusPedido.EM_PREPARO);
-        dao.atualizarStatus(pedido.getId(), StatusPedido.PRONTO);
-        dao.atualizarStatus(pedido.getId(), StatusPedido.ENTREGUE);
+        dao.atualizarStatus(pedido.getId(), V, StatusPedido.EM_PREPARO, null);
+        dao.atualizarStatus(pedido.getId(), V, StatusPedido.PRONTO, null);
+        dao.atualizarStatus(pedido.getId(), V, StatusPedido.ENTREGUE, null);
 
         assertEquals(StatusPedido.ENTREGUE, dao.buscarPorId(pedido.getId()).getStatus());
-        assertTrue(dao.listarPedidos(StatusPedido.ENTREGUE).stream().anyMatch(p -> p.getId() == pedido.getId()));
-        assertTrue(dao.listarPedidos(StatusPedido.PENDENTE).stream().noneMatch(p -> p.getId() == pedido.getId()));
+        assertTrue(dao.listarPedidos(V, StatusPedido.ENTREGUE).stream().anyMatch(p -> p.getId() == pedido.getId()));
+        assertTrue(dao.listarPedidos(V, StatusPedido.PENDENTE).stream().noneMatch(p -> p.getId() == pedido.getId()));
         assertEquals(5, estoque(a), "entregar nao devolve estoque");
     }
 
@@ -167,18 +179,18 @@ class PedidoDAOTest {
         Pedido pedido = dao.criarPedido(comprador, List.of(new ItemCarrinho(a, 1)));
 
         // pular etapas
-        assertThrows(TransicaoInvalidaException.class, () -> dao.atualizarStatus(pedido.getId(), StatusPedido.PRONTO));
-        assertThrows(TransicaoInvalidaException.class, () -> dao.atualizarStatus(pedido.getId(), StatusPedido.ENTREGUE));
+        assertThrows(TransicaoInvalidaException.class, () -> dao.atualizarStatus(pedido.getId(), V, StatusPedido.PRONTO, null));
+        assertThrows(TransicaoInvalidaException.class, () -> dao.atualizarStatus(pedido.getId(), V, StatusPedido.ENTREGUE, null));
         // voltar / repetir
-        dao.atualizarStatus(pedido.getId(), StatusPedido.EM_PREPARO);
-        assertThrows(TransicaoInvalidaException.class, () -> dao.atualizarStatus(pedido.getId(), StatusPedido.PENDENTE));
-        assertThrows(TransicaoInvalidaException.class, () -> dao.atualizarStatus(pedido.getId(), StatusPedido.EM_PREPARO));
+        dao.atualizarStatus(pedido.getId(), V, StatusPedido.EM_PREPARO, null);
+        assertThrows(TransicaoInvalidaException.class, () -> dao.atualizarStatus(pedido.getId(), V, StatusPedido.PENDENTE, null));
+        assertThrows(TransicaoInvalidaException.class, () -> dao.atualizarStatus(pedido.getId(), V, StatusPedido.EM_PREPARO, null));
         // estados finais nao mudam
-        dao.atualizarStatus(pedido.getId(), StatusPedido.PRONTO);
-        dao.atualizarStatus(pedido.getId(), StatusPedido.ENTREGUE);
-        assertThrows(TransicaoInvalidaException.class, () -> dao.atualizarStatus(pedido.getId(), StatusPedido.CANCELADO));
+        dao.atualizarStatus(pedido.getId(), V, StatusPedido.PRONTO, null);
+        dao.atualizarStatus(pedido.getId(), V, StatusPedido.ENTREGUE, null);
+        assertThrows(TransicaoInvalidaException.class, () -> dao.atualizarStatus(pedido.getId(), V, StatusPedido.CANCELADO, MOTIVO));
         // pedido inexistente
-        assertThrows(RegraNegocioException.class, () -> dao.atualizarStatus(999999, StatusPedido.EM_PREPARO));
+        assertThrows(RegraNegocioException.class, () -> dao.atualizarStatus(999999, V, StatusPedido.EM_PREPARO, null));
     }
 
     @Test
@@ -191,7 +203,7 @@ class PedidoDAOTest {
         assertThrows(RegraNegocioException.class, () -> dao.cancelarComoComprador(pedido.getId(), outro));
         assertEquals(StatusPedido.PENDENTE, dao.buscarPorId(pedido.getId()).getStatus());
 
-        dao.atualizarStatus(pedido.getId(), StatusPedido.EM_PREPARO);
+        dao.atualizarStatus(pedido.getId(), V, StatusPedido.EM_PREPARO, null);
         assertThrows(TransicaoInvalidaException.class, () -> dao.cancelarComoComprador(pedido.getId(), dono));
         assertEquals(8, estoque(a));
 
@@ -226,6 +238,7 @@ class PedidoDAOTest {
 
         Produto reajustado = new Produto("Preco mudou", "d", new BigDecimal("6.00"), 10, Categoria.SALGADO, null);
         reajustado.setId(a.getId());
+        reajustado.setVendedorProntuario(V);
         produtos.atualizar(reajustado);
 
         PrecoAlteradoException ex = assertThrows(PrecoAlteradoException.class,
@@ -238,5 +251,71 @@ class PedidoDAOTest {
         visto.setPreco(new BigDecimal("6.00"));
         var pedido = dao.criarPedidoConfirmandoPrecos(comprador, List.of(new ItemCarrinho(visto, 2)));
         assertEquals(0, new BigDecimal("12.00").compareTo(pedido.getTotal()));
+    }
+
+    @Test
+    void pedidoEDoVendedorVinculadoEProdutoDeOutroVendedorERecusado() throws Exception {
+        String comprador = novoComprador();
+        Produto meu = novoProduto("Do vendedor", "2.00", 5);
+        Produto alheio = novoProduto(OUTRO, "De outro vendedor", "2.00", 5);
+
+        Pedido pedido = dao.criarPedido(comprador, List.of(new ItemCarrinho(meu, 1)));
+        assertEquals(V, pedido.getVendedorProntuario());
+        assertEquals(V, dao.buscarPorId(pedido.getId()).getVendedorProntuario());
+        assertEquals("Cantina " + V, dao.buscarPorId(pedido.getId()).getVendedorNome());
+
+        RegraNegocioException ex = assertThrows(RegraNegocioException.class,
+                () -> dao.criarPedido(comprador, List.of(new ItemCarrinho(meu, 1), new ItemCarrinho(alheio, 1))));
+        assertTrue(ex.getMessage().contains("não é do seu vendedor"));
+        assertEquals(4, estoque(meu), "nada baixou no pedido recusado");
+        assertEquals(5, estoque(alheio));
+
+        // o outro vendedor nao ve nem altera o pedido
+        assertTrue(dao.listarPedidos(OUTRO, null).stream().noneMatch(p -> p.getId() == pedido.getId()));
+        assertThrows(RegraNegocioException.class,
+                () -> dao.atualizarStatus(pedido.getId(), OUTRO, StatusPedido.CANCELADO, MOTIVO));
+        assertEquals(StatusPedido.PENDENTE, dao.buscarPorId(pedido.getId()).getStatus());
+    }
+
+    @Test
+    void compradorSemVinculoOuDesativadoNaoFazPedido() throws Exception {
+        String comprador = novoComprador();
+        Produto a = novoProduto("Sem vinculo", "2.00", 5);
+        TestDb.vincular(comprador, null);
+        RegraNegocioException ex = assertThrows(RegraNegocioException.class,
+                () -> dao.criarPedido(comprador, List.of(new ItemCarrinho(a, 1))));
+        assertTrue(ex.getMessage().contains("Vincule"));
+
+        TestDb.vincular(comprador, V);
+        assertTrue(new UserDao().definirAtivo(comprador, V, false));
+        ex = assertThrows(RegraNegocioException.class, () -> dao.criarPedido(comprador, List.of(new ItemCarrinho(a, 1))));
+        assertTrue(ex.getMessage().contains("desativada"));
+        assertEquals(5, estoque(a));
+    }
+
+    @Test
+    void cancelamentoPeloVendedorExigeMotivoQueFicaRegistrado() throws Exception {
+        String comprador = novoComprador();
+        Produto a = novoProduto("Motivo", "2.00", 5);
+        Pedido pedido = dao.criarPedido(comprador, List.of(new ItemCarrinho(a, 2)));
+
+        for (String ruim : new String[] { null, "", "  ", "ab", "x".repeat(PedidoDAO.MOTIVO_MAXIMO + 1) }) {
+            assertThrows(PedidoDAO.MotivoInvalidoException.class,
+                    () -> dao.atualizarStatus(pedido.getId(), V, StatusPedido.CANCELADO, ruim));
+        }
+        assertEquals(StatusPedido.PENDENTE, dao.buscarPorId(pedido.getId()).getStatus());
+        assertEquals(3, estoque(a));
+
+        dao.atualizarStatus(pedido.getId(), V, StatusPedido.CANCELADO, "  Acabou o recheio  ");
+        Pedido lido = dao.buscarPorId(pedido.getId());
+        assertEquals(StatusPedido.CANCELADO, lido.getStatus());
+        assertEquals("VENDEDOR", lido.getCanceladoPor());
+        assertEquals("Acabou o recheio", lido.getMotivoCancelamento());
+        assertEquals(5, estoque(a));
+
+        Pedido outro = dao.criarPedido(comprador, List.of(new ItemCarrinho(a, 1)));
+        dao.cancelarComoComprador(outro.getId(), comprador);
+        assertEquals("COMPRADOR", dao.buscarPorId(outro.getId()).getCanceladoPor());
+        assertNull(dao.buscarPorId(outro.getId()).getMotivoCancelamento());
     }
 }

@@ -28,15 +28,21 @@ import java.util.TreeMap;
 public class PedidoDAO {
 
     private static final String SELECT_PEDIDOS =
-            "SELECT p.id AS pedido_id, p.status, p.criado_em, p.total, "
+            "SELECT p.id AS pedido_id, p.status, p.criado_em, p.total, p.cancelado_por, p.motivo_cancelamento, "
+            + "p.vendedor_prontuario, v.nome AS vendedor_nome, "
             + "c.prontuario, c.nome AS comprador_nome, c.email, "
             + "pp.produto_id, prod.nome AS produto_nome, pp.quantidade, pp.preco_unitario "
             + "FROM Pedido p "
             + "JOIN Comprador c ON p.comprador_prontuario = c.prontuario "
+            + "JOIN Vendedor v ON p.vendedor_prontuario = v.prontuario "
             + "JOIN Pedido_Produto pp ON p.id = pp.pedido_id "
             + "JOIN Produto prod ON pp.produto_id = prod.id ";
 
     private static final String ORDEM = " ORDER BY p.criado_em DESC, p.id DESC, prod.nome ASC";
+
+    /** Tamanho do motivo de cancelamento informado pelo vendedor. */
+    public static final int MOTIVO_MINIMO = 3;
+    public static final int MOTIVO_MAXIMO = 300;
 
     public PedidoDAO() {
     }
@@ -58,9 +64,11 @@ public class PedidoDAO {
 
     /**
      * Cria um pedido baixando o estoque na mesma transacao. O preco unitario e o total sao lidos/calculados
-     * no servidor a partir do banco (o carrinho da sessao nao e confiavel para preco).
+     * no servidor a partir do banco (o carrinho da sessao nao e confiavel para preco). O pedido e feito ao vendedor
+     * ao qual o comprador esta vinculado AGORA (lido na transacao) e todos os produtos tem de ser desse vendedor.
      *
      * @throws EstoqueInsuficienteException se algum item nao tiver estoque suficiente (nada e gravado)
+     * @throws RegraNegocioException comprador sem vinculo, desativado, ou produto de outro vendedor
      */
     public Pedido criarPedido(String prontuario, List<ItemCarrinho> itens, LocalDateTime criadoEm)
             throws SQLException, RegraNegocioException {
@@ -86,7 +94,9 @@ public class PedidoDAO {
         try (Connection conn = Database.getConnection()) {
             conn.setAutoCommit(false);
             try {
+                String vendedor = vendedorDoComprador(conn, prontuario);
                 Pedido pedido = new Pedido();
+                pedido.setVendedorProntuario(vendedor);
                 Comprador comprador = new Comprador();
                 comprador.setProntuario(prontuario);
                 pedido.setComprador(comprador);
@@ -97,7 +107,7 @@ public class PedidoDAO {
                 for (Map.Entry<Integer, Integer> e : quantidades.entrySet()) {
                     int produtoId = e.getKey();
                     int quantidade = e.getValue();
-                    baixarEstoque(conn, produtoId, quantidade);
+                    baixarEstoque(conn, vendedor, produtoId, quantidade);
                     Produto produto = lerProduto(conn, produtoId);
                     BigDecimal visto = precosVistos.get(produtoId);
                     if (confirmarPrecos && visto != null && visto.compareTo(produto.getPreco()) != 0) {
@@ -110,12 +120,14 @@ public class PedidoDAO {
                 pedido.setTotal(total);
 
                 try (PreparedStatement ps = conn.prepareStatement(
-                        "INSERT INTO Pedido (comprador_prontuario, status, criado_em, total) VALUES (?, ?, ?, ?)",
+                        "INSERT INTO Pedido (comprador_prontuario, vendedor_prontuario, status, criado_em, total) "
+                        + "VALUES (?, ?, ?, ?, ?)",
                         Statement.RETURN_GENERATED_KEYS)) {
                     ps.setString(1, prontuario);
-                    ps.setString(2, StatusPedido.PENDENTE.name());
-                    ps.setTimestamp(3, Timestamp.valueOf(criadoEm));
-                    ps.setBigDecimal(4, total);
+                    ps.setString(2, vendedor);
+                    ps.setString(3, StatusPedido.PENDENTE.name());
+                    ps.setTimestamp(4, Timestamp.valueOf(criadoEm));
+                    ps.setBigDecimal(5, total);
                     ps.executeUpdate();
                     try (ResultSet rs = ps.getGeneratedKeys()) {
                         if (!rs.next()) {
@@ -146,27 +158,51 @@ public class PedidoDAO {
         }
     }
 
-    /** UPDATE atomico: so baixa se houver estoque suficiente. */
-    private void baixarEstoque(Connection conn, int produtoId, int quantidade)
+    /** Vendedor vinculado ao comprador, com a linha do comprador travada ate o fim da transacao. */
+    private String vendedorDoComprador(Connection conn, String prontuario) throws SQLException, RegraNegocioException {
+        try (PreparedStatement ps = conn.prepareStatement(
+                "SELECT ativo, vendedor_prontuario FROM Comprador WHERE prontuario = ? FOR UPDATE")) {
+            ps.setString(1, prontuario);
+            try (ResultSet rs = ps.executeQuery()) {
+                if (!rs.next()) {
+                    throw new RegraNegocioException("Comprador não encontrado.");
+                }
+                if (!rs.getBoolean("ativo")) {
+                    throw new RegraNegocioException("Sua conta foi desativada pelo vendedor.");
+                }
+                String vendedor = rs.getString("vendedor_prontuario");
+                if (vendedor == null) {
+                    throw new RegraNegocioException("Vincule sua conta a um vendedor antes de fazer pedidos.");
+                }
+                return vendedor;
+            }
+        }
+    }
+
+    /** UPDATE atomico: so baixa se o produto for do vendedor e houver estoque suficiente. */
+    private void baixarEstoque(Connection conn, String vendedor, int produtoId, int quantidade)
             throws SQLException, RegraNegocioException {
         try (PreparedStatement ps = conn.prepareStatement(
-                "UPDATE Produto SET estoque = estoque - ? WHERE id = ? AND estoque >= ?")) {
+                "UPDATE Produto SET estoque = estoque - ? WHERE id = ? AND vendedor_prontuario = ? AND estoque >= ?")) {
             ps.setInt(1, quantidade);
             ps.setInt(2, produtoId);
-            ps.setInt(3, quantidade);
+            ps.setString(3, vendedor);
+            ps.setInt(4, quantidade);
             if (ps.executeUpdate() == 1) {
                 return;
             }
         }
-        try (PreparedStatement ps = conn.prepareStatement("SELECT nome, estoque FROM Produto WHERE id = ?")) {
+        try (PreparedStatement ps = conn.prepareStatement(
+                "SELECT nome, estoque FROM Produto WHERE id = ? AND vendedor_prontuario = ?")) {
             ps.setInt(1, produtoId);
+            ps.setString(2, vendedor);
             try (ResultSet rs = ps.executeQuery()) {
                 if (rs.next()) {
                     throw new EstoqueInsuficienteException(rs.getString("nome"), rs.getInt("estoque"));
                 }
             }
         }
-        throw new RegraNegocioException("Um dos produtos do carrinho não existe mais.");
+        throw new RegraNegocioException("Um dos produtos do carrinho não existe mais ou não é do seu vendedor.");
     }
 
     private Produto lerProduto(Connection conn, int produtoId) throws SQLException {
@@ -185,28 +221,40 @@ public class PedidoDAO {
 
     // ------------------------------------------------------------------ status
 
-    /** Muda o status (acao do vendedor). Cancelar devolve o estoque. */
-    public void atualizarStatus(int pedidoId, StatusPedido novo) throws SQLException, RegraNegocioException {
-        mudarStatus(pedidoId, novo, null);
+    /**
+     * Muda o status de um pedido do vendedor (acao do vendedor). Cancelar devolve o estoque e exige um motivo
+     * ({@value #MOTIVO_MINIMO} a {@value #MOTIVO_MAXIMO} caracteres), que o comprador ve.
+     */
+    public void atualizarStatus(int pedidoId, String vendedor, StatusPedido novo, String motivo)
+            throws SQLException, RegraNegocioException {
+        String texto = null;
+        if (novo == StatusPedido.CANCELADO) {
+            texto = motivo == null ? "" : motivo.strip();
+            if (texto.length() < MOTIVO_MINIMO || texto.length() > MOTIVO_MAXIMO) {
+                throw new MotivoInvalidoException();
+            }
+        }
+        mudarStatus(pedidoId, novo, "vendedor_prontuario", vendedor, texto);
     }
 
     /** O comprador cancela o proprio pedido, somente enquanto estiver PENDENTE. */
     public void cancelarComoComprador(int pedidoId, String prontuario) throws SQLException, RegraNegocioException {
-        mudarStatus(pedidoId, StatusPedido.CANCELADO, prontuario);
+        mudarStatus(pedidoId, StatusPedido.CANCELADO, "comprador_prontuario", prontuario, null);
     }
 
-    private void mudarStatus(int pedidoId, StatusPedido novo, String prontuarioDono)
+    /** {@code colunaDono} identifica quem age (vendedor ou comprador): pedido de outro dono = nao encontrado. */
+    private void mudarStatus(int pedidoId, StatusPedido novo, String colunaDono, String dono, String motivo)
             throws SQLException, RegraNegocioException {
+        boolean comprador = colunaDono.equals("comprador_prontuario");
         try (Connection conn = Database.getConnection()) {
             conn.setAutoCommit(false);
             try {
                 StatusPedido atual;
                 try (PreparedStatement ps = conn.prepareStatement(
-                        "SELECT status, comprador_prontuario FROM Pedido WHERE id = ? FOR UPDATE")) {
+                        "SELECT status, " + colunaDono + " FROM Pedido WHERE id = ? FOR UPDATE")) {
                     ps.setInt(1, pedidoId);
                     try (ResultSet rs = ps.executeQuery()) {
-                        if (!rs.next()
-                                || (prontuarioDono != null && !prontuarioDono.equals(rs.getString("comprador_prontuario")))) {
+                        if (!rs.next() || dono == null || !dono.equals(rs.getString(2))) {
                             throw new RegraNegocioException("Pedido não encontrado.");
                         }
                         atual = StatusPedido.valueOf(rs.getString("status"));
@@ -215,16 +263,24 @@ public class PedidoDAO {
                 if (!atual.podeIrPara(novo)) {
                     throw new TransicaoInvalidaException(atual, novo);
                 }
-                if (prontuarioDono != null && atual != StatusPedido.PENDENTE) {
+                if (comprador && atual != StatusPedido.PENDENTE) {
                     throw new TransicaoInvalidaException(
                             "Só é possível cancelar pedidos pendentes. Procure a cantina para este pedido.");
                 }
-                if (novo == StatusPedido.CANCELADO) {
+                boolean cancelar = novo == StatusPedido.CANCELADO;
+                if (cancelar) {
                     devolverEstoque(conn, pedidoId);
                 }
-                try (PreparedStatement ps = conn.prepareStatement("UPDATE Pedido SET status = ? WHERE id = ?")) {
-                    ps.setString(1, novo.name());
-                    ps.setInt(2, pedidoId);
+                try (PreparedStatement ps = conn.prepareStatement(cancelar
+                        ? "UPDATE Pedido SET status = ?, cancelado_por = ?, motivo_cancelamento = ? WHERE id = ?"
+                        : "UPDATE Pedido SET status = ? WHERE id = ?")) {
+                    int i = 1;
+                    ps.setString(i++, novo.name());
+                    if (cancelar) {
+                        ps.setString(i++, comprador ? "COMPRADOR" : "VENDEDOR");
+                        ps.setString(i++, motivo);
+                    }
+                    ps.setInt(i, pedidoId);
                     ps.executeUpdate();
                 }
                 conn.commit();
@@ -232,6 +288,15 @@ public class PedidoDAO {
                 conn.rollback();
                 throw ex;
             }
+        }
+    }
+
+    /** O vendedor tentou cancelar sem motivo (ou com um motivo grande demais). */
+    public static class MotivoInvalidoException extends RegraNegocioException {
+        private static final long serialVersionUID = 1L;
+
+        public MotivoInvalidoException() {
+            super("Informe o motivo do cancelamento (de " + MOTIVO_MINIMO + " a " + MOTIVO_MAXIMO + " caracteres).");
         }
     }
 
@@ -258,12 +323,12 @@ public class PedidoDAO {
 
     // ------------------------------------------------------------------ consultas
 
-    /** Todos os pedidos (mais recentes primeiro), opcionalmente filtrados por status. */
-    public List<Pedido> listarPedidos(StatusPedido filtro) throws SQLException {
+    /** Pedidos feitos ao vendedor (mais recentes primeiro), opcionalmente filtrados por status. */
+    public List<Pedido> listarPedidos(String vendedor, StatusPedido filtro) throws SQLException {
         if (filtro == null) {
-            return consultar("", null);
+            return consultar("WHERE p.vendedor_prontuario = ? ", vendedor);
         }
-        return consultar("WHERE p.status = ? ", filtro.name());
+        return consultar("WHERE p.vendedor_prontuario = ? AND p.status = ? ", vendedor, filtro.name());
     }
 
     /** Pedidos de um comprador (mais recentes primeiro). */
@@ -276,12 +341,12 @@ public class PedidoDAO {
         return r.isEmpty() ? null : r.get(0);
     }
 
-    private List<Pedido> consultar(String where, Object parametro) throws SQLException {
+    private List<Pedido> consultar(String where, Object... parametros) throws SQLException {
         Map<Integer, Pedido> pedidos = new LinkedHashMap<>();
         try (Connection conn = Database.getConnection();
              PreparedStatement ps = conn.prepareStatement(SELECT_PEDIDOS + where + ORDEM)) {
-            if (parametro != null) {
-                ps.setObject(1, parametro);
+            for (int i = 0; i < parametros.length; i++) {
+                ps.setObject(i + 1, parametros[i]);
             }
             try (ResultSet rs = ps.executeQuery()) {
                 while (rs.next()) {
@@ -293,6 +358,10 @@ public class PedidoDAO {
                         pedido.setStatus(StatusPedido.valueOf(rs.getString("status")));
                         pedido.setCriadoEm(rs.getTimestamp("criado_em").toLocalDateTime());
                         pedido.setTotal(rs.getBigDecimal("total"));
+                        pedido.setVendedorProntuario(rs.getString("vendedor_prontuario"));
+                        pedido.setVendedorNome(rs.getString("vendedor_nome"));
+                        pedido.setCanceladoPor(rs.getString("cancelado_por"));
+                        pedido.setMotivoCancelamento(rs.getString("motivo_cancelamento"));
                         Comprador c = new Comprador();
                         c.setProntuario(rs.getString("prontuario"));
                         c.setNome(rs.getString("comprador_nome"));

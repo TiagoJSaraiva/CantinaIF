@@ -14,6 +14,8 @@ public class Produto implements java.io.Serializable {
     }
 
     private int id;
+    /** Dono do produto. */
+    private String vendedorProntuario;
     private String nome;
     private String descricao;
     private BigDecimal preco;
@@ -40,6 +42,9 @@ public class Produto implements java.io.Serializable {
 
     public int getId() { return id; }
     public void setId(int id) { this.id = id; }
+
+    public String getVendedorProntuario() { return vendedorProntuario; }
+    public void setVendedorProntuario(String vendedorProntuario) { this.vendedorProntuario = vendedorProntuario; }
 
     public String getNome() { return nome; }
     public void setNome(String nome) { this.nome = nome; }

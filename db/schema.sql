@@ -28,46 +28,58 @@
 --     ./mvnw -q compile exec:java -Dexec.args=--confirmar-apagar   (apaga os dados existentes!)
 -- ============================================================================
 
--- Comprador (aluno ou colaborador que faz os pedidos)
-CREATE TABLE IF NOT EXISTS Comprador (
-    prontuario VARCHAR(10)  NOT NULL PRIMARY KEY,
-    email      VARCHAR(100) NOT NULL UNIQUE,
-    senha      VARCHAR(100) NOT NULL,           -- hash BCrypt
-    nome       VARCHAR(75),
-    cpf        VARCHAR(11) UNIQUE               -- opcional; nos dados de demonstracao e sempre ficticio
-);
-
--- Vendedor (responsavel pela cantina)
+-- Vendedor (dono de uma cantina/lanchonete; cada um tem os proprios produtos, pedidos e compradores)
 CREATE TABLE IF NOT EXISTS Vendedor (
     prontuario VARCHAR(10)  NOT NULL PRIMARY KEY,
     email      VARCHAR(100) NOT NULL UNIQUE,
-    senha      VARCHAR(100) NOT NULL            -- hash BCrypt
+    senha      VARCHAR(100) NOT NULL,           -- hash BCrypt
+    nome       VARCHAR(75)  NOT NULL            -- nome da cantina, mostrado aos compradores
 );
 
--- Produto (itens a venda)
+-- Comprador (aluno ou colaborador que faz os pedidos). Fica vinculado a no maximo UM vendedor (por um codigo
+-- temporario fornecido pelo vendedor) e so ve os produtos desse vendedor; sem vinculo nao ve produto nenhum.
+CREATE TABLE IF NOT EXISTS Comprador (
+    prontuario          VARCHAR(10)  NOT NULL PRIMARY KEY,
+    email               VARCHAR(100) NOT NULL UNIQUE,
+    senha               VARCHAR(100) NOT NULL,           -- hash BCrypt
+    nome                VARCHAR(75),
+    cpf                 VARCHAR(11) UNIQUE,              -- opcional; nos dados de demonstracao e sempre ficticio
+    vendedor_prontuario VARCHAR(10),                     -- vendedor vinculado (NULL = sem vinculo)
+    ativo               BOOLEAN      NOT NULL DEFAULT TRUE, -- FALSE = desativado pelo vendedor (sem acesso)
+    CONSTRAINT fk_comprador_vendedor FOREIGN KEY (vendedor_prontuario) REFERENCES Vendedor(prontuario)
+);
+
+-- Produto (itens a venda de um vendedor)
 CREATE TABLE IF NOT EXISTS Produto (
-    id        INT           NOT NULL PRIMARY KEY AUTO_INCREMENT,
-    nome      VARCHAR(100)  NOT NULL,
-    descricao VARCHAR(400),
-    preco     DECIMAL(10,2) NOT NULL,
-    estoque   INT           NOT NULL DEFAULT 0,
-    categoria VARCHAR(10),
-    imagem    MEDIUMBLOB,
+    id                  INT           NOT NULL PRIMARY KEY AUTO_INCREMENT,
+    vendedor_prontuario VARCHAR(10)   NOT NULL,
+    nome                VARCHAR(100)  NOT NULL,
+    descricao           VARCHAR(400),
+    preco               DECIMAL(10,2) NOT NULL,
+    estoque             INT           NOT NULL DEFAULT 0,
+    categoria           VARCHAR(10),
+    imagem              MEDIUMBLOB,
     CONSTRAINT ck_produto_preco     CHECK (preco >= 0),
     CONSTRAINT ck_produto_estoque   CHECK (estoque >= 0),
-    CONSTRAINT ck_produto_categoria CHECK (categoria IN ('salgado', 'doce', 'lanche', 'bebida'))
+    CONSTRAINT ck_produto_categoria CHECK (categoria IN ('salgado', 'doce', 'lanche', 'bebida')),
+    CONSTRAINT fk_produto_vendedor  FOREIGN KEY (vendedor_prontuario) REFERENCES Vendedor(prontuario)
 );
 
--- Pedido realizado por um comprador
+-- Pedido realizado por um comprador a um vendedor
 CREATE TABLE IF NOT EXISTS Pedido (
     id                   INT           NOT NULL PRIMARY KEY AUTO_INCREMENT,
     comprador_prontuario VARCHAR(10)   NOT NULL,
+    vendedor_prontuario  VARCHAR(10)   NOT NULL,
     status               VARCHAR(12)   NOT NULL DEFAULT 'PENDENTE',
     criado_em            TIMESTAMP     NOT NULL DEFAULT CURRENT_TIMESTAMP,
     total                DECIMAL(10,2) NOT NULL DEFAULT 0,   -- calculado no servidor
+    cancelado_por        VARCHAR(10),                        -- COMPRADOR ou VENDEDOR (so quando CANCELADO)
+    motivo_cancelamento  VARCHAR(300),                       -- obrigatorio quando o vendedor cancela
     CONSTRAINT ck_pedido_status CHECK (status IN ('PENDENTE', 'EM_PREPARO', 'PRONTO', 'ENTREGUE', 'CANCELADO')),
     CONSTRAINT ck_pedido_total  CHECK (total >= 0),
-    CONSTRAINT fk_pedido_comprador FOREIGN KEY (comprador_prontuario) REFERENCES Comprador(prontuario)
+    CONSTRAINT ck_pedido_cancelado_por CHECK (cancelado_por IS NULL OR cancelado_por IN ('COMPRADOR', 'VENDEDOR')),
+    CONSTRAINT fk_pedido_comprador FOREIGN KEY (comprador_prontuario) REFERENCES Comprador(prontuario),
+    CONSTRAINT fk_pedido_vendedor  FOREIGN KEY (vendedor_prontuario) REFERENCES Vendedor(prontuario)
 );
 
 -- Itens do pedido (um produto aparece no maximo uma vez por pedido)
@@ -80,4 +92,28 @@ CREATE TABLE IF NOT EXISTS Pedido_Produto (
     CONSTRAINT fk_pp_pedido  FOREIGN KEY (pedido_id)  REFERENCES Pedido(id),
     CONSTRAINT fk_pp_produto FOREIGN KEY (produto_id) REFERENCES Produto(id),
     CONSTRAINT ck_pp_quantidade CHECK (quantidade >= 1)
+);
+
+-- Codigo de vinculo: gerado pelo vendedor, vale 60 segundos e uma unica vez (liga um comprador ao vendedor).
+CREATE TABLE IF NOT EXISTS CodigoVinculo (
+    codigo              VARCHAR(8)  NOT NULL PRIMARY KEY,
+    vendedor_prontuario VARCHAR(10) NOT NULL,
+    criado_em           TIMESTAMP   NOT NULL,
+    expira_em           TIMESTAMP   NOT NULL,
+    usado_por           VARCHAR(10),                 -- comprador que usou (NULL = ainda nao usado)
+    usado_em            TIMESTAMP,
+    CONSTRAINT fk_cv_vendedor  FOREIGN KEY (vendedor_prontuario) REFERENCES Vendedor(prontuario),
+    CONSTRAINT fk_cv_comprador FOREIGN KEY (usado_por) REFERENCES Comprador(prontuario)
+);
+
+-- Advertencia enviada por um vendedor a um comprador vinculado (aparece para o comprador ate ser lida).
+CREATE TABLE IF NOT EXISTS Advertencia (
+    id                   INT          NOT NULL PRIMARY KEY AUTO_INCREMENT,
+    comprador_prontuario VARCHAR(10)  NOT NULL,
+    vendedor_prontuario  VARCHAR(10)  NOT NULL,
+    mensagem             VARCHAR(500) NOT NULL,
+    criada_em            TIMESTAMP    NOT NULL,
+    lida_em              TIMESTAMP,
+    CONSTRAINT fk_adv_comprador FOREIGN KEY (comprador_prontuario) REFERENCES Comprador(prontuario),
+    CONSTRAINT fk_adv_vendedor  FOREIGN KEY (vendedor_prontuario) REFERENCES Vendedor(prontuario)
 );

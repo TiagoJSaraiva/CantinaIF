@@ -57,6 +57,7 @@ public class EditarProdutos extends HttpServlet {
             return;
         }
         form.produto.setId(id);
+        form.produto.setVendedorProntuario(Sessao.vendedorProntuario(request)); // so altera produto do proprio vendedor
         try {
             if (form.produto.getImagem() != null) {
                 Limites.verificarImagem(form.produto.getImagem().length);

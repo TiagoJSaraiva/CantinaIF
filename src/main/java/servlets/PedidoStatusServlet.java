@@ -13,7 +13,10 @@ import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.sql.SQLException;
 
-/** Acao explicita do vendedor: muda o status de um pedido (id, status). Nada e apagado. */
+/**
+ * Acao explicita do vendedor: muda o status de um pedido dele (id, status). Para cancelar, o motivo e obrigatorio
+ * (parametro motivo) e aparece para o comprador. Nada e apagado.
+ */
 @WebServlet("/api/pedidos/status")
 public class PedidoStatusServlet extends HttpServlet {
     private static final long serialVersionUID = 1L;
@@ -33,8 +36,10 @@ public class PedidoStatusServlet extends HttpServlet {
             return;
         }
         try {
-            pedidoDAO.atualizarStatus(id, novo);
+            pedidoDAO.atualizarStatus(id, Sessao.vendedorProntuario(request), novo, request.getParameter("motivo"));
             Json.result(response, HttpServletResponse.SC_OK, true, "Pedido #" + id + ": " + novo.getRotulo() + ".");
+        } catch (PedidoDAO.MotivoInvalidoException e) {
+            Json.result(response, HttpServletResponse.SC_BAD_REQUEST, false, e.getMessage());
         } catch (TransicaoInvalidaException e) {
             Json.result(response, HttpServletResponse.SC_CONFLICT, false, e.getMessage());
         } catch (RegraNegocioException e) {

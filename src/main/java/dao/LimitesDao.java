@@ -14,6 +14,22 @@ public class LimitesDao {
         return escalar("SELECT COUNT(*) FROM Produto");
     }
 
+    public long contarVendedores() throws SQLException {
+        return escalar("SELECT COUNT(*) FROM Vendedor");
+    }
+
+    /** Produtos de um vendedor. */
+    public long contarProdutosDe(String vendedor) throws SQLException {
+        try (Connection c = Database.getConnection();
+             java.sql.PreparedStatement ps = c.prepareStatement("SELECT COUNT(*) FROM Produto WHERE vendedor_prontuario = ?")) {
+            ps.setString(1, vendedor);
+            try (ResultSet rs = ps.executeQuery()) {
+                rs.next();
+                return rs.getLong(1);
+            }
+        }
+    }
+
     public long contarCompradores() throws SQLException {
         return escalar("SELECT COUNT(*) FROM Comprador");
     }

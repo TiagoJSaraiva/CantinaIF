@@ -20,7 +20,7 @@ public class VendedorDao {
      * @return o vendedor (sem a senha) ou null se prontuario/senha estiverem incorretos
      */
     public Vendedor autenticar(String prontuario, String senha) throws SQLException {
-        String sql = "SELECT prontuario, email, senha FROM Vendedor WHERE prontuario = ?";
+        String sql = "SELECT prontuario, email, senha, nome FROM Vendedor WHERE prontuario = ?";
         try (Connection conn = Database.getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql)) {
             stmt.setString(1, prontuario);
@@ -30,6 +30,7 @@ public class VendedorDao {
                         Vendedor v = new Vendedor();
                         v.setProntuario(rs.getString("prontuario"));
                         v.setEmail(rs.getString("email"));
+                        v.setNome(rs.getString("nome"));
                         return v;
                     }
                     return null;
@@ -40,14 +41,20 @@ public class VendedorDao {
         return null;
     }
 
-    /** Cadastra um vendedor; a senha em texto puro e convertida em hash aqui. Retorna false se ja existir. */
-    public boolean create(String prontuario, String email, String senha) throws SQLException {
-        String sql = "INSERT INTO Vendedor (prontuario, email, senha) VALUES (?, ?, ?)";
+    /**
+     * Cadastra um vendedor; a senha em texto puro e convertida em hash aqui.
+     *
+     * @param nome nome da cantina, mostrado aos compradores
+     * @return false se o prontuario ou o e-mail ja existirem
+     */
+    public boolean create(String prontuario, String nome, String email, String senha) throws SQLException {
+        String sql = "INSERT INTO Vendedor (prontuario, email, senha, nome) VALUES (?, ?, ?, ?)";
         try (Connection conn = Database.getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql)) {
             stmt.setString(1, prontuario);
             stmt.setString(2, email);
             stmt.setString(3, Passwords.hash(senha));
+            stmt.setString(4, nome);
             stmt.executeUpdate();
             return true;
         } catch (java.sql.SQLIntegrityConstraintViolationException e) {

@@ -45,6 +45,7 @@ public final class DemoDataSeeder {
     public static final String SENHA_DEMO = "demo1234";
     public static final String VENDEDOR_PRONTUARIO = "VEND001";
     public static final String VENDEDOR_EMAIL = "vendedor@cantinaif.demo";
+    public static final String VENDEDOR_NOME = "Cantina Central";
     public static final String COMPRADOR_PRONTUARIO = "CJ3000001";
     public static final String COMPRADOR_EMAIL = "aluno@cantinaif.demo";
 
@@ -181,6 +182,8 @@ public final class DemoDataSeeder {
 
     private static void limparTudo(Connection conn) throws SQLException {
         try (Statement st = conn.createStatement()) {
+            st.executeUpdate("DELETE FROM CodigoVinculo");
+            st.executeUpdate("DELETE FROM Advertencia");
             st.executeUpdate("DELETE FROM Pedido_Produto");
             st.executeUpdate("DELETE FROM Pedido");
             st.executeUpdate("DELETE FROM Produto");
@@ -211,17 +214,19 @@ public final class DemoDataSeeder {
         String hashDemo = plano.hashDemo();
         String hashOutros = plano.hashOutros();
 
-        try (PreparedStatement ps = conn.prepareStatement("INSERT INTO Vendedor (prontuario, email, senha) VALUES (?, ?, ?)")) {
+        try (PreparedStatement ps = conn.prepareStatement("INSERT INTO Vendedor (prontuario, email, senha, nome) VALUES (?, ?, ?, ?)")) {
             ps.setString(1, VENDEDOR_PRONTUARIO);
             ps.setString(2, VENDEDOR_EMAIL);
             ps.setString(3, hashDemo);
+            ps.setString(4, VENDEDOR_NOME);
             ps.executeUpdate();
         }
 
         // produtos (ids 1..n na ordem do catalogo)
         List<BigDecimal> precos = new ArrayList<>();
         try (PreparedStatement ps = conn.prepareStatement(
-                "INSERT INTO Produto (id, nome, descricao, preco, estoque, categoria, imagem) VALUES (?, ?, ?, ?, ?, ?, ?)")) {
+                "INSERT INTO Produto (id, nome, descricao, preco, estoque, categoria, imagem, vendedor_prontuario) "
+                + "VALUES (?, ?, ?, ?, ?, ?, ?, ?)")) {
             int idProduto = 0;
             for (Prod prod : CATALOGO) {
                 idProduto++;
@@ -239,6 +244,7 @@ public final class DemoDataSeeder {
                 } else {
                     ps.setNull(7, java.sql.Types.BLOB);
                 }
+                ps.setString(8, VENDEDOR_PRONTUARIO);
                 ps.addBatch();
             }
             ps.executeBatch();
@@ -247,7 +253,7 @@ public final class DemoDataSeeder {
         // compradores: o de demonstracao + os fictícios
         List<String> prontuarios = new ArrayList<>();
         try (PreparedStatement ps = conn.prepareStatement(
-                "INSERT INTO Comprador (prontuario, email, senha, nome, cpf) VALUES (?, ?, ?, ?, ?)")) {
+                "INSERT INTO Comprador (prontuario, email, senha, nome, cpf, vendedor_prontuario) VALUES (?, ?, ?, ?, ?, ?)")) {
             prontuarios.add(COMPRADOR_PRONTUARIO);
             adicionarComprador(ps, COMPRADOR_PRONTUARIO, COMPRADOR_EMAIL, hashDemo, "Aluno Demonstração", cpfFicticio(r));
             Set<String> emails = new LinkedHashSet<>();
@@ -279,13 +285,15 @@ public final class DemoDataSeeder {
         ps.setString(3, hash);
         ps.setString(4, nome);
         ps.setString(5, cpf);
+        ps.setString(6, VENDEDOR_PRONTUARIO);
         ps.addBatch();
     }
 
     private static int inserirPedidos(Connection conn, Random r, LocalDateTime agora, List<String> prontuarios,
             List<BigDecimal> precos, Map<Integer, Integer> consumo) throws SQLException {
         try (PreparedStatement psPedido = conn.prepareStatement(
-                "INSERT INTO Pedido (id, comprador_prontuario, status, criado_em, total) VALUES (?, ?, ?, ?, ?)");
+                "INSERT INTO Pedido (id, comprador_prontuario, status, criado_em, total, vendedor_prontuario, cancelado_por) "
+                + "VALUES (?, ?, ?, ?, ?, ?, ?)");
              PreparedStatement psItem = conn.prepareStatement(
                 "INSERT INTO Pedido_Produto (pedido_id, produto_id, quantidade, preco_unitario) VALUES (?, ?, ?, ?)")) {
 
@@ -320,6 +328,8 @@ public final class DemoDataSeeder {
                 psPedido.setString(3, status);
                 psPedido.setTimestamp(4, Timestamp.valueOf(criadoEm));
                 psPedido.setBigDecimal(5, total);
+                psPedido.setString(6, VENDEDOR_PRONTUARIO);
+                psPedido.setString(7, status.equals("CANCELADO") ? "COMPRADOR" : null);
                 psPedido.executeUpdate();
                 for (int[] linha : linhas) {
                     if (!status.equals("CANCELADO")) {

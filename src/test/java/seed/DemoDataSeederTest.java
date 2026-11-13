@@ -43,10 +43,10 @@ class DemoDataSeederTest {
     private static String fotografia(Connection c) throws SQLException {
         StringBuilder sb = new StringBuilder();
         String[] consultas = {
-            "SELECT id, nome, descricao, preco, estoque, categoria, LENGTH(imagem) FROM Produto ORDER BY id",
-            "SELECT prontuario, email, nome, cpf FROM Comprador ORDER BY prontuario",
-            "SELECT prontuario, email FROM Vendedor ORDER BY prontuario",
-            "SELECT id, comprador_prontuario, status, criado_em, total FROM Pedido ORDER BY id",
+            "SELECT id, vendedor_prontuario, nome, descricao, preco, estoque, categoria, LENGTH(imagem) FROM Produto ORDER BY id",
+            "SELECT prontuario, email, nome, cpf, vendedor_prontuario, ativo FROM Comprador ORDER BY prontuario",
+            "SELECT prontuario, email, nome FROM Vendedor ORDER BY prontuario",
+            "SELECT id, comprador_prontuario, vendedor_prontuario, status, criado_em, total, cancelado_por, motivo_cancelamento FROM Pedido ORDER BY id",
             "SELECT pedido_id, produto_id, quantidade, preco_unitario FROM Pedido_Produto ORDER BY pedido_id, produto_id" };
         try (Statement st = c.createStatement()) {
             for (String q : consultas) {
@@ -183,6 +183,7 @@ class DemoDataSeederTest {
         // ids gerados apos o seed nao colidem com os semeados
         ProductDao produtos = new ProductDao();
         Produto novo = new Produto("Novo", "d", new BigDecimal("1.00"), 5, Produto.Categoria.DOCE, null);
+        novo.setVendedorProntuario(DemoDataSeeder.VENDEDOR_PRONTUARIO);
         produtos.create(novo);
         assertEquals(31, novo.getId());
         var pedido = new PedidoDAO().criarPedido(DemoDataSeeder.COMPRADOR_PRONTUARIO, List.of(new ItemCarrinho(novo, 2)));
@@ -254,7 +255,7 @@ class DemoDataSeederTest {
                 ProductDao dao = new ProductDao();
                 while (!parar.get()) {
                     try {
-                        int n = dao.listarProdutos(null).size();
+                        int n = dao.listarProdutos(DemoDataSeeder.VENDEDOR_PRONTUARIO, null).size();
                         leituras.incrementAndGet();
                         if (n != 30) {
                             falha.compareAndSet(null, "leitor viu " + n + " produtos");

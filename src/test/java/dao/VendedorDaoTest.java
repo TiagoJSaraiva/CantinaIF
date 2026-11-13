@@ -35,6 +35,7 @@ class VendedorDaoTest {
         Vendedor v = dao.autenticar(DemoDataSeeder.VENDEDOR_PRONTUARIO, DemoDataSeeder.SENHA_DEMO);
         assertNotNull(v);
         assertEquals(DemoDataSeeder.VENDEDOR_EMAIL, v.getEmail());
+        assertEquals(DemoDataSeeder.VENDEDOR_NOME, v.getNome());
         assertNull(v.getSenha());
     }
 
@@ -46,8 +47,11 @@ class VendedorDaoTest {
 
     @Test
     void criaNovoVendedorComHash() throws Exception {
-        assertTrue(dao.create("VEND9", "v9@x.test", "outrasenha1"));
-        assertFalse(dao.create("VEND9", "v9b@x.test", "outrasenha1"));
-        assertNotNull(dao.autenticar("VEND9", "outrasenha1"));
+        assertTrue(dao.create("VEND9", "Lanchonete Nove", "v9@x.test", "outrasenha1"));
+        assertFalse(dao.create("VEND9", "Outra", "v9b@x.test", "outrasenha1"));
+        assertFalse(dao.create("VEND10", "Outra", "v9@x.test", "outrasenha1"), "e-mail repetido");
+        Vendedor v = dao.autenticar("VEND9", "outrasenha1");
+        assertNotNull(v);
+        assertEquals("Lanchonete Nove", v.getNome());
     }
 }
