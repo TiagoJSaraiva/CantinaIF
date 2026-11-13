@@ -670,7 +670,12 @@ dialog::backdrop { background: var(--backdrop); }
 .lista-advertencias { list-style: none; margin: 0; padding: 0; display: grid; gap: .6rem; }
 .advertencia { border: 1px solid var(--borda); border-left: 4px solid var(--borda); border-radius: 8px; padding: .6rem .8rem; background: var(--superficie); }
 .advertencia.nao-lida { border-left-color: var(--aviso); background: var(--aviso-bg); }
-.advertencia-meta { font-size: .85rem; color: var(--texto-suave); margin: 0 0 .2rem; }
+.advertencia-meta {
+	display: flex; flex-wrap: wrap; justify-content: space-between; align-items: baseline; gap: .1rem 1rem;
+	font-size: .85rem; color: var(--texto-suave); margin: 0 0 .25rem;
+}
+.advertencia-cantina { min-width: 0; overflow-wrap: anywhere; }
+.advertencia-data { white-space: nowrap; font-variant-numeric: tabular-nums; }
 .advertencia-texto { margin: 0; overflow-wrap: anywhere; white-space: pre-line; }
 .aviso-desativada { margin-top: 1rem; }
 .aviso-desativada h1 { color: var(--erro); }

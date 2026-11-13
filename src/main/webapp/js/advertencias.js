@@ -27,7 +27,10 @@ document.addEventListener('DOMContentLoaded', function() {
 		mostrarEstado(estado, '', 'vazio');
 		itens.forEach(a => {
 			const item = criar('li', { classe: 'advertencia' + (a.lida ? '' : ' nao-lida') }, [
-				criar('p', { classe: 'advertencia-meta', texto: (a.vendedorNome || 'Cantina') + ' · ' + formatarData(a.criadaEm) + (a.lida ? '' : ' · nova') }),
+				criar('p', { classe: 'advertencia-meta' }, [
+					criar('span', { classe: 'advertencia-cantina', texto: a.vendedorNome || 'Cantina' }),
+					criar('time', { classe: 'advertencia-data', texto: formatarData(a.criadaEm), attrs: { datetime: a.criadaEm } })
+				].concat(a.lida ? [] : [criar('span', { classe: 'sr-only', texto: '(nova)' })])),
 				criar('p', { classe: 'advertencia-texto', texto: a.mensagem })
 			]);
 			lista.appendChild(item);
