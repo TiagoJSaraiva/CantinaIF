@@ -9,7 +9,7 @@
 <body>
 <main class="auth" id="conteudo">
     <section class="auth-card" aria-labelledby="titulo">
-        <div class="brand-grande"><img src="img/Logo.png" alt=""><span>CantinaIF</span></div>
+        <div class="brand-grande"><img src="img/marca-if.png" alt="" width="33" height="44"><span>CantinaIF</span></div>
         <h1 id="titulo">Entrar</h1>
 
         <c:if test="${param.restaurada == '1'}">

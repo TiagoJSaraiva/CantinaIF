@@ -7,14 +7,15 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <link rel="icon" type="image/png" href="img/Logo.png">
+    <link rel="icon" type="image/png" sizes="32x32" href="img/favicon-32.png">
+    <link rel="apple-touch-icon" href="img/favicon-180.png">
     <link rel="stylesheet" href="css/app.css">
     <title>Ops - CantinaIF</title>
 </head>
 <body>
 <main class="auth" id="conteudo">
     <section class="auth-card" aria-labelledby="titulo">
-        <div class="brand-grande"><img src="img/Logo.png" alt=""><span>CantinaIF</span></div>
+        <div class="brand-grande"><img src="img/marca-if.png" alt="" width="33" height="44"><span>CantinaIF</span></div>
         <h1 id="titulo">
             <c:choose>
                 <c:when test="${codigo == 404}">Página não encontrada</c:when>
