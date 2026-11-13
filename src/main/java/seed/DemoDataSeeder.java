@@ -379,7 +379,7 @@ public final class DemoDataSeeder {
     // ------------------------------------------------------------------ utilitarios
 
     private static byte[] imagem(String slug) {
-        try (InputStream in = DemoDataSeeder.class.getResourceAsStream("/seed/img/" + slug + ".png")) {
+        try (InputStream in = DemoDataSeeder.class.getResourceAsStream("/seed/img/" + slug + ".jpg")) {
             if (in == null) {
                 throw new IllegalStateException("Imagem de seed ausente: " + slug);
             }

@@ -102,10 +102,9 @@ src/main/java/
   seed/DemoDataSeeder.java    deterministic demo data (boot in H2, manual command elsewhere)
   servlets/                   controllers, JSON endpoints and the filters (see below)
   utils/                      Database (pool and the restore lock), config, BCrypt, login guard and rate limiter, client IP, demo caps, demo reset, image processing
-src/main/resources/seed/img/  demo product illustrations (PNG)
+src/main/resources/seed/img/  demo product photos (JPEG, CC0/public domain; credits in CREDITOS.md)
 src/main/webapp/              JSP pages, WEB-INF/jspf (head/navbar), css/app.css, js/, img/
 src/test/java/                JUnit 5 tests (run on H2)
-tools/GerarImagensSeed.java   generates the demo illustrations (Java2D)
 docs/screenshots/             README screenshots
 Dockerfile, docker-compose.yml, render.yaml, .env.example, .github/workflows/ci.yml
 ```
@@ -227,7 +226,7 @@ In demo mode the application boots populated, so there is always something to sh
 
 Contents:
 - **30 products** (8 savory, 8 snacks, 7 sweets, 7 drinks) with realistic names, descriptions and prices in BRL. Edge cases: 3 sold-out products, 1 product with stock 1, 1 very long name, 1 product without an image.
-- **Original illustrations** for 29 products (PNG, up to 30 KB each, versioned in `src/main/resources/seed/img/`; the seed loads them as they are, without the upload re-encoding). No photos or third-party artwork; brand names were avoided.
+- **Real photos** for 29 products (JPEG 480×360, up to 40 KB each, versioned in `src/main/resources/seed/img/`; the seed loads them as they are, without the upload re-encoding). They come from Wikimedia Commons and Openverse and are all CC0 or public domain, with no watermarks; source, author and license of each one are listed in `src/main/resources/seed/img/CREDITOS.md`. Brand names were avoided.
 - **1 seller and 19 students** (the demo student, 15 with orders and 3 with none). Names are fictitious and e-mails use the `.demo` domain. CPF numbers are generated synthetically (they have valid check digits, but no relation to real people; any coincidence with a real number is accidental). The CPF is stored in a database column only and is not shown on any screen or returned by any API.
 - **50 orders** over the last 30 days in every status, with totals consistent with unit prices; the demo student has a varied history. Stock follows the real rule (an order decrements stock when created, cancelling returns it): the stored stock is the final one and the seeder computes the initial stock as final + units in non-canceled orders, so no open order exceeds the initial stock.
 
@@ -244,12 +243,6 @@ CANTINA_DB_URL=jdbc:mysql://localhost:3306/cantinaif CANTINA_DB_USER=... CANTINA
 ```
 
 Without `--confirmar-apagar` (or `CANTINA_SEED_CONFIRMAR=SIM`) the command only prints a warning and does nothing; without `CANTINA_DB_URL` it refuses to run.
-
-Regenerating the images (JDK 21, from the repository root):
-
-```bash
-java tools/GerarImagensSeed.java src/main/resources/seed/img
-```
 
 ## Tests and CI
 

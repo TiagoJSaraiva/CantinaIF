@@ -114,7 +114,7 @@ class DemoDataSeederTest {
             assertEquals(1, inteiro(c, "SELECT COUNT(*) FROM Produto WHERE estoque = 1"));
             assertEquals(1, inteiro(c, "SELECT COUNT(*) FROM Produto WHERE LENGTH(nome) > 80"));
             assertEquals(1, inteiro(c, "SELECT COUNT(*) FROM Produto WHERE imagem IS NULL"));
-            assertEquals(0, inteiro(c, "SELECT COUNT(*) FROM Produto WHERE LENGTH(imagem) > 30720"));
+            assertEquals(0, inteiro(c, "SELECT COUNT(*) FROM Produto WHERE LENGTH(imagem) > 40960"));
             assertEquals(0, inteiro(c, "SELECT COUNT(*) FROM Produto WHERE estoque < 0 OR preco <= 0"));
             for (String cat : List.of("salgado", "lanche", "doce", "bebida")) {
                 assertTrue(inteiro(c, "SELECT COUNT(*) FROM Produto WHERE categoria = '" + cat + "'") >= 5, cat);

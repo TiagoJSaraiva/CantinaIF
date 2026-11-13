@@ -102,10 +102,9 @@ src/main/java/
   seed/DemoDataSeeder.java    dados de demonstração determinísticos (boot em H2, comando manual nos demais)
   servlets/                   controladores, endpoints JSON e filtros (veja abaixo)
   utils/                      Database (pool e trava da restauração), configuração, BCrypt, proteção de login e limitador de taxa, IP do cliente, tetos da demo, reset da demo, processamento de imagem
-src/main/resources/seed/img/  ilustrações dos produtos de demonstração (PNG)
+src/main/resources/seed/img/  fotos dos produtos de demonstração (JPEG, CC0/domínio público; créditos em CREDITOS.md)
 src/main/webapp/              páginas JSP, WEB-INF/jspf (head/navbar), css/app.css, js/, img/
 src/test/java/                testes JUnit 5 (rodam em H2)
-tools/GerarImagensSeed.java   gera as ilustrações da demo (Java2D)
 docs/screenshots/             capturas de tela do README
 Dockerfile, docker-compose.yml, render.yaml, .env.example, .github/workflows/ci.yml
 ```
@@ -227,7 +226,7 @@ No modo demonstração a aplicação já nasce populada, para sempre haver o que
 
 Conteúdo:
 - **30 produtos** (8 salgados, 8 lanches, 7 doces, 7 bebidas) com nomes, descrições e preços realistas em reais. Casos extremos: 3 produtos esgotados, 1 com estoque 1, 1 com nome muito longo, 1 sem imagem.
-- **Ilustrações originais** para 29 produtos (PNG, até 30 KB cada, versionadas em `src/main/resources/seed/img/`; o seed as carrega como estão, sem a recodificação dos uploads). Sem fotos nem arte de terceiros; marcas registradas foram evitadas.
+- **Fotos reais** para 29 produtos (JPEG 480×360, até 40 KB cada, versionadas em `src/main/resources/seed/img/`; o seed as carrega como estão, sem a recodificação dos uploads). Vêm da Wikimedia Commons e do Openverse, todas com licença CC0 ou em domínio público e sem marca d'água; origem, autor e licença de cada uma estão em `src/main/resources/seed/img/CREDITOS.md`. Marcas registradas foram evitadas.
 - **1 vendedor e 19 alunos** (o aluno de demonstração, 15 com pedidos e 3 sem nenhum). Os nomes são fictícios e os e-mails usam o domínio `.demo`. Os CPFs são gerados sinteticamente (têm dígitos verificadores válidos, mas nenhuma relação com pessoas reais; qualquer coincidência com um número real é acidental). O CPF fica apenas numa coluna do banco e não é exibido em nenhuma tela nem retornado por nenhuma API.
 - **50 pedidos** nos últimos 30 dias, em todos os status, com totais consistentes com os preços unitários; o aluno de demonstração tem um histórico variado. O estoque segue a regra real (o pedido baixa o estoque ao ser criado, cancelar devolve): o estoque gravado é o final e o seeder calcula o inicial como final + unidades dos pedidos não cancelados, então nenhum pedido aberto excede o estoque inicial.
 
@@ -244,12 +243,6 @@ CANTINA_DB_URL=jdbc:mysql://localhost:3306/cantinaif CANTINA_DB_USER=... CANTINA
 ```
 
 Sem `--confirmar-apagar` (ou `CANTINA_SEED_CONFIRMAR=SIM`) o comando só imprime um aviso e não faz nada; sem `CANTINA_DB_URL` ele se recusa a rodar.
-
-Para regenerar as imagens (JDK 21, a partir da raiz do repositório):
-
-```bash
-java tools/GerarImagensSeed.java src/main/resources/seed/img
-```
 
 ## Testes e CI
 
