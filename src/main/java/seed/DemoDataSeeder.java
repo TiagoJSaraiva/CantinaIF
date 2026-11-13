@@ -29,7 +29,8 @@ import utils.Passwords;
  * geram exatamente os mesmos dados. Todas as pessoas, e-mails (dominio .demo) e CPFs sao ficticios.
  *
  * <p>Contas de demonstracao (senha {@value #SENHA_DEMO}):
- * vendedor {@value #VENDEDOR_PRONTUARIO} e comprador {@value #COMPRADOR_PRONTUARIO}.
+ * vendedores {@value #VENDEDOR_PRONTUARIO} (Cantina Central) e {@value #VENDEDOR2_PRONTUARIO} (Lanchonete do Bloco B) e
+ * comprador {@value #COMPRADOR_PRONTUARIO} (vinculado a Cantina Central).
  *
  * <p>Execucao manual contra o banco configurado em CANTINA_DB_URL (APAGA produtos, compradores, vendedores
  * e pedidos existentes e por isso exige confirmacao explicita):
@@ -46,6 +47,23 @@ public final class DemoDataSeeder {
     public static final String VENDEDOR_PRONTUARIO = "VEND001";
     public static final String VENDEDOR_EMAIL = "vendedor@cantinaif.demo";
     public static final String VENDEDOR_NOME = "Cantina Central";
+    /** Segundo vendedor (outra cantina, com os proprios produtos, compradores e pedidos). */
+    public static final String VENDEDOR2_PRONTUARIO = "VEND002";
+    public static final String VENDEDOR2_EMAIL = "lanchonete@cantinaif.demo";
+    public static final String VENDEDOR2_NOME = "Lanchonete do Bloco B";
+
+    /** Compradores com papeis fixos na demonstracao (indices de NOMES + 2 = numero do prontuario CJ300000x). */
+    static final String COMPRADOR_DESATIVADO = "CJ3000015";
+    static final String COMPRADOR_ADVERTIDO = "CJ3000003";
+    static final String COMPRADOR_SEM_VINCULO = "CJ3000019";
+    static final Set<String> COMPRADORES_DO_VENDEDOR2 = Set.of("CJ3000017", "CJ3000018");
+
+    /** Motivos usados nos pedidos que a cantina cancelou. */
+    private static final List<String> MOTIVOS = List.of(
+        "Um dos produtos acabou antes do preparo.",
+        "A cantina precisou fechar mais cedo hoje.",
+        "Pedido não retirado no horário.",
+        "Falta de troco no caixa para o pagamento combinado.");
     public static final String COMPRADOR_PRONTUARIO = "CJ3000001";
     public static final String COMPRADOR_EMAIL = "aluno@cantinaif.demo";
 
@@ -106,6 +124,15 @@ public final class DemoDataSeeder {
         p("achocolatado", "Achocolatado Gelado 200 ml", "Leite com chocolate, servido gelado.", "4.50", 24, "bebida"),
         p("cha-limao", "Chá Gelado de Limão 500 ml", "Chá preto gelado com limão, adoçado.", "5.00", 20, "bebida"));
 
+    /** Produtos da Lanchonete do Bloco B (ids depois dos do CATALOGO). */
+    private static final List<Prod> CATALOGO_B = List.of(
+        p("acai", "Açaí na Tigela 300 ml", "Açaí batido com banana, morango, granola e coco ralado.", "14.00", 12, "doce"),
+        p("salada-frutas", "Salada de Frutas", "Melancia, manga, banana e mirtilo picados na hora.", "8.00", 10, "doce"),
+        p("croissant", "Croissant de Manteiga", "Folhado amanteigado assado no dia.", "7.50", 15, "lanche"),
+        p("brownie", "Brownie de Chocolate", "Brownie úmido com pedaços de chocolate.", "6.50", 20, "doce"),
+        p("pipoca", "Pipoca Salgada", "Pacote de pipoca estourada na hora.", "4.00", 30, "salgado"),
+        p("limonada", "Limonada 400 ml", "Limonada natural com gelo, adoçada na medida.", "6.00", 18, "bebida"));
+
     private static final List<String> NOMES = List.of(
         "Marina Teixeira", "Gabriel Nogueira", "Larissa Menezes", "Pedro Henrique Campos", "Beatriz Albuquerque",
         "Rafael Siqueira", "Camila Ferraz", "Lucas Barreto", "Juliana Matos", "Felipe Andrade", "Isabela Cordeiro",
@@ -123,7 +150,7 @@ public final class DemoDataSeeder {
     /** Calcula hashes e carrega imagens (sem acessar o banco). */
     public static Plano preparar() {
         List<byte[]> imagens = new ArrayList<>();
-        for (Prod prod : CATALOGO) {
+        for (Prod prod : todosOsProdutos()) {
             imagens.add(prod.comImagem() ? imagem(prod.slug()) : null);
         }
         return new Plano(Passwords.hash(SENHA_DEMO), Passwords.hash("senha-demo-nao-publicada"), imagens);
@@ -153,7 +180,7 @@ public final class DemoDataSeeder {
         } finally {
             conn.setAutoCommit(autoCommit);
         }
-        reiniciarIdentidades(conn, r.produtos() + 1, r.pedidos() + 1);
+        reiniciarIdentidades(conn, r.produtos() + 1, r.pedidos() + 1, ADVERTENCIAS + 1);
         return r;
     }
 
@@ -178,6 +205,17 @@ public final class DemoDataSeeder {
         }
     }
 
+    /** CATALOGO (Cantina Central, ids 1..30) seguido do CATALOGO_B (Lanchonete, ids 31..36). */
+    private static List<Prod> todosOsProdutos() {
+        List<Prod> todos = new ArrayList<>(CATALOGO);
+        todos.addAll(CATALOGO_B);
+        return todos;
+    }
+
+    private static String vendedorDoProduto(int id) {
+        return id <= CATALOGO.size() ? VENDEDOR_PRONTUARIO : VENDEDOR2_PRONTUARIO;
+    }
+
     // ------------------------------------------------------------------ limpeza
 
     private static void limparTudo(Connection conn) throws SQLException {
@@ -193,7 +231,8 @@ public final class DemoDataSeeder {
     }
 
     /** Proximos ids gerados pelo banco (apos os ids explicitos do seed). DDL: fora da transacao. */
-    private static void reiniciarIdentidades(Connection conn, int proximoProduto, int proximoPedido) throws SQLException {
+    private static void reiniciarIdentidades(Connection conn, int proximoProduto, int proximoPedido, int proximaAdvertencia)
+            throws SQLException {
         boolean h2 = conn.getMetaData().getDatabaseProductName().toUpperCase().contains("H2");
         boolean autoCommit = conn.getAutoCommit();
         conn.setAutoCommit(true);
@@ -202,6 +241,8 @@ public final class DemoDataSeeder {
                                 : "ALTER TABLE Produto AUTO_INCREMENT = " + proximoProduto);
             st.executeUpdate(h2 ? "ALTER TABLE Pedido ALTER COLUMN id RESTART WITH " + proximoPedido
                                 : "ALTER TABLE Pedido AUTO_INCREMENT = " + proximoPedido);
+            st.executeUpdate(h2 ? "ALTER TABLE Advertencia ALTER COLUMN id RESTART WITH " + proximaAdvertencia
+                                : "ALTER TABLE Advertencia AUTO_INCREMENT = " + proximaAdvertencia);
         } finally {
             conn.setAutoCommit(autoCommit);
         }
@@ -219,16 +260,23 @@ public final class DemoDataSeeder {
             ps.setString(2, VENDEDOR_EMAIL);
             ps.setString(3, hashDemo);
             ps.setString(4, VENDEDOR_NOME);
-            ps.executeUpdate();
+            ps.addBatch();
+            ps.setString(1, VENDEDOR2_PRONTUARIO);
+            ps.setString(2, VENDEDOR2_EMAIL);
+            ps.setString(3, hashDemo);
+            ps.setString(4, VENDEDOR2_NOME);
+            ps.addBatch();
+            ps.executeBatch();
         }
 
-        // produtos (ids 1..n na ordem do catalogo)
+        // produtos (ids 1..n na ordem dos catalogos: Cantina Central e depois Lanchonete)
+        List<Prod> todos = todosOsProdutos();
         List<BigDecimal> precos = new ArrayList<>();
         try (PreparedStatement ps = conn.prepareStatement(
                 "INSERT INTO Produto (id, nome, descricao, preco, estoque, categoria, imagem, vendedor_prontuario) "
                 + "VALUES (?, ?, ?, ?, ?, ?, ?, ?)")) {
             int idProduto = 0;
-            for (Prod prod : CATALOGO) {
+            for (Prod prod : todos) {
                 idProduto++;
                 BigDecimal preco = new BigDecimal(prod.preco());
                 precos.add(preco);
@@ -244,7 +292,7 @@ public final class DemoDataSeeder {
                 } else {
                     ps.setNull(7, java.sql.Types.BLOB);
                 }
-                ps.setString(8, VENDEDOR_PRONTUARIO);
+                ps.setString(8, vendedorDoProduto(idProduto));
                 ps.addBatch();
             }
             ps.executeBatch();
@@ -265,17 +313,23 @@ public final class DemoDataSeeder {
             }
             ps.executeBatch();
         }
+        try (PreparedStatement ps = conn.prepareStatement("UPDATE Comprador SET ativo = FALSE WHERE prontuario = ?")) {
+            ps.setString(1, COMPRADOR_DESATIVADO);
+            ps.executeUpdate();
+        }
 
         // consumo liquido de estoque (pedidos nao cancelados) por produto
         Map<Integer, Integer> consumo = new LinkedHashMap<>();
         int pedidos = inserirPedidos(conn, r, agora, prontuarios, precos, consumo);
+        pedidos += inserirPedidosDoVendedor2(conn, agora, pedidos, precos, consumo);
+        inserirAdvertencias(conn, agora);
         // o estoque gravado e o estoque FINAL; o inicial = final + consumo (a regra real: o pedido baixa ao ser
         // criado e cancelar devolve), entao nenhum pedido aberto pode exceder o estoque inicial
         Map<Integer, Integer> inicial = new LinkedHashMap<>();
-        for (int i = 0; i < CATALOGO.size(); i++) {
-            inicial.put(i + 1, CATALOGO.get(i).estoque() + consumo.getOrDefault(i + 1, 0));
+        for (int i = 0; i < todos.size(); i++) {
+            inicial.put(i + 1, todos.get(i).estoque() + consumo.getOrDefault(i + 1, 0));
         }
-        return new Resultado(CATALOGO.size(), prontuarios.size(), pedidos, inicial);
+        return new Resultado(todos.size(), prontuarios.size(), pedidos, inicial);
     }
 
     private static void adicionarComprador(PreparedStatement ps, String prontuario, String email, String hash,
@@ -285,20 +339,27 @@ public final class DemoDataSeeder {
         ps.setString(3, hash);
         ps.setString(4, nome);
         ps.setString(5, cpf);
-        ps.setString(6, VENDEDOR_PRONTUARIO);
+        String vendedor = prontuario.equals(COMPRADOR_SEM_VINCULO) ? null
+                : COMPRADORES_DO_VENDEDOR2.contains(prontuario) ? VENDEDOR2_PRONTUARIO : VENDEDOR_PRONTUARIO;
+        if (vendedor == null) {
+            ps.setNull(6, java.sql.Types.VARCHAR);
+        } else {
+            ps.setString(6, vendedor);
+        }
         ps.addBatch();
     }
 
     private static int inserirPedidos(Connection conn, Random r, LocalDateTime agora, List<String> prontuarios,
             List<BigDecimal> precos, Map<Integer, Integer> consumo) throws SQLException {
         try (PreparedStatement psPedido = conn.prepareStatement(
-                "INSERT INTO Pedido (id, comprador_prontuario, status, criado_em, total, vendedor_prontuario, cancelado_por) "
-                + "VALUES (?, ?, ?, ?, ?, ?, ?)");
+                "INSERT INTO Pedido (id, comprador_prontuario, status, criado_em, total, vendedor_prontuario, cancelado_por, "
+                + "motivo_cancelamento) VALUES (?, ?, ?, ?, ?, ?, ?, ?)");
              PreparedStatement psItem = conn.prepareStatement(
                 "INSERT INTO Pedido_Produto (pedido_id, produto_id, quantidade, preco_unitario) VALUES (?, ?, ?, ?)")) {
 
             int janelaMinutos = DIAS * 24 * 60 - 180;
             int[] contadorOutros = { 0 };
+            int cancelados = 0;
             for (int i = 0; i < TOTAL_PEDIDOS; i++) {
                 // do mais antigo (i = 0) ao mais recente; mais pedidos recentes que antigos
                 double fracao = (TOTAL_PEDIDOS - 1 - i) / (double) (TOTAL_PEDIDOS - 1);
@@ -329,7 +390,18 @@ public final class DemoDataSeeder {
                 psPedido.setTimestamp(4, Timestamp.valueOf(criadoEm));
                 psPedido.setBigDecimal(5, total);
                 psPedido.setString(6, VENDEDOR_PRONTUARIO);
-                psPedido.setString(7, status.equals("CANCELADO") ? "COMPRADOR" : null);
+                // cancelamentos alternam entre o aluno (sem motivo) e a cantina (com motivo)
+                String canceladoPor = null;
+                String motivo = null;
+                if (status.equals("CANCELADO")) {
+                    canceladoPor = cancelados % 2 == 0 ? "COMPRADOR" : "VENDEDOR";
+                    if (canceladoPor.equals("VENDEDOR")) {
+                        motivo = MOTIVOS.get((cancelados / 2) % MOTIVOS.size());
+                    }
+                    cancelados++;
+                }
+                psPedido.setString(7, canceladoPor);
+                psPedido.setString(8, motivo);
                 psPedido.executeUpdate();
                 for (int[] linha : linhas) {
                     if (!status.equals("CANCELADO")) {
@@ -345,6 +417,91 @@ public final class DemoDataSeeder {
             psItem.executeBatch();
         }
         return TOTAL_PEDIDOS;
+    }
+
+    /**
+     * Tres pedidos da Lanchonete do Bloco B (ids depois dos da Cantina Central), com itens fixos: um entregue, um
+     * cancelado pela lanchonete com motivo e um pendente.
+     */
+    private static int inserirPedidosDoVendedor2(Connection conn, LocalDateTime agora, int ultimoId, List<BigDecimal> precos,
+            Map<Integer, Integer> consumo) throws SQLException {
+        int base = CATALOGO.size(); // id do produto = base + posicao (1..6) no CATALOGO_B
+        Object[][] pedidos = {
+            // comprador, status, minutos atras, cancelado_por, motivo, {produto, quantidade}...
+            { "CJ3000017", "ENTREGUE", 2 * 24 * 60, null, null, new int[][] { { base + 1, 1 }, { base + 6, 1 } } },
+            { "CJ3000018", "CANCELADO", 27 * 60, "VENDEDOR", "Acabou o açaí do dia; tente amanhã cedo.",
+                new int[][] { { base + 1, 2 } } },
+            { "CJ3000017", "PENDENTE", 25, null, null, new int[][] { { base + 3, 1 }, { base + 4, 2 } } } };
+        try (PreparedStatement psPedido = conn.prepareStatement(
+                "INSERT INTO Pedido (id, comprador_prontuario, status, criado_em, total, vendedor_prontuario, cancelado_por, "
+                + "motivo_cancelamento) VALUES (?, ?, ?, ?, ?, ?, ?, ?)");
+             PreparedStatement psItem = conn.prepareStatement(
+                "INSERT INTO Pedido_Produto (pedido_id, produto_id, quantidade, preco_unitario) VALUES (?, ?, ?, ?)")) {
+            int id = ultimoId;
+            for (Object[] p : pedidos) {
+                id++;
+                int[][] itens = (int[][]) p[5];
+                BigDecimal total = BigDecimal.ZERO;
+                for (int[] item : itens) {
+                    total = total.add(precos.get(item[0] - 1).multiply(BigDecimal.valueOf(item[1])));
+                }
+                psPedido.setInt(1, id);
+                psPedido.setString(2, (String) p[0]);
+                psPedido.setString(3, (String) p[1]);
+                psPedido.setTimestamp(4, Timestamp.valueOf(agora.minusMinutes((Integer) p[2])));
+                psPedido.setBigDecimal(5, total);
+                psPedido.setString(6, VENDEDOR2_PRONTUARIO);
+                psPedido.setString(7, (String) p[3]);
+                psPedido.setString(8, (String) p[4]);
+                psPedido.executeUpdate();
+                for (int[] item : itens) {
+                    if (!"CANCELADO".equals(p[1])) {
+                        consumo.merge(item[0], item[1], Integer::sum);
+                    }
+                    psItem.setInt(1, id);
+                    psItem.setInt(2, item[0]);
+                    psItem.setInt(3, item[1]);
+                    psItem.setBigDecimal(4, precos.get(item[0] - 1));
+                    psItem.addBatch();
+                }
+            }
+            psItem.executeBatch();
+            return pedidos.length;
+        }
+    }
+
+    /** Quantidade de advertencias semeadas. */
+    static final int ADVERTENCIAS = 4;
+
+    /** Advertencias de exemplo: do comprador desativado, de um que cancela muito e um lembrete ao aluno de demonstracao. */
+    private static void inserirAdvertencias(Connection conn, LocalDateTime agora) throws SQLException {
+        Object[][] advertencias = {
+            { COMPRADOR_DESATIVADO, "Você não retirou pedidos que ficaram prontos. Retire no horário ou sua conta poderá "
+                + "ser desativada.", 5 * 24 * 60, 4 * 24 * 60 },
+            { COMPRADOR_DESATIVADO, "Conta desativada após novos pedidos não retirados. Procure a cantina para regularizar.",
+                24 * 60, null },
+            { COMPRADOR_ADVERTIDO, "Cancelamentos estão ocorrendo com frequência. Se continuar, você poderá ser multado.",
+                2 * 24 * 60, null },
+            { COMPRADOR_PRONTUARIO, "Lembrete: retire seus pedidos no balcão assim que ficarem prontos, para não atrasar a fila.",
+                3 * 60, null } };
+        try (PreparedStatement ps = conn.prepareStatement("INSERT INTO Advertencia (id, comprador_prontuario, "
+                + "vendedor_prontuario, mensagem, criada_em, lida_em) VALUES (?, ?, ?, ?, ?, ?)")) {
+            int id = 0;
+            for (Object[] a : advertencias) {
+                ps.setInt(1, ++id);
+                ps.setString(2, (String) a[0]);
+                ps.setString(3, VENDEDOR_PRONTUARIO);
+                ps.setString(4, (String) a[1]);
+                ps.setTimestamp(5, Timestamp.valueOf(agora.minusMinutes((Integer) a[2])));
+                if (a[3] == null) {
+                    ps.setNull(6, java.sql.Types.TIMESTAMP);
+                } else {
+                    ps.setTimestamp(6, Timestamp.valueOf(agora.minusMinutes((Integer) a[3])));
+                }
+                ps.addBatch();
+            }
+            ps.executeBatch();
+        }
     }
 
     /** Os 6 mais recentes cobrem os status em andamento; os demais sao entregues, com alguns cancelados. */
@@ -475,7 +632,7 @@ public final class DemoDataSeeder {
             Resultado r = run(conn, LocalDateTime.now());
             System.out.println("Dados de demonstracao gravados: " + r.produtos() + " produtos, "
                     + r.compradores() + " compradores, " + r.pedidos() + " pedidos.");
-            System.out.println("Vendedor: " + VENDEDOR_PRONTUARIO + " / " + SENHA_DEMO
+            System.out.println("Vendedores: " + VENDEDOR_PRONTUARIO + " e " + VENDEDOR2_PRONTUARIO + " / " + SENHA_DEMO
                     + " | Comprador: " + COMPRADOR_PRONTUARIO + " / " + SENHA_DEMO);
         } finally {
             Database.shutdown();

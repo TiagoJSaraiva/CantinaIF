@@ -24,6 +24,7 @@ public class AppLifecycleListener implements ServletContextListener {
         if (Database.isDemoMode()) {
             ctx.setAttribute("demoMode", Boolean.TRUE);
             ctx.setAttribute("demoVendedor", DemoDataSeeder.VENDEDOR_PRONTUARIO);
+            ctx.setAttribute("demoVendedor2", DemoDataSeeder.VENDEDOR2_PRONTUARIO);
             ctx.setAttribute("demoComprador", DemoDataSeeder.COMPRADOR_PRONTUARIO);
             ctx.setAttribute("demoSenha", DemoDataSeeder.SENHA_DEMO);
             double horas = DemoReset.horasConfiguradas();

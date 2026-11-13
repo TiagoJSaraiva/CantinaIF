@@ -47,7 +47,8 @@ class DemoDataSeederTest {
             "SELECT prontuario, email, nome, cpf, vendedor_prontuario, ativo FROM Comprador ORDER BY prontuario",
             "SELECT prontuario, email, nome FROM Vendedor ORDER BY prontuario",
             "SELECT id, comprador_prontuario, vendedor_prontuario, status, criado_em, total, cancelado_por, motivo_cancelamento FROM Pedido ORDER BY id",
-            "SELECT pedido_id, produto_id, quantidade, preco_unitario FROM Pedido_Produto ORDER BY pedido_id, produto_id" };
+            "SELECT pedido_id, produto_id, quantidade, preco_unitario FROM Pedido_Produto ORDER BY pedido_id, produto_id",
+            "SELECT id, comprador_prontuario, vendedor_prontuario, mensagem, criada_em, lida_em FROM Advertencia ORDER BY id" };
         try (Statement st = c.createStatement()) {
             for (String q : consultas) {
                 try (ResultSet rs = st.executeQuery(q)) {
@@ -105,10 +106,12 @@ class DemoDataSeederTest {
     void quantidadesEPerfisDoConjunto() throws Exception {
         try (Connection c = Database.getConnection()) {
             DemoDataSeeder.Resultado r = DemoDataSeeder.run(c, AGORA);
-            assertTrue(r.produtos() >= 28 && r.produtos() <= 32, "produtos: " + r.produtos());
+            assertEquals(36, r.produtos());
             assertTrue(r.compradores() >= 15 && r.compradores() <= 20, "compradores: " + r.compradores());
-            assertTrue(r.pedidos() >= 40 && r.pedidos() <= 60, "pedidos: " + r.pedidos());
-            assertEquals(1, inteiro(c, "SELECT COUNT(*) FROM Vendedor"));
+            assertEquals(53, r.pedidos());
+            assertEquals(2, inteiro(c, "SELECT COUNT(*) FROM Vendedor"));
+            assertEquals(30, inteiro(c, "SELECT COUNT(*) FROM Produto WHERE vendedor_prontuario = 'VEND001'"));
+            assertEquals(6, inteiro(c, "SELECT COUNT(*) FROM Produto WHERE vendedor_prontuario = 'VEND002'"));
 
             assertEquals(3, inteiro(c, "SELECT COUNT(*) FROM Produto WHERE estoque = 0"));
             assertEquals(1, inteiro(c, "SELECT COUNT(*) FROM Produto WHERE estoque = 1"));
@@ -120,7 +123,7 @@ class DemoDataSeederTest {
                 assertTrue(inteiro(c, "SELECT COUNT(*) FROM Produto WHERE categoria = '" + cat + "'") >= 5, cat);
             }
 
-            assertEquals(3, inteiro(c, "SELECT COUNT(*) FROM Comprador WHERE prontuario NOT IN "
+            assertEquals(1, inteiro(c, "SELECT COUNT(*) FROM Comprador WHERE prontuario NOT IN "
                     + "(SELECT comprador_prontuario FROM Pedido)"));
             assertEquals(0, inteiro(c, "SELECT COUNT(*) FROM Comprador WHERE email NOT LIKE '%.demo'"));
         }
@@ -185,9 +188,9 @@ class DemoDataSeederTest {
         Produto novo = new Produto("Novo", "d", new BigDecimal("1.00"), 5, Produto.Categoria.DOCE, null);
         novo.setVendedorProntuario(DemoDataSeeder.VENDEDOR_PRONTUARIO);
         produtos.create(novo);
-        assertEquals(31, novo.getId());
+        assertEquals(37, novo.getId());
         var pedido = new PedidoDAO().criarPedido(DemoDataSeeder.COMPRADOR_PRONTUARIO, List.of(new ItemCarrinho(novo, 2)));
-        assertEquals(51, pedido.getId());
+        assertEquals(54, pedido.getId());
         assertEquals(3, produtos.buscarResumo(novo.getId()).getEstoque());
     }
 
@@ -301,5 +304,42 @@ class DemoDataSeederTest {
             assertEquals(0, inteiro(c, "SELECT COUNT(*) FROM Pedido p WHERE p.total <> "
                     + "(SELECT SUM(pp.quantidade * pp.preco_unitario) FROM Pedido_Produto pp WHERE pp.pedido_id = p.id)"));
         }
+    }
+
+    @Test
+    void doisVendedoresComVinculosSituacoesAdvertenciasECancelamentosVariados() throws Exception {
+        try (Connection c = Database.getConnection()) {
+            DemoDataSeeder.run(c, AGORA);
+            // cada pedido so tem produtos do proprio vendedor
+            assertEquals(0, inteiro(c, "SELECT COUNT(*) FROM Pedido p JOIN Pedido_Produto pp ON pp.pedido_id = p.id "
+                    + "JOIN Produto pr ON pr.id = pp.produto_id WHERE pr.vendedor_prontuario <> p.vendedor_prontuario"));
+            assertEquals(3, inteiro(c, "SELECT COUNT(*) FROM Pedido WHERE vendedor_prontuario = 'VEND002'"));
+            // vinculos: o aluno demo na Cantina Central, 2 na Lanchonete, 1 sem vinculo
+            assertEquals(1, inteiro(c, "SELECT COUNT(*) FROM Comprador WHERE prontuario = '"
+                    + DemoDataSeeder.COMPRADOR_PRONTUARIO + "' AND vendedor_prontuario = 'VEND001'"));
+            assertEquals(2, inteiro(c, "SELECT COUNT(*) FROM Comprador WHERE vendedor_prontuario = 'VEND002'"));
+            assertEquals(1, inteiro(c, "SELECT COUNT(*) FROM Comprador WHERE vendedor_prontuario IS NULL"));
+            // o comprador de cada pedido esta vinculado ao vendedor do pedido
+            assertEquals(0, inteiro(c, "SELECT COUNT(*) FROM Pedido p JOIN Comprador cp ON cp.prontuario = p.comprador_prontuario "
+                    + "WHERE cp.vendedor_prontuario IS NULL OR cp.vendedor_prontuario <> p.vendedor_prontuario"));
+            assertEquals(1, inteiro(c, "SELECT COUNT(*) FROM Comprador WHERE ativo = FALSE"));
+            // cancelamentos dos dois lados; o da cantina sempre com motivo, o do aluno nunca
+            assertTrue(inteiro(c, "SELECT COUNT(*) FROM Pedido WHERE cancelado_por = 'COMPRADOR'") > 0);
+            assertTrue(inteiro(c, "SELECT COUNT(*) FROM Pedido WHERE cancelado_por = 'VENDEDOR'") > 0);
+            assertEquals(0, inteiro(c, "SELECT COUNT(*) FROM Pedido WHERE (status = 'CANCELADO') <> (cancelado_por IS NOT NULL)"));
+            assertEquals(0, inteiro(c, "SELECT COUNT(*) FROM Pedido WHERE cancelado_por = 'VENDEDOR' AND motivo_cancelamento IS NULL"));
+            assertEquals(0, inteiro(c, "SELECT COUNT(*) FROM Pedido WHERE cancelado_por = 'COMPRADOR' AND motivo_cancelamento IS NOT NULL"));
+            // o aluno demo ve um cancelamento feito pela cantina e tem uma advertencia nao lida
+            assertTrue(inteiro(c, "SELECT COUNT(*) FROM Pedido WHERE cancelado_por = 'VENDEDOR' AND comprador_prontuario = '"
+                    + DemoDataSeeder.COMPRADOR_PRONTUARIO + "'") >= 1);
+            assertEquals(1, inteiro(c, "SELECT COUNT(*) FROM Advertencia WHERE lida_em IS NULL AND comprador_prontuario = '"
+                    + DemoDataSeeder.COMPRADOR_PRONTUARIO + "'"));
+            assertEquals(DemoDataSeeder.ADVERTENCIAS, inteiro(c, "SELECT COUNT(*) FROM Advertencia"));
+        }
+        // o segundo vendedor autentica e a proxima advertencia nao colide com as semeadas
+        assertEquals(DemoDataSeeder.VENDEDOR2_NOME,
+                new dao.VendedorDao().autenticar(DemoDataSeeder.VENDEDOR2_PRONTUARIO, DemoDataSeeder.SENHA_DEMO).getNome());
+        assertEquals(DemoDataSeeder.ADVERTENCIAS + 1,
+                new dao.AdvertenciaDao().criar("CJ3000002", "VEND001", "Teste de id", AGORA));
     }
 }

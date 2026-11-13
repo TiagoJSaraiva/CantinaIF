@@ -47,12 +47,18 @@
                         <button type="button" class="btn btn-secundario btn-pequeno js-demo"
                                 data-prontuario="<c:out value='${applicationScope.demoComprador}'/>"
                                 data-senha="<c:out value='${applicationScope.demoSenha}'/>">Usar esta conta</button></li>
-                    <li><span>Vendedor: <code><c:out value="${applicationScope.demoVendedor}"/></code></span>
+                    <li><span>Vendedor (Cantina Central): <code><c:out value="${applicationScope.demoVendedor}"/></code></span>
                         <button type="button" class="btn btn-secundario btn-pequeno js-demo"
                                 data-prontuario="<c:out value='${applicationScope.demoVendedor}'/>"
                                 data-senha="<c:out value='${applicationScope.demoSenha}'/>">Usar esta conta</button></li>
+                    <li><span>Vendedor (Lanchonete do Bloco B): <code><c:out value="${applicationScope.demoVendedor2}"/></code></span>
+                        <button type="button" class="btn btn-secundario btn-pequeno js-demo"
+                                data-prontuario="<c:out value='${applicationScope.demoVendedor2}'/>"
+                                data-senha="<c:out value='${applicationScope.demoSenha}'/>">Usar esta conta</button></li>
                 </ul>
-                <p class="dica">Senha das duas contas: <code><c:out value="${applicationScope.demoSenha}"/></code></p>
+                <p class="dica">Senha das três contas: <code><c:out value="${applicationScope.demoSenha}"/></code>.
+                    O aluno está vinculado à Cantina Central; para testar outro vínculo, crie uma conta e use um código
+                    gerado em Compradores.</p>
             </section>
         </c:if>
 
