@@ -184,3 +184,74 @@ document.addEventListener('DOMContentLoaded', function() {
 		});
 	});
 });
+
+// ---------- card de pedido (Meus pedidos e painel do vendedor) ----------
+// Estrutura fixa: topo (numero + status), meta, itens numa area com rolagem propria e rodape sempre no fim do card
+// (total, avisos, etapas e acoes). A lista usa linhas de altura igual, entao todos os cards ficam do mesmo tamanho.
+const ETAPAS_PEDIDO = [['PENDENTE', 'Pendente'], ['EM_PREPARO', 'Em preparo'], ['PRONTO', 'Pronto'], ['ENTREGUE', 'Entregue']];
+
+// opcoes: { meta: texto, avisos: [elementos], acoes: [botoes], destaque: bool }
+function cartaoPedido(p, opcoes = {}) {
+	const lista = criar('ul', { classe: 'pedido-itens' });
+	p.itens.forEach(i => {
+		const preco = [criar('span', { classe: 'item-subtotal', texto: formatarPreco(i.subtotal) })];
+		if (i.quantidade > 1) preco.push(criar('span', { classe: 'item-unitario', texto: formatarPreco(i.precoUnitario) + ' cada' }));
+		lista.appendChild(criar('li', { classe: 'pedido-item' }, [
+			criar('span', { classe: 'item-nome', texto: i.quantidade + ' × ' + i.nome }),
+			criar('span', { classe: 'item-preco' }, preco)
+		]));
+	});
+	const qtdLinhas = p.itens.length;
+	const areaItens = criar('section', { classe: 'pedido-itens-area', attrs: { 'aria-label': 'Itens do pedido #' + p.id } }, [
+		criar('div', { classe: 'pedido-itens-cab' }, [
+			criar('span', { texto: 'Itens do pedido' }),
+			criar('span', { classe: 'pedido-itens-qtd', texto: qtdLinhas + (qtdLinhas === 1 ? ' item' : ' itens') })
+		]),
+		lista
+	]);
+
+	const rodape = criar('div', { classe: 'pedido-rodape' }, [
+		criar('div', { classe: 'pedido-total-linha' }, [
+			criar('span', { texto: 'Total' }),
+			criar('strong', { classe: 'pedido-total-valor', texto: formatarPreco(p.total) })
+		])
+	]);
+	(opcoes.avisos || []).forEach(a => rodape.appendChild(a));
+	if (p.status !== 'CANCELADO') {
+		const atual = ETAPAS_PEDIDO.findIndex(e => e[0] === p.status);
+		const passos = criar('ol', { classe: 'passos', attrs: { 'aria-label': 'Andamento do pedido' } });
+		ETAPAS_PEDIDO.forEach((e, idx) => passos.appendChild(criar('li', {
+			classe: idx <= atual ? 'feito' : '', texto: e[1],
+			attrs: idx === atual ? { 'aria-current': 'step' } : {}
+		})));
+		rodape.appendChild(passos);
+	}
+	if (opcoes.acoes && opcoes.acoes.length) rodape.appendChild(criar('div', { classe: 'pedido-acoes' }, opcoes.acoes));
+
+	return criar('article', { classe: 'pedido-card' + (opcoes.destaque ? ' destaque' : '') }, [
+		criar('div', { classe: 'pedido-topo' }, [
+			criar('h2', { texto: 'Pedido #' + p.id }),
+			criar('span', { classe: 'status status-' + p.status, texto: p.statusRotulo })
+		]),
+		criar('p', { classe: 'pedido-meta', texto: opcoes.meta || formatarData(p.criadoEm), attrs: { title: opcoes.meta || '' } }),
+		areaItens,
+		rodape
+	]);
+}
+
+// Depois de os cards entrarem na pagina: listas de itens que transbordam ganham foco por teclado (para rolar).
+function ajustarRolagemDosItens(container) {
+	requestAnimationFrame(() => container.querySelectorAll('.pedido-itens').forEach(ul => {
+		if (ul.scrollHeight > ul.clientHeight + 1) {
+			ul.setAttribute('tabindex', '0');
+			ul.classList.add('rolavel');
+			// esmaecimento embaixo enquanto houver mais itens; some ao chegar ao fim
+			const noFim = () => ul.classList.toggle('no-fim', ul.scrollTop + ul.clientHeight >= ul.scrollHeight - 2);
+			ul.addEventListener('scroll', noFim, { passive: true });
+			noFim();
+		} else {
+			ul.removeAttribute('tabindex');
+			ul.classList.remove('rolavel');
+		}
+	}));
+}

@@ -4,7 +4,6 @@ document.addEventListener('DOMContentLoaded', function() {
 	const lista = document.getElementById('lista');
 	const mensagem = document.getElementById('mensagem');
 	const novo = document.getElementById('conteudo').dataset.novo;
-	const ETAPAS = [['PENDENTE', 'Pendente'], ['EM_PREPARO', 'Em preparo'], ['PRONTO', 'Pronto'], ['ENTREGUE', 'Entregue']];
 
 	function carregar() {
 		mostrarEstado(estado, 'Carregando pedidos...', 'carregando');
@@ -32,52 +31,34 @@ document.addEventListener('DOMContentLoaded', function() {
 		mostrarEstado(estado, '', 'vazio');
 		pedidos.forEach(p => lista.appendChild(criarCartao(p)));
 		lista.hidden = false;
+		ajustarRolagemDosItens(lista);
 	}
 
 	function criarCartao(p) {
-		const itens = criar('ul', { classe: 'pedido-itens' });
-		p.itens.forEach(i => itens.appendChild(criar('li', {
-			texto: i.quantidade + ' × ' + i.nome + ' — ' + formatarPreco(i.subtotal)
-		})));
-
-		const cartao = criar('article', { classe: 'pedido-card' + (String(p.id) === novo ? ' destaque' : '') }, [
-			criar('div', { classe: 'pedido-topo' }, [
-				criar('h2', { texto: 'Pedido #' + p.id }),
-				criar('span', { classe: 'status status-' + p.status, texto: p.statusRotulo })
-			]),
-			criar('p', { classe: 'pedido-meta', texto: formatarData(p.criadoEm) + (p.vendedorNome ? ' · ' + p.vendedorNome : '') }),
-			itens,
-			criar('p', { classe: 'pedido-total', texto: 'Total: ' + formatarPreco(p.total) })
-		]);
-
-		if (p.status !== 'CANCELADO') {
-			const atual = ETAPAS.findIndex(e => e[0] === p.status);
-			const passos = criar('ol', { classe: 'passos', attrs: { 'aria-label': 'Andamento do pedido' } });
-			ETAPAS.forEach((e, idx) => passos.appendChild(criar('li', {
-				classe: idx <= atual ? 'feito' : '', texto: e[1],
-				attrs: idx === atual ? { 'aria-current': 'step' } : {}
-			})));
-			cartao.appendChild(passos);
+		const avisos = [];
+		if (p.status === 'PRONTO') {
+			avisos.push(criar('p', { classe: 'alerta alerta-ok pedido-aviso', texto: 'Seu pedido está pronto! Retire no balcão.' }));
 		}
-		if (p.status === 'CANCELADO') {
-			if (p.canceladoPor === 'VENDEDOR') {
-				cartao.appendChild(criar('div', { classe: 'alerta alerta-erro pedido-motivo' }, [
-					criar('p', { texto: 'Cancelado pela cantina. Motivo:' }),
-					criar('p', { classe: 'motivo-texto', texto: p.motivoCancelamento || '(não informado)' })
-				]));
-			} else if (p.canceladoPor === 'COMPRADOR') {
-				cartao.appendChild(criar('p', { classe: 'pedido-cancelamento', texto: 'Você cancelou este pedido.' }));
-			}
+		if (p.status === 'CANCELADO' && p.canceladoPor === 'VENDEDOR') {
+			avisos.push(criar('div', { classe: 'alerta alerta-erro pedido-aviso pedido-motivo' }, [
+				criar('p', { texto: 'Cancelado pela cantina. Motivo:' }),
+				criar('p', { classe: 'motivo-texto', texto: p.motivoCancelamento || '(não informado)' })
+			]));
+		} else if (p.status === 'CANCELADO' && p.canceladoPor === 'COMPRADOR') {
+			avisos.push(criar('p', { classe: 'pedido-cancelamento', texto: 'Você cancelou este pedido.' }));
 		}
-				if (p.status === 'PRONTO') {
-			cartao.appendChild(criar('p', { classe: 'alerta alerta-ok', texto: 'Seu pedido está pronto! Retire no balcão.' }));
-		}
+		const acoes = [];
 		if (p.podeCancelar) {
 			const botao = criar('button', { classe: 'btn btn-perigo btn-pequeno', texto: 'Cancelar pedido', attrs: { type: 'button' } });
 			botao.addEventListener('click', () => cancelar(p, botao));
-			cartao.appendChild(criar('div', { classe: 'pedido-acoes' }, [botao]));
+			acoes.push(botao);
 		}
-		return cartao;
+		return cartaoPedido(p, {
+			meta: formatarData(p.criadoEm) + (p.vendedorNome ? ' · ' + p.vendedorNome : ''),
+			avisos: avisos,
+			acoes: acoes,
+			destaque: String(p.id) === novo
+		});
 	}
 
 	function cancelar(p, botao) {

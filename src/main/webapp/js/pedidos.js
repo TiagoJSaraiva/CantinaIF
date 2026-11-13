@@ -18,9 +18,9 @@ document.addEventListener('DOMContentLoaded', function() {
 	];
 	const ACAO = {
 		EM_PREPARO: { texto: 'Iniciar preparo', classe: 'btn btn-pequeno' },
-		PRONTO: { texto: 'Marcar como pronto', classe: 'btn btn-pequeno' },
-		ENTREGUE: { texto: 'Marcar como entregue', classe: 'btn btn-pequeno' },
-		CANCELADO: { texto: 'Cancelar pedido', classe: 'btn btn-perigo btn-pequeno' }
+		PRONTO: { texto: 'Marcar pronto', classe: 'btn btn-pequeno' },
+		ENTREGUE: { texto: 'Marcar entregue', classe: 'btn btn-pequeno' },
+		CANCELADO: { texto: 'Cancelar', classe: 'btn btn-perigo btn-pequeno' }
 	};
 
 	let pedidos = [];
@@ -72,42 +72,31 @@ document.addEventListener('DOMContentLoaded', function() {
 		mostrarEstado(estado, '', 'vazio');
 		visiveis.forEach(p => lista.appendChild(criarCartao(p)));
 		lista.hidden = false;
+		ajustarRolagemDosItens(lista);
 	}
 
 	function criarCartao(p) {
-		const itens = criar('ul', { classe: 'pedido-itens' });
-		p.itens.forEach(i => itens.appendChild(criar('li', {
-			texto: i.quantidade + ' × ' + i.nome + ' (' + formatarPreco(i.precoUnitario) + ')'
-		})));
 		const c = p.comprador || {};
-		const cartao = criar('article', { classe: 'pedido-card' }, [
-			criar('div', { classe: 'pedido-topo' }, [
-				criar('h2', { texto: 'Pedido #' + p.id }),
-				criar('span', { classe: 'status status-' + p.status, texto: p.statusRotulo })
-			]),
-			criar('p', { classe: 'pedido-meta', texto: formatarData(p.criadoEm) + ' · ' + (c.nome || '') + ' (' + (c.prontuario || '') + ')' }),
-			itens,
-			criar('p', { classe: 'pedido-total', texto: 'Total: ' + formatarPreco(p.total) })
-		]);
+		const avisos = [];
 		if (p.status === 'CANCELADO') {
-			cartao.appendChild(criar('p', {
-				classe: 'pedido-cancelamento',
-				texto: p.canceladoPor === 'VENDEDOR'
-					? 'Cancelado por você: ' + (p.motivoCancelamento || '')
-					: 'Cancelado pelo aluno.'
-			}));
+			avisos.push(p.canceladoPor === 'VENDEDOR'
+				? criar('div', { classe: 'alerta alerta-erro pedido-aviso pedido-motivo' }, [
+					criar('p', { texto: 'Cancelado por você. Motivo:' }),
+					criar('p', { classe: 'motivo-texto', texto: p.motivoCancelamento || '(não informado)' })
+				])
+				: criar('p', { classe: 'pedido-cancelamento', texto: 'Cancelado pelo aluno.' }));
 		}
-		if (p.proximos.length) {
-			const acoes = criar('div', { classe: 'pedido-acoes' });
-			p.proximos.forEach(novo => {
-				const def = ACAO[novo];
-				const botao = criar('button', { classe: def.classe, texto: def.texto, attrs: { type: 'button' } });
-				botao.addEventListener('click', () => mudarStatus(p, novo, botao));
-				acoes.appendChild(botao);
-			});
-			cartao.appendChild(acoes);
-		}
-		return cartao;
+		const acoes = p.proximos.map(novo => {
+			const def = ACAO[novo];
+			const botao = criar('button', { classe: def.classe, texto: def.texto, attrs: { type: 'button' } });
+			botao.addEventListener('click', () => mudarStatus(p, novo, botao));
+			return botao;
+		});
+		return cartaoPedido(p, {
+			meta: formatarData(p.criadoEm) + ' · ' + (c.nome || '') + ' (' + (c.prontuario || '') + ')',
+			avisos: avisos,
+			acoes: acoes
+		});
 	}
 
 	function mudarStatus(p, novo, botao) {

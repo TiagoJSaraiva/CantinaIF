@@ -210,7 +210,7 @@ a { color: var(--link); }
 	margin: 0 auto;
 	padding: 0 1rem;
 	display: grid;
-	grid-template-columns: auto 1fr;
+	grid-template-columns: auto minmax(0, 1fr);
 	grid-template-areas: "marca usuario" "nav nav";
 	align-items: center;
 	column-gap: 1rem;
@@ -230,14 +230,14 @@ a { color: var(--link); }
 
 .usuario {
 	grid-area: usuario;
-	justify-self: end;
 	display: flex;
+	justify-content: flex-end;
 	align-items: center;
 	gap: .6rem;
 	min-width: 0;
 }
 .usuario form { margin: 0; }
-.usuario-info { display: flex; flex-direction: column; align-items: flex-end; line-height: 1.2; min-width: 0; max-width: 13rem; }
+.usuario-info { display: flex; flex-direction: column; align-items: flex-end; line-height: 1.2; min-width: 0; max-width: 13rem; flex: 0 1 auto; }
 .usuario-principal, .usuario-secundario { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .usuario-principal { font-weight: 700; font-size: .92rem; }
 .usuario-secundario { font-size: .78rem; color: rgba(255, 255, 255, .78); }
@@ -495,22 +495,48 @@ fieldset.perfil-campos { border: 0; margin: 0; padding: 0; min-width: 0; }
 .resumo .linha { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: .75rem; }
 
 /* ---------- pedidos ---------- */
+/* todas as linhas com a mesma altura (a do card mais alto); a lista de itens tem altura maxima e rola */
 .lista-pedidos { display: grid; grid-template-columns: 1fr; gap: 1rem; }
 .pedido-card {
 	background: var(--superficie);
+	border: 1px solid var(--borda);
 	border-radius: var(--raio);
 	box-shadow: var(--sombra);
-	padding: .9rem;
+	padding: 1rem 1.1rem;
 	display: flex;
 	flex-direction: column;
-	gap: .5rem;
+	min-width: 0;
 }
-.pedido-topo { display: flex; flex-wrap: wrap; align-items: center; gap: .5rem; justify-content: space-between; }
-.pedido-card.destaque { outline: 3px solid var(--verde); }
-.pedido-meta { color: var(--texto-suave); font-size: .9rem; }
-.pedido-itens { margin: 0; padding-left: 1.1rem; }
-.pedido-total { font-weight: 800; }
-.pedido-acoes { display: flex; flex-wrap: wrap; gap: .5rem; margin-top: .25rem; }
+.pedido-topo { display: flex; align-items: center; gap: .5rem; justify-content: space-between; }
+.pedido-topo h2 { margin: 0; font-size: 1.1rem; }
+.pedido-card.destaque { outline: 3px solid var(--verde); outline-offset: 2px; }
+.pedido-meta { color: var(--texto-suave); font-size: .85rem; margin: .3rem 0 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.pedido-itens-area {
+	flex: 1 1 auto;
+	display: flex;
+	flex-direction: column;
+	min-height: 0;
+	margin-top: .75rem;
+	padding-top: .65rem;
+	border-top: 1px solid var(--borda);
+}
+.pedido-itens-cab { display: flex; justify-content: space-between; align-items: baseline; font-weight: 700; margin-bottom: .35rem; }
+.pedido-itens-qtd { font-weight: 400; font-size: .85rem; color: var(--texto-suave); }
+.pedido-itens { list-style: none; margin: 0; padding: 0 .25rem 0 0; max-height: 12.5rem; overflow-y: auto; overscroll-behavior: contain; }
+.pedido-itens.rolavel:not(.no-fim) { -webkit-mask-image: linear-gradient(to bottom, #000 72%, transparent); mask-image: linear-gradient(to bottom, #000 72%, transparent); }
+.pedido-itens.rolavel:focus-visible { outline: 2px solid var(--verde); outline-offset: 2px; }
+.pedido-item { display: flex; flex-direction: column; padding: .45rem 0; border-bottom: 1px solid var(--borda); }
+.pedido-item:last-child { border-bottom: 0; }
+.item-nome { font-weight: 600; overflow-wrap: anywhere; }
+.item-preco { display: flex; gap: .5rem; align-items: baseline; font-size: .9rem; }
+.item-subtotal { color: var(--texto); }
+.item-unitario { color: var(--texto-suave); font-size: .8rem; }
+.pedido-rodape { margin-top: .75rem; padding-top: .7rem; border-top: 1px solid var(--borda); display: flex; flex-direction: column; gap: .6rem; }
+.pedido-total-linha { display: flex; justify-content: space-between; align-items: baseline; font-weight: 600; }
+.pedido-total-valor { font-size: 1.35rem; font-weight: 800; color: var(--destaque); font-variant-numeric: tabular-nums; }
+.pedido-aviso { margin: 0; padding: .55rem .75rem; font-size: .9rem; }
+.pedido-acoes { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); gap: .5rem; }
+.pedido-acoes .btn { width: 100%; padding-left: .4rem; padding-right: .4rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .status {
 	display: inline-block;
 	padding: .15rem .65rem;
@@ -523,8 +549,8 @@ fieldset.perfil-campos { border: 0; margin: 0; padding: 0; min-width: 0; }
 .status-PRONTO { background: var(--st-pronto-bg); color: var(--st-pronto-fg); }
 .status-ENTREGUE { background: var(--neutro-bg); color: var(--neutro-fg); }
 .status-CANCELADO { background: var(--erro-bg); color: var(--erro); }
-.passos { display: flex; flex-wrap: wrap; gap: .25rem; list-style: none; margin: 0; padding: 0; font-size: .8rem; }
-.passos li { padding: .1rem .5rem; border-radius: 999px; background: var(--neutro-bg); color: var(--neutro-fg-suave); }
+.passos { display: grid; grid-template-columns: repeat(4, 1fr); gap: .3rem; list-style: none; margin: 0; padding: 0; font-size: .72rem; }
+.passos li { padding: .15rem .1rem; border-radius: 999px; background: var(--neutro-bg); color: var(--neutro-fg-suave); text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .passos li.feito { background: var(--verde-claro); color: var(--destaque); font-weight: 700; }
 
 /* ---------- login / cadastro / erro ---------- */
@@ -572,7 +598,7 @@ dialog::backdrop { background: var(--backdrop); }
 /* ---------- >= 600 px ---------- */
 @media (min-width: 600px) {
 	.grade { grid-template-columns: repeat(2, 1fr); }
-	.lista-pedidos { grid-template-columns: repeat(2, 1fr); }
+	.lista-pedidos { grid-template-columns: repeat(2, 1fr); grid-auto-rows: 1fr; }
 	.linha-campos { grid-template-columns: 1fr 1fr; }
 	.toolbar { flex-direction: row; align-items: center; flex-wrap: wrap; }
 	.toolbar .busca { flex: 1 1 14rem; max-width: 22rem; }
@@ -670,7 +696,7 @@ fieldset.modelos .chip { text-align: left; border-radius: 8px; white-space: norm
     .tabela-compradores td[data-rotulo="Último pedido"] { white-space: nowrap; }
 }
 .pedido-cancelamento { font-size: .9rem; color: var(--texto-suave); font-style: italic; margin: 0; overflow-wrap: anywhere; }
-.pedido-motivo { margin: 0; padding: .5rem .75rem; }
+.pedido-motivo .motivo-texto { max-height: 4.4em; overflow-y: auto; }
 .pedido-motivo p:first-child { font-weight: 700; }
 .motivo-texto { overflow-wrap: anywhere; white-space: pre-line; }
 
