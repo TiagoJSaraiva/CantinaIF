@@ -12,7 +12,10 @@
     <div class="topbar-inner">
         <span class="brand"><img src="img/Logo.png" alt=""><span>CantinaIF</span></span>
         <div class="usuario">
-            <span class="usuario-nome">Olá, <c:out value="${sessionScope.comprador.nome}"/></span>
+            <div class="usuario-info">
+                <span class="usuario-principal"><c:out value="${sessionScope.comprador.nome}"/></span>
+                <span class="usuario-secundario">Conta desativada</span>
+            </div>
             <form action="logout" method="post">
                 <input type="hidden" name="_csrf" value="<c:out value='${sessionScope.csrfToken}'/>">
                 <button type="submit" class="btn btn-ghost">Sair</button>

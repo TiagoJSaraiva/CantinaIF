@@ -26,12 +26,20 @@
         </nav>
 
         <div class="usuario">
-            <span class="usuario-nome">
-                <c:choose>
-                    <c:when test="${not empty sessionScope.vendedor}"><c:out value="${sessionScope.vendedor.nome}"/> (<c:out value="${sessionScope.vendedor.prontuario}"/>)</c:when>
-                    <c:otherwise>Olá, <c:out value="${sessionScope.comprador.nome}"/><c:if test="${requestScope.estadoComprador.vinculado}"> · <c:out value="${requestScope.estadoComprador.vendedorNome}"/></c:if></c:otherwise>
-                </c:choose>
-            </span>
+            <c:choose>
+                <c:when test="${not empty sessionScope.vendedor}">
+                    <c:set var="usuarioPrincipal" value="${sessionScope.vendedor.nome}"/>
+                    <c:set var="usuarioSecundario" value="${sessionScope.vendedor.prontuario}"/>
+                </c:when>
+                <c:otherwise>
+                    <c:set var="usuarioPrincipal" value="${sessionScope.comprador.nome}"/>
+                    <c:set var="usuarioSecundario" value="${requestScope.estadoComprador.vinculado ? requestScope.estadoComprador.vendedorNome : 'Sem cantina vinculada'}"/>
+                </c:otherwise>
+            </c:choose>
+            <div class="usuario-info" title="<c:out value='${usuarioPrincipal}'/> · <c:out value='${usuarioSecundario}'/>">
+                <span class="usuario-principal"><c:out value="${usuarioPrincipal}"/></span>
+                <span class="usuario-secundario"><c:out value="${usuarioSecundario}"/></span>
+            </div>
             <form action="logout" method="post">
                 <input type="hidden" name="_csrf" value="<c:out value='${sessionScope.csrfToken}'/>">
                 <button type="submit" class="btn btn-ghost">Sair</button>

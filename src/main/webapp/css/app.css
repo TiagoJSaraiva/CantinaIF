@@ -83,64 +83,94 @@ a { color: var(--verde-hover); }
 	border: 0;
 }
 
-/* ---------- cabecalho e navegacao ---------- */
-.topbar { background: var(--verde-escuro); color: #fff; }
+/* ---------- cabecalho e navegacao ----------
+   Barra de abas: itens retangulares colados que ocupam toda a altura da barra. Passar o mouse clareia, clicar
+   escurece e a pagina atual fica "afundada" (mais escura, com sombra interna). */
+.topbar { background: var(--verde-escuro); color: #fff; border-bottom: 1px solid rgba(0, 0, 0, .3); }
 .topbar-inner {
 	max-width: 72rem;
 	margin: 0 auto;
-	padding: .5rem 1rem;
-	display: flex;
-	flex-wrap: wrap;
+	padding: 0 1rem;
+	display: grid;
+	grid-template-columns: auto 1fr;
+	grid-template-areas: "marca usuario" "nav nav";
 	align-items: center;
-	gap: .5rem 1rem;
+	column-gap: 1rem;
 }
 .brand {
+	grid-area: marca;
 	display: flex;
 	align-items: center;
 	gap: .5rem;
+	padding: .55rem 0;
 	color: #fff;
 	text-decoration: none;
 	font-weight: 700;
 	font-size: 1.15rem;
 }
-.brand img { height: 36px; width: auto; }
+.brand img { height: 34px; width: auto; }
 
 .usuario {
-	margin-left: auto;
+	grid-area: usuario;
+	justify-self: end;
 	display: flex;
 	align-items: center;
-	gap: .5rem;
-	font-size: .9rem;
+	gap: .6rem;
+	min-width: 0;
 }
 .usuario form { margin: 0; }
-.usuario-nome { max-width: 12rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.usuario-info { display: flex; flex-direction: column; align-items: flex-end; line-height: 1.2; min-width: 0; max-width: 13rem; }
+.usuario-principal, .usuario-secundario { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.usuario-principal { font-weight: 700; font-size: .92rem; }
+.usuario-secundario { font-size: .78rem; color: rgba(255, 255, 255, .78); }
 
 .nav {
-	order: 3;
-	width: 100%;
+	grid-area: nav;
 	display: flex;
-	gap: .25rem;
+	align-items: stretch;
+	margin: 0 -1rem;
+	border-top: 1px solid rgba(255, 255, 255, .12);
 	overflow-x: auto;
+	scrollbar-width: none;
 }
+.nav::-webkit-scrollbar { display: none; }
 .nav a {
-	color: #fff;
+	flex: 1 1 0;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	flex-wrap: wrap;
+	gap: .1rem;
+	min-height: 3rem;
+	padding: .3rem .4rem;
+	color: rgba(255, 255, 255, .9);
 	text-decoration: none;
-	padding: .5rem .75rem;
-	border-radius: var(--raio);
-	white-space: nowrap;
+	text-align: center;
+	line-height: 1.15;
+	font-size: .88rem;
 	font-weight: 600;
+	border-right: 1px solid rgba(255, 255, 255, .08);
+	transition: background-color .12s ease;
 }
-.nav a:hover { background: rgba(255, 255, 255, .15); }
-.nav a[aria-current="page"] { background: #fff; color: var(--verde-escuro); }
+.nav a:first-child { border-left: 1px solid rgba(255, 255, 255, .08); }
+.nav a:hover { background: rgba(255, 255, 255, .1); color: #fff; }
+.nav a:active { background: rgba(0, 0, 0, .28); }
+.nav a[aria-current="page"] {
+	background: rgba(0, 0, 0, .3);
+	box-shadow: inset 0 2px 6px rgba(0, 0, 0, .35);
+	color: #fff;
+}
+.nav a:focus-visible { outline: 2px solid #fff; outline-offset: -4px; }
 .badge-carrinho {
 	display: inline-block;
 	min-width: 1.4rem;
 	padding: 0 .35rem;
-	margin-left: .25rem;
+	margin-left: .35rem;
 	border-radius: 999px;
 	background: #ffb300;
 	color: #1b2b2a;
 	font-size: .8rem;
+	line-height: 1.35rem;
 	text-align: center;
 }
 
@@ -429,8 +459,9 @@ dialog::backdrop { background: rgba(0, 0, 0, .5); }
 
 /* ---------- >= 768 px (tablet) ---------- */
 @media (min-width: 768px) {
-	.topbar-inner { flex-wrap: nowrap; }
-	.nav { order: 0; width: auto; flex: 1; }
+	.topbar-inner { grid-template-columns: auto 1fr auto; grid-template-areas: "marca nav usuario"; min-height: 3.5rem; }
+	.nav { align-self: stretch; margin: 0; border-top: 0; }
+	.nav a { flex: 0 0 auto; flex-wrap: nowrap; min-height: 0; padding: 0 1.15rem; white-space: nowrap; font-size: 1rem; }
 	.grade { grid-template-columns: repeat(3, 1fr); }
 	.carrinho-layout { grid-template-columns: 1fr 20rem; }
 	.item-carrinho { grid-template-columns: 6rem 1fr; }
