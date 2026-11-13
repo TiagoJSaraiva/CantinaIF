@@ -16,6 +16,7 @@
                 <span class="usuario-principal"><c:out value="${sessionScope.comprador.nome}"/></span>
                 <span class="usuario-secundario">Conta desativada</span>
             </div>
+            <%@ include file="/WEB-INF/jspf/botao-tema.jspf" %>
             <form action="logout" method="post">
                 <input type="hidden" name="_csrf" value="<c:out value='${sessionScope.csrfToken}'/>">
                 <button type="submit" class="btn btn-ghost">Sair</button>

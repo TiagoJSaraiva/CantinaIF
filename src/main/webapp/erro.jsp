@@ -9,12 +9,15 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <link rel="icon" type="image/png" sizes="32x32" href="img/favicon-32.png">
     <link rel="apple-touch-icon" href="img/favicon-180.png">
+    <meta name="color-scheme" content="light dark">
+    <script src="js/tema.js"></script>
     <link rel="stylesheet" href="css/app.css">
     <title>Ops - CantinaIF</title>
 </head>
 <body>
 <main class="auth" id="conteudo">
     <section class="auth-card" aria-labelledby="titulo">
+        <%@ include file="/WEB-INF/jspf/botao-tema.jspf" %>
         <div class="brand-grande"><img src="img/marca-if.png" alt="" width="33" height="44"><span>CantinaIF</span></div>
         <h1 id="titulo">
             <c:choose>

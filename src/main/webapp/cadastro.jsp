@@ -10,6 +10,7 @@
 <body>
 <main class="auth" id="conteudo">
     <section class="auth-card" aria-labelledby="titulo">
+        <%@ include file="/WEB-INF/jspf/botao-tema.jspf" %>
         <div class="brand-grande"><img src="img/marca-if.png" alt="" width="33" height="44"><span>CantinaIF</span></div>
         <h1 id="titulo">Criar conta</h1>
 
