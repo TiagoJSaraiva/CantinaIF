@@ -637,7 +637,18 @@ dialog::backdrop { background: var(--backdrop); }
 .dados { display: grid; grid-template-columns: max-content 1fr; gap: .35rem 1rem; margin: 0; }
 .dados dt { font-weight: 600; color: var(--texto-suave); }
 .dados dd { margin: 0; overflow-wrap: anywhere; }
-.cantina-atual { font-size: 1.15rem; }
+/* "Minha conta": um unico painel com secoes de titulo com icone */
+.painel-conta { padding: 1.15rem 1.25rem 1.25rem; border-color: color-mix(in srgb, var(--verde) 55%, var(--borda)); }
+.conta-secao + .conta-secao { margin-top: 1.6rem; }
+.titulo-icone { display: flex; align-items: center; gap: .6rem; font-size: 1.15rem; margin: 0 0 .7rem; }
+.titulo-icone svg { flex: none; width: 1.4rem; height: 1.4rem; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+.painel-conta .painel-topo { margin-bottom: .7rem; }
+.painel-conta .dados { gap: .3rem 1.25rem; }
+.painel-conta .dados dt { font-weight: 400; }
+.cantina-selo {
+	display: inline-block; max-width: 100%; margin: 0 0 .4rem; padding: .3rem .8rem; border-radius: 6px;
+	background: var(--verde); color: #fff; font-weight: 700; overflow-wrap: anywhere;
+}
 .painel-codigo { display: grid; gap: 1rem; align-items: center; }
 .codigo-area { display: flex; flex-direction: column; align-items: center; gap: .5rem; text-align: center; }
 .codigo-grande {
