@@ -40,7 +40,7 @@
         <c:if test="${applicationScope.demoMode}">
             <section class="demo-box" aria-labelledby="demo-titulo">
                 <h2 id="demo-titulo">Contas de demonstração</h2>
-                <p>Dados fictícios, restaurados automaticamente
+                <p>Dados fictícios para teste do MVP. São restaurados automaticamente
                     <c:choose>
                         <c:when test="${applicationScope.demoResetHoras > 0}">a cada <c:out value="${applicationScope.demoResetTexto}"/> h.</c:when>
                         <c:otherwise>a cada reinício.</c:otherwise>
@@ -60,9 +60,10 @@
                                 data-prontuario="<c:out value='${applicationScope.demoVendedor2}'/>"
                                 data-senha="<c:out value='${applicationScope.demoSenha}'/>">Usar esta conta</button></li>
                 </ul>
-                <p class="dica">Senha das três contas: <code><c:out value="${applicationScope.demoSenha}"/></code>.
+                <p class="dica">
                     O aluno está vinculado à Cantina Central; para testar outro vínculo, crie uma conta e use um código
-                    gerado em Compradores.</p>
+                    gerado em Compradores.
+                </p>
             </section>
         </c:if>
 
