@@ -10,7 +10,7 @@ import java.util.Set;
 public enum StatusPedido {
     PENDENTE("Pendente"),
     EM_PREPARO("Em preparo"),
-    PRONTO("Pronto para retirada"),
+    PRONTO("Pronto"),
     ENTREGUE("Entregue"),
     CANCELADO("Cancelado");
 
