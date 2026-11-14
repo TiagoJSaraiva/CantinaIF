@@ -63,7 +63,7 @@ document.addEventListener('DOMContentLoaded', function() {
 			acoes.push(botao);
 		}
 		return cartaoPedido(p, {
-			meta: formatarData(p.criadoEm) + (p.vendedorNome ? ' · ' + p.vendedorNome : ''),
+			nome: p.vendedorNome || '',
 			avisos: avisos,
 			acoes: acoes,
 			destaque: String(p.id) === novo

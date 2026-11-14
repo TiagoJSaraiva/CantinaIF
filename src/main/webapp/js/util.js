@@ -276,7 +276,7 @@ function rotuloStatus(status) {
 	return etapa ? etapa[1] : (status === 'CANCELADO' ? 'Cancelado' : status);
 }
 
-// opcoes: { meta: texto, avisos: [elementos], acoes: [botoes], destaque: bool }
+// opcoes: { nome: cantina (aluno) ou aluno (vendedor), avisos: [elementos], acoes: [botoes], destaque: bool }
 function cartaoPedido(p, opcoes = {}) {
 	const lista = criar('ul', { classe: 'pedido-itens' });
 	p.itens.forEach(i => {
@@ -316,10 +316,13 @@ function cartaoPedido(p, opcoes = {}) {
 
 	return criar('article', { classe: 'pedido-card' + (opcoes.destaque ? ' destaque' : '') }, [
 		criar('div', { classe: 'pedido-topo' }, [
-			criar('h2', { texto: 'Pedido #' + p.numero }),
+			criar('h2', { attrs: { title: '#' + p.numero + ' ' + (opcoes.nome || '') } }, [
+				criar('span', { classe: 'pedido-num', texto: '#' + p.numero }),
+				criar('span', { classe: 'pedido-nome', texto: opcoes.nome || '' })
+			]),
 			criar('span', { classe: 'status status-' + p.status, texto: p.statusRotulo })
 		]),
-		criar('p', { classe: 'pedido-meta', texto: opcoes.meta || formatarData(p.criadoEm), attrs: { title: opcoes.meta || '' } }),
+		criar('p', { classe: 'pedido-meta', texto: formatarData(p.criadoEm) }),
 		areaItens,
 		rodape
 	]);

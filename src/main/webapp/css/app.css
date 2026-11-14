@@ -508,7 +508,12 @@ fieldset.perfil-campos { border: 0; margin: 0; padding: 0; min-width: 0; }
 	min-width: 0;
 }
 .pedido-topo { display: flex; align-items: center; gap: .5rem; justify-content: space-between; }
-.pedido-topo h2 { margin: 0; font-size: 1.1rem; }
+.pedido-topo h2 { margin: 0; font-size: 1.1rem; display: flex; gap: .4rem; min-width: 0; }
+.pedido-num { flex: none; font-variant-numeric: tabular-nums; }
+.pedido-nome { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pedido-topo .status { flex: none; }
+#dlg-cancelar-info .dlg-pedido, #dlg-cancelar-info .dlg-pedido-total { display: block; }
+#dlg-cancelar-info .dlg-pedido { color: var(--texto); font-size: 1rem; }
 .pedido-card.destaque { outline: 3px solid var(--verde); outline-offset: 2px; }
 .pedido-meta { color: var(--texto-suave); font-size: .85rem; margin: .3rem 0 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .pedido-itens-area {

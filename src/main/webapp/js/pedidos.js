@@ -92,7 +92,7 @@ document.addEventListener('DOMContentLoaded', function() {
 			return botao;
 		});
 		return cartaoPedido(p, {
-			meta: formatarData(p.criadoEm) + ' · ' + (c.nome || '') + ' (' + (c.prontuario || '') + ')',
+			nome: c.nome || 'Aluno',
 			avisos: avisos,
 			acoes: acoes
 		});
@@ -117,7 +117,7 @@ document.addEventListener('DOMContentLoaded', function() {
 			body: new URLSearchParams(dados).toString()
 		}).then(r => {
 			if (r.ok || !motivo) {
-				notificar(r.ok ? 'Pedido #' + p.numero + ' de ' + ((p.comprador || {}).nome || '') + ': ' + rotuloStatus(novo) + '.'
+				notificar(r.ok ? '#' + p.numero + ' ' + ((p.comprador || {}).nome || '') + ': ' + rotuloStatus(novo) + '.'
 					: (r.corpo.message || 'Não foi possível atualizar o pedido.'), r.ok ? 'ok' : 'erro');
 				carregar(true);
 			}
@@ -140,8 +140,9 @@ document.addEventListener('DOMContentLoaded', function() {
 		limparErros(form);
 		campoMotivo.value = '';
 		const c = p.comprador || {};
-		document.getElementById('dlg-cancelar-info').textContent =
-			'Pedido #' + p.numero + ' de ' + (c.nome || c.prontuario || '') + ' · ' + formatarPreco(p.total);
+		document.getElementById('dlg-cancelar-info').replaceChildren(
+			criar('strong', { classe: 'dlg-pedido', texto: '#' + p.numero + ' ' + (c.nome || 'Aluno') }),
+			criar('span', { classe: 'dlg-pedido-total', texto: 'Total: ' + formatarPreco(p.total) }));
 		dialogo.showModal();
 		campoMotivo.focus();
 	}
