@@ -6,7 +6,7 @@
 <html lang="pt-br">
 <head>
     <%@ include file="/WEB-INF/jspf/head.jspf" %>
-    <title>Vitrine - CantinaIF</title>
+    <title>Catálogo - CantinaIF</title>
 </head>
 <body>
 <%@ include file="/WEB-INF/jspf/navbar.jspf" %>
@@ -14,7 +14,7 @@
     <div id="mensagem" role="status" aria-live="polite" hidden></div>
     <c:choose>
         <c:when test="${not estado.vinculado}">
-            <div class="page-head"><h1>Vitrine</h1></div>
+            <div class="page-head"><h1>Catálogo</h1></div>
             <section class="cartao-vinculo" aria-labelledby="titulo-vinculo">
                 <h2 id="titulo-vinculo">Vincule sua conta a uma cantina</h2>
                 <p>Para ver e comprar produtos, informe o código que a cantina gera para você no momento.
@@ -23,9 +23,7 @@
             </section>
         </c:when>
         <c:otherwise>
-            <div class="page-head">
-                <h1>Vitrine <span class="subtitulo">· <c:out value="${estado.vendedorNome}"/></span></h1>
-            </div>
+            <div class="page-head"><h1>Catálogo</h1></div>
             <c:if test="${estado.naoLidas > 0}">
                 <div class="alerta alerta-aviso js-faixa-advertencias" role="status">
                     <p>Você tem <strong><c:out value="${estado.naoLidas}"/></strong>

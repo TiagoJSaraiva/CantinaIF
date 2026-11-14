@@ -1,11 +1,11 @@
-// Vitrine do comprador: busca, filtro por categoria e adicao ao carrinho. Depende de util.js.
+// Catalogo do comprador: busca, filtro por categoria e adicao ao carrinho. Depende de util.js.
 
 const ROTULO_CATEGORIA = { salgado: 'Salgado', lanche: 'Lanche', doce: 'Doce', bebida: 'Bebida' };
 
-const vitrine = { produtos: [], categoria: 'todos', busca: '' };
+const catalogo = { produtos: [], categoria: 'todos', busca: '' };
 
 function carregarProdutosUser(categoria) {
-	vitrine.categoria = categoria;
+	catalogo.categoria = categoria;
 	const estado = document.getElementById('estado');
 	const container = document.getElementById('productContainer');
 	container.hidden = true;
@@ -18,32 +18,32 @@ function carregarProdutosUser(categoria) {
 				return;
 			}
 			if (!ok || !Array.isArray(corpo)) throw new Error('resposta inesperada');
-			vitrine.produtos = corpo;
+			catalogo.produtos = corpo;
 			renderizar();
 		})
 		.catch(() => {
 			mostrarEstado(estado, 'Não foi possível carregar os produtos.', 'erro',
-				{ texto: 'Tentar novamente', fn: () => carregarProdutosUser(vitrine.categoria) });
+				{ texto: 'Tentar novamente', fn: () => carregarProdutosUser(catalogo.categoria) });
 		});
 }
 
 function renderizar() {
 	const estado = document.getElementById('estado');
 	const container = document.getElementById('productContainer');
-	const termo = semAcento(vitrine.busca.trim());
-	const lista = vitrine.produtos.filter(p => !termo || semAcento(p.nome + ' ' + (p.descricao || '')).includes(termo));
+	const termo = semAcento(catalogo.busca.trim());
+	const lista = catalogo.produtos.filter(p => !termo || semAcento(p.nome + ' ' + (p.descricao || '')).includes(termo));
 
 	container.replaceChildren();
-	if (vitrine.produtos.length === 0) {
+	if (catalogo.produtos.length === 0) {
 		container.hidden = true;
 		mostrarEstado(estado, 'Nenhum produto cadastrado nesta categoria.', 'vazio');
 		return;
 	}
 	if (lista.length === 0) {
 		container.hidden = true;
-		mostrarEstado(estado, 'Nenhum produto encontrado para "' + vitrine.busca.trim() + '".', 'vazio', {
+		mostrarEstado(estado, 'Nenhum produto encontrado para "' + catalogo.busca.trim() + '".', 'vazio', {
 			texto: 'Limpar busca',
-			fn: () => { document.getElementById('busca').value = ''; vitrine.busca = ''; renderizar(); }
+			fn: () => { document.getElementById('busca').value = ''; catalogo.busca = ''; renderizar(); }
 		});
 		return;
 	}
@@ -114,7 +114,7 @@ function adicionarAoCarrinho(produto, campo) {
 		.then(({ ok, corpo }) => {
 			mostrarMensagem(mensagem, ok ? produto.nome + ' adicionado ao carrinho.' : (corpo.message || 'Erro ao adicionar produto.'), !ok);
 			if (ok) atualizarBadgeCarrinho();
-			else if (corpo.message && corpo.message.indexOf('esgotado') >= 0) carregarProdutosUser(vitrine.categoria);
+			else if (corpo.message && corpo.message.indexOf('esgotado') >= 0) carregarProdutosUser(catalogo.categoria);
 		})
 		.catch(() => mostrarMensagem(mensagem, 'Erro de comunicação com o servidor.', true));
 }
@@ -128,8 +128,8 @@ document.addEventListener('DOMContentLoaded', function() {
 		});
 	});
 	document.getElementById('busca').addEventListener('input', debounce(e => {
-		vitrine.busca = e.target.value;
-		if (vitrine.produtos.length) renderizar();
+		catalogo.busca = e.target.value;
+		if (catalogo.produtos.length) renderizar();
 	}, 150));
 	carregarProdutosUser('todos');
 });

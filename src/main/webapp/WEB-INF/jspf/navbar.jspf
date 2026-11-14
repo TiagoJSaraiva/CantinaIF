@@ -15,7 +15,7 @@
                     <a href="compradores.jsp" <c:if test="${pagina == 'compradores'}">aria-current="page"</c:if>>Compradores</a>
                 </c:when>
                 <c:otherwise>
-                    <a href="home.jsp" <c:if test="${pagina == 'home'}">aria-current="page"</c:if>>Vitrine</a>
+                    <a href="home.jsp" <c:if test="${pagina == 'home'}">aria-current="page"</c:if>>Catálogo</a>
                     <a href="Carrinho.jsp" <c:if test="${pagina == 'carrinho'}">aria-current="page"</c:if>>Carrinho
                         <span class="badge-carrinho" id="badge-carrinho" aria-label="itens no carrinho"><c:out value="${empty sessionScope.carrinho ? 0 : sessionScope.carrinho.quantidadeTotal}"/></span></a>
                     <a href="meus-pedidos.jsp" <c:if test="${pagina == 'meus-pedidos'}">aria-current="page"</c:if>>Meus pedidos</a>

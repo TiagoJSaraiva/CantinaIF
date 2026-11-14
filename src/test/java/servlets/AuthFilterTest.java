@@ -230,7 +230,7 @@ class AuthFilterTest {
     }
 
     @Test
-    void compradorAtivoNaPaginaDeContaDesativadaVoltaParaAVitrine() throws Exception {
+    void compradorAtivoNaPaginaDeContaDesativadaVoltaParaOCatalogo() throws Exception {
         HttpSession sessao = sessao("comprador", compradorCom("CJ8"), Database.geracao());
         FilterChain cadeia = mock(FilterChain.class);
         HttpServletResponse res = resposta(new StringWriter());

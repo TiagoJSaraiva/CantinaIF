@@ -8,7 +8,7 @@ Sistema de pedidos antecipados para a cantina de um campus do IFSP (Instituto Fe
 
 Demo online: **https://cantinaif-ubt0.onrender.com** (instância gratuita do Render: o primeiro acesso depois de 15 minutos sem uso pode levar cerca de um minuto)
 
-![Vitrine](docs/screenshots/vitrine.png)
+![Catálogo](docs/screenshots/catalogo.png)
 
 ## Sumário
 
@@ -38,10 +38,10 @@ O projeto foi depois modernizado (segurança, domínio de pedidos, dados de demo
 
 **Aluno (comprador)**
 - Cadastro com prontuário, nome, e-mail e senha; login e logout.
-- **Vínculo com uma cantina por código do vendedor.** O vendedor gera um código de 6 caracteres que vale por 1 minuto e para um único aluno. O aluno digita o código no cadastro (opcional) ou depois, em "Minha conta"; até lá a vitrine não mostra produtos, só o formulário do código. Cada conta fica vinculada a uma cantina por vez; um código novo troca de cantina (o carrinho é esvaziado e os pedidos antigos continuam no histórico).
-- Advertências enviadas pelo vendedor aparecem numa faixa na vitrine, num contador no menu e numa lista em "Minha conta" (marcar como lidas). Uma conta desativada ainda entra, mas só vê o aviso e as advertências: sem produtos, carrinho, pedidos nem troca de cantina, inclusive em sessões que já estavam abertas.
+- **Vínculo com uma cantina por código do vendedor.** O vendedor gera um código de 6 caracteres que vale por 1 minuto e para um único aluno. O aluno digita o código no cadastro (opcional) ou depois, em "Minha conta"; até lá o catálogo não mostra produtos, só o formulário do código. Cada conta fica vinculada a uma cantina por vez; um código novo troca de cantina (o carrinho é esvaziado e os pedidos antigos continuam no histórico).
+- Advertências enviadas pelo vendedor aparecem numa faixa no catálogo, num contador no menu e numa lista em "Minha conta" (marcar como lidas). Uma conta desativada ainda entra, mas só vê o aviso e as advertências: sem produtos, carrinho, pedidos nem troca de cantina, inclusive em sessões que já estavam abertas.
 - Pedidos cancelados pela cantina mostram o motivo informado pelo vendedor.
-- Vitrine com busca por texto e filtro por categoria (salgados, lanches, doces, bebidas). Produtos esgotados aparecem, mas não podem ser comprados; selo "Última unidade" quando o estoque é 1.
+- Catálogo com busca por texto e filtro por categoria (salgados, lanches, doces, bebidas). Produtos esgotados aparecem, mas não podem ser comprados; selo "Última unidade" quando o estoque é 1.
 - Carrinho com alteração de quantidade, remoção de itens, subtotal e total (até 99 unidades por item); o estoque é conferido considerando o que já está no carrinho.
 - Finalizar pedido cria o pedido e baixa o estoque na mesma transação do banco. Se algum item não tiver estoque, nada é gravado e o aluno é avisado de qual item faltou. Se o preço mudou desde que o item entrou no carrinho, também não se grava nada: o carrinho é atualizado e o aluno precisa confirmar de novo.
 - "Meus pedidos": histórico com status, itens, preço unitário da época da compra e total.
@@ -85,9 +85,9 @@ Se houver uma demo pública publicada, tenha em mente (tudo isso é proposital, 
 
 ## Capturas de tela
 
-| Login | Vitrine |
+| Login | Catálogo |
 |---|---|
-| ![Login](docs/screenshots/login.png) | ![Vitrine](docs/screenshots/vitrine.png) |
+| ![Login](docs/screenshots/login.png) | ![Catálogo](docs/screenshots/catalogo.png) |
 | **Carrinho** | **Meus pedidos** |
 | ![Carrinho](docs/screenshots/carrinho.png) | ![Meus pedidos](docs/screenshots/meus-pedidos.png) |
 | **Vendedor: pedidos** | **Vendedor: produtos** |

@@ -1,4 +1,4 @@
-// Formulario do codigo de vinculo com um vendedor (vitrine e "Minha conta"). Depende de util.js.
+// Formulario do codigo de vinculo com um vendedor (catalogo e "Minha conta"). Depende de util.js.
 document.addEventListener('DOMContentLoaded', function() {
 	document.querySelectorAll('form.js-vinculo').forEach(form => {
 		const campo = form.querySelector('input[name="codigo"]');
@@ -21,7 +21,7 @@ document.addEventListener('DOMContentLoaded', function() {
 			}).then(({ ok, corpo }) => {
 				mostrarMensagem(msg, corpo.message || (ok ? 'Conta vinculada.' : 'Não foi possível vincular.'), !ok);
 				if (ok) {
-					// a pagina inteira depende do vinculo (vitrine, cabecalho): recarrega mostrando a confirmacao
+					// a pagina inteira depende do vinculo (catalogo, cabecalho): recarrega mostrando a confirmacao
 					try { sessionStorage.setItem('vinculo-msg', corpo.message || ''); } catch (e) { /* sem armazenamento */ }
 					setTimeout(() => window.location.reload(), 600);
 				} else {

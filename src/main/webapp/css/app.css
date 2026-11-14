@@ -409,7 +409,7 @@ fieldset.perfil-campos { border: 0; margin: 0; padding: 0; min-width: 0; }
 @keyframes gira { to { transform: rotate(360deg); } }
 @media (prefers-reduced-motion: reduce) { .carregando::before { animation: none; } }
 
-/* ---------- vitrine / produtos ---------- */
+/* ---------- catalogo / produtos ---------- */
 .grade { display: grid; grid-template-columns: 1fr; gap: 1rem; }
 .produto {
 	display: flex;
@@ -622,7 +622,6 @@ dialog::backdrop { background: var(--backdrop); }
 }
 
 /* ---------- multivendedor: vinculo, conta, compradores ---------- */
-.subtitulo { font-weight: 600; color: var(--texto-suave); font-size: .8em; }
 .container-estreito { max-width: 44rem; }
 .painel {
     background: var(--superficie); border: 1px solid var(--borda); border-radius: var(--raio); padding: 1rem;

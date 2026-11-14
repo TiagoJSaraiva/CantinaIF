@@ -15,7 +15,7 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 
 /**
- * Vitrine do comprador: os produtos do vendedor ao qual ele esta vinculado (os esgotados aparecem, mas nao podem ser
+ * Catalogo do comprador: os produtos do vendedor ao qual ele esta vinculado (os esgotados aparecem, mas nao podem ser
  * comprados). Sem vinculo responde 409 {semVendedor: true} e a pagina mostra como se vincular.
  */
 @WebServlet("/apiUser/produtos")
