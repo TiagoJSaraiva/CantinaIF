@@ -20,6 +20,11 @@ FROM tomcat:10.1-jre21-temurin
 ENV JAVA_OPTS="-XX:MaxRAMPercentage=60 -XX:MaxMetaspaceSize=192m -XX:+ExitOnOutOfMemoryError -XX:+UseSerialGC -Djava.awt.headless=true -Djava.security.egd=file:/dev/urandom" \
     PORT=8080
 
+# Commit da imagem, exposto no cabecalho X-App-Commit do /health (o CI passa --build-arg com o SHA do push).
+# No Render, a variavel RENDER_GIT_COMMIT definida em tempo de execucao tem prioridade.
+ARG RENDER_GIT_COMMIT=""
+ENV APP_COMMIT=${RENDER_GIT_COMMIT}
+
 # Aplicacao na raiz (ROOT.war => contexto "/"). O docker-entrypoint.sh ajusta o conf/server.xml
 # (porta, ErrorReportValve e, atras de proxy, RemoteIpValve) a cada inicio, de forma idempotente.
 RUN rm -rf /usr/local/tomcat/webapps/* \
