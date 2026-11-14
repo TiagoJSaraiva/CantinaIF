@@ -2,6 +2,9 @@
 
 const ROTULO_CATEGORIA = { salgado: 'Salgado', lanche: 'Lanche', doce: 'Doce', bebida: 'Bebida' };
 const TAMANHO_MAX_IMAGEM = 2 * 1024 * 1024;
+const ESTOQUE_MAX = 1000000;
+// espera curta depois do ultimo clique em -/+ antes de gravar: varios cliques seguidos viram um envio so
+const ESPERA_ESTOQUE = 400;
 
 const painel = { produtos: [], categoria: 'todos', busca: '' };
 
@@ -11,12 +14,23 @@ document.addEventListener('DOMContentLoaded', function() {
 	const dialogo = document.getElementById('dlg-produto');
 	const form = document.getElementById('form-produto');
 	const erroGeral = document.getElementById('erro-geral');
+	// id do produto -> funcao que grava o ajuste de estoque pendente do card (e devolve uma promessa)
+	const estoquesPendentes = new Map();
+
+	function gravarEstoquesPendentes() {
+		return Promise.all([...estoquesPendentes.values()].map(gravar => gravar()));
+	}
 
 	// ---------- listagem ----------
 	function carregar() {
+		// grava antes os ajustes de estoque ainda pendentes, para a lista nova ja vir com eles
+		return gravarEstoquesPendentes().then(buscar);
+	}
+
+	function buscar() {
 		container.hidden = true;
 		mostrarEstado(estado, 'Carregando produtos...', 'carregando');
-		requisitar('apiAdm/produtos?categoria=' + encodeURIComponent(painel.categoria))
+		return requisitar('apiAdm/produtos?categoria=' + encodeURIComponent(painel.categoria))
 			.then(({ ok, corpo }) => {
 				if (!ok || !Array.isArray(corpo)) throw new Error('resposta inesperada');
 				painel.produtos = corpo;
@@ -40,42 +54,92 @@ document.addEventListener('DOMContentLoaded', function() {
 			return;
 		}
 		mostrarEstado(estado, '', 'vazio');
+		estoquesPendentes.clear();
 		lista.forEach(p => container.appendChild(criarCartao(p)));
 		container.hidden = false;
 	}
 
 	function criarCartao(produto) {
-		const esgotado = produto.estoque < 1;
-		const cartao = criar('article', { classe: 'produto' + (esgotado ? ' esgotado' : '') });
-
+		const cartao = criar('article', { classe: 'produto' });
 		const areaImagem = criar('div', { classe: 'produto-img' }, [
 			criar('img', { attrs: { src: urlImagem(produto), alt: produto.nome || 'Produto', loading: 'lazy' } })
 		]);
-		if (esgotado) areaImagem.appendChild(criar('span', { classe: 'selo selo-esgotado', texto: 'Esgotado' }));
+		const seloEsgotado = criar('span', { classe: 'selo selo-esgotado', texto: 'Esgotado' });
 		cartao.appendChild(areaImagem);
 
 		const campoEstoque = criar('input', {
-			attrs: { type: 'number', min: '0', value: String(produto.estoque), inputmode: 'numeric', 'aria-label': 'Estoque de ' + produto.nome }
+			attrs: { type: 'number', min: '0', max: String(ESTOQUE_MAX), inputmode: 'numeric', 'aria-label': 'Estoque de ' + produto.nome }
 		});
-		const salvarEstoque = valor => {
-			if (!Number.isInteger(valor) || valor < 0) { campoEstoque.value = String(produto.estoque); return; }
-			requisitar('atualizarEstoque', {
+		// alvo: o estoque que o vendedor esta vendo no card; produto.estoque: o ultimo confirmado pelo servidor
+		let alvo = produto.estoque;
+		let espera = null;
+		let envio = null;
+
+		function mostrarEstoque() {
+			campoEstoque.value = String(alvo);
+			cartao.classList.toggle('esgotado', alvo < 1);
+			if (alvo < 1) areaImagem.appendChild(seloEsgotado); else seloEsgotado.remove();
+		}
+
+		function ajustar(valor) {
+			alvo = Math.min(Math.max(valor, 0), ESTOQUE_MAX);
+			mostrarEstoque();
+			clearTimeout(espera);
+			espera = setTimeout(gravar, ESPERA_ESTOQUE);
+		}
+
+		// grava o alvo (um envio por vez; o que mudar durante o envio vai no seguinte); resolve quando terminar
+		function gravar() {
+			clearTimeout(espera);
+			espera = null;
+			if (envio) return envio.then(gravar);
+			if (alvo === produto.estoque) return Promise.resolve();
+			const valor = alvo;
+			envio = requisitar('atualizarEstoque', {
 				method: 'POST',
 				headers: cabecalhosCsrf({ 'Content-Type': 'application/x-www-form-urlencoded' }),
 				body: new URLSearchParams({ id: produto.id, estoque: valor, esperado: produto.estoque }).toString()
 			}).then(({ ok, status, corpo }) => {
-				notificar(ok ? 'Estoque de ' + produto.nome + ' atualizado para ' + valor + '.' : (corpo.message || 'Erro ao atualizar o estoque.'), ok ? 'ok' : 'erro');
-				if (ok) { produto.estoque = valor; carregar(); } else { campoEstoque.value = String(produto.estoque); if (status === 409) carregar(); }
-			}).catch(() => notificar('Erro de comunicação com o servidor.', 'erro'));
-		};
+				if (ok) {
+					produto.estoque = valor;
+					if (alvo === valor) notificar('Estoque de ' + produto.nome + ' atualizado para ' + valor + '.');
+					return;
+				}
+				notificar(corpo.message || 'Erro ao atualizar o estoque.', 'erro');
+				alvo = produto.estoque;
+				mostrarEstoque();
+				if (status === 409) return buscar(); // o estoque mudou por outra operacao: recarrega a lista
+			}).catch(() => {
+				notificar('Erro de comunicação com o servidor.', 'erro');
+				alvo = produto.estoque;
+				mostrarEstoque();
+			}).finally(() => { envio = null; });
+			return envio;
+		}
+		estoquesPendentes.set(produto.id, gravar);
+
 		const menos = criar('button', { texto: '−', attrs: { type: 'button', 'aria-label': 'Diminuir estoque de ' + produto.nome } });
 		const mais = criar('button', { texto: '+', attrs: { type: 'button', 'aria-label': 'Aumentar estoque de ' + produto.nome } });
-		menos.addEventListener('click', () => salvarEstoque(produto.estoque - 1));
-		mais.addEventListener('click', () => salvarEstoque(produto.estoque + 1));
-		campoEstoque.addEventListener('change', () => salvarEstoque(parseInt(campoEstoque.value, 10)));
+		menos.addEventListener('click', () => ajustar(alvo - 1));
+		mais.addEventListener('click', () => ajustar(alvo + 1));
+		campoEstoque.addEventListener('change', () => {
+			const valor = Number(campoEstoque.value);
+			if (campoEstoque.value === '' || !Number.isInteger(valor) || valor < 0 || valor > ESTOQUE_MAX) {
+				mostrarEstoque(); // valor invalido: volta ao que estava
+				return;
+			}
+			ajustar(valor);
+			gravar(); // digitado: grava ja, sem esperar
+		});
+		mostrarEstoque();
 
 		const editar = criar('button', { classe: 'btn btn-secundario btn-pequeno', texto: 'Editar', attrs: { type: 'button', 'aria-label': 'Editar ' + produto.nome } });
-		editar.addEventListener('click', () => abrirDialogo(produto));
+		editar.addEventListener('click', () => {
+			// o estoque digitado/ajustado no card pode ainda estar sendo gravado: abre o formulario depois
+			editar.disabled = true;
+			gravar().then(() => abrirDialogo(painel.produtos.find(p => p.id === produto.id) || produto))
+				.finally(() => { editar.disabled = false; });
+		});
 
 		cartao.appendChild(criar('div', { classe: 'produto-corpo' }, [
 			criar('span', { classe: 'categoria-rotulo', texto: ROTULO_CATEGORIA[produto.categoria] || '' }),
