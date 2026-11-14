@@ -38,6 +38,8 @@ public class PedidoDto {
     }
 
     public final int id;
+    /** Numero exibido: sequencia dos pedidos do aluno (o id continua sendo usado nas acoes). */
+    public final int numero;
     public final String status;
     public final String statusRotulo;
     /** Data/hora de criacao em ISO-8601 com deslocamento de fuso. */
@@ -58,6 +60,7 @@ public class PedidoDto {
 
     public PedidoDto(Pedido p, boolean incluirComprador) {
         this.id = p.getId();
+        this.numero = p.getNumeroDoComprador();
         this.status = p.getStatus().name();
         this.statusRotulo = p.getStatus().getRotulo();
         this.criadoEm = p.getCriadoEm() == null ? null

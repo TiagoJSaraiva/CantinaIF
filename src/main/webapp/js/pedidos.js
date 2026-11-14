@@ -117,7 +117,8 @@ document.addEventListener('DOMContentLoaded', function() {
 			body: new URLSearchParams(dados).toString()
 		}).then(r => {
 			if (r.ok || !motivo) {
-				notificar(r.corpo.message || (r.ok ? 'Pedido atualizado.' : 'Não foi possível atualizar o pedido.'), r.ok ? 'ok' : 'erro');
+				notificar(r.ok ? 'Pedido #' + p.numero + ' de ' + ((p.comprador || {}).nome || '') + ': ' + rotuloStatus(novo) + '.'
+					: (r.corpo.message || 'Não foi possível atualizar o pedido.'), r.ok ? 'ok' : 'erro');
 				carregar(true);
 			}
 			return r;
@@ -140,7 +141,7 @@ document.addEventListener('DOMContentLoaded', function() {
 		campoMotivo.value = '';
 		const c = p.comprador || {};
 		document.getElementById('dlg-cancelar-info').textContent =
-			'Pedido #' + p.id + ' de ' + (c.nome || c.prontuario || '') + ' · ' + formatarPreco(p.total);
+			'Pedido #' + p.numero + ' de ' + (c.nome || c.prontuario || '') + ' · ' + formatarPreco(p.total);
 		dialogo.showModal();
 		campoMotivo.focus();
 	}

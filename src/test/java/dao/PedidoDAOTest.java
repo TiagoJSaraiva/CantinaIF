@@ -228,6 +228,35 @@ class PedidoDAOTest {
     }
 
     @Test
+    void numeroDoPedidoESequenciaDoProprioAlunoEmQualquerCantina() throws Exception {
+        String ana = novoComprador();
+        String bia = novoComprador();
+        Produto a = novoProduto("Numeracao", "1.00", 50);
+        Produto b = novoProduto(OUTRO, "Numeracao outra cantina", "1.00", 50);
+        LocalDateTime t = LocalDateTime.of(2031, 1, 10, 9, 0);
+        Pedido ana1 = dao.criarPedido(ana, List.of(new ItemCarrinho(a, 1)), t);
+        Pedido bia1 = dao.criarPedido(bia, List.of(new ItemCarrinho(a, 1)), t.plusHours(1));
+        Pedido ana2 = dao.criarPedido(ana, List.of(new ItemCarrinho(a, 2)), t.plusHours(2));
+        dao.cancelarComoComprador(ana2.getId(), ana); // cancelado continua contando
+        TestDb.vincular(ana, OUTRO);
+        Pedido ana3 = dao.criarPedido(ana, List.of(new ItemCarrinho(b, 1)), t.plusHours(3));
+        TestDb.vincular(ana, V);
+
+        List<Pedido> daAna = dao.listarPorComprador(ana);
+        assertEquals(List.of(3, 2, 1), daAna.stream().map(Pedido::getNumeroDoComprador).toList());
+        assertEquals(List.of(ana3.getId(), ana2.getId(), ana1.getId()), daAna.stream().map(Pedido::getId).toList());
+        assertEquals(1, dao.listarPorComprador(bia).get(0).getNumeroDoComprador());
+
+        // o vendedor ve o mesmo numero que o aluno
+        Pedido visto = dao.listarPedidos(V, null).stream().filter(p -> p.getId() == bia1.getId()).findFirst().orElseThrow();
+        assertEquals(1, visto.getNumeroDoComprador());
+        assertEquals(3, dao.listarPedidos(OUTRO, null).stream().filter(p -> p.getId() == ana3.getId())
+                .findFirst().orElseThrow().getNumeroDoComprador());
+        assertEquals(2, dao.buscarPorId(ana2.getId()).getNumeroDoComprador());
+        assertEquals(2, new model.PedidoDto(dao.buscarPorId(ana2.getId()), false).numero);
+    }
+
+    @Test
     void precoAlteradoDesdeOCarrinhoImpedeOCheckoutSemGravarNada() throws Exception {
         String comprador = novoComprador();
         Produto a = novoProduto("Preco mudou", "5.00", 10);

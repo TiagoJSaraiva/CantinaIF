@@ -40,7 +40,7 @@ document.addEventListener('DOMContentLoaded', function() {
 		if (confirmacaoMostrada || !novo) return;
 		confirmacaoMostrada = true;
 		const p = pedidos.find(x => String(x.id) === novo);
-		if (p) notificar('Pedido #' + p.id + ' realizado! Acompanhe o status abaixo e retire no balcão quando estiver pronto.');
+		if (p) notificar('Pedido #' + p.numero + ' realizado! Acompanhe o status abaixo e retire no balcão quando estiver pronto.');
 	}
 
 	function criarCartao(p) {
@@ -71,14 +71,14 @@ document.addEventListener('DOMContentLoaded', function() {
 	}
 
 	function cancelar(p, botao) {
-		if (!confirm('Cancelar o pedido #' + p.id + '?')) return;
+		if (!confirm('Cancelar o pedido #' + p.numero + '?')) return;
 		botao.disabled = true;
 		requisitar('apiUser/pedidos/cancelar', {
 			method: 'POST',
 			headers: cabecalhosCsrf({ 'Content-Type': 'application/x-www-form-urlencoded' }),
 			body: new URLSearchParams({ id: p.id }).toString()
 		}).then(({ ok, corpo }) => {
-			notificar(corpo.message || (ok ? 'Pedido cancelado.' : 'Não foi possível cancelar.'), ok ? 'ok' : 'erro');
+			notificar(ok ? 'Pedido #' + p.numero + ' cancelado.' : (corpo.message || 'Não foi possível cancelar.'), ok ? 'ok' : 'erro');
 			carregar();
 		}).catch(() => {
 			notificar('Erro de comunicação com o servidor.', 'erro');

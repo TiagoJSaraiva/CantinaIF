@@ -9,6 +9,8 @@ import java.util.List;
 public class Pedido {
 
     private int id;
+    /** Numero do pedido entre os pedidos do mesmo aluno (1, 2, 3...); e o numero mostrado ao aluno e ao vendedor. */
+    private int numeroDoComprador;
     private Comprador comprador;
     private List<ItemCarrinho> itens = new ArrayList<>();
     private StatusPedido status = StatusPedido.PENDENTE;
@@ -25,6 +27,9 @@ public class Pedido {
 
     public int getId() { return id; }
     public void setId(int id) { this.id = id; }
+
+    public int getNumeroDoComprador() { return numeroDoComprador; }
+    public void setNumeroDoComprador(int numeroDoComprador) { this.numeroDoComprador = numeroDoComprador; }
 
     public Comprador getComprador() { return comprador; }
     public void setComprador(Comprador comprador) { this.comprador = comprador; }

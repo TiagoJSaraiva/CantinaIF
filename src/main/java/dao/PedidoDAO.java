@@ -30,6 +30,9 @@ public class PedidoDAO {
     private static final String SELECT_PEDIDOS =
             "SELECT p.id AS pedido_id, p.status, p.criado_em, p.total, p.cancelado_por, p.motivo_cancelamento, "
             + "p.vendedor_prontuario, v.nome AS vendedor_nome, "
+            // numero do pedido entre os pedidos do proprio aluno (1, 2, 3...), em todas as cantinas e status
+            + "(SELECT COUNT(*) FROM Pedido q WHERE q.comprador_prontuario = p.comprador_prontuario "
+            + "AND (q.criado_em < p.criado_em OR (q.criado_em = p.criado_em AND q.id <= p.id))) AS numero_comprador, "
             + "c.prontuario, c.nome AS comprador_nome, c.email, "
             + "pp.produto_id, prod.nome AS produto_nome, pp.quantidade, pp.preco_unitario "
             + "FROM Pedido p "
@@ -355,6 +358,7 @@ public class PedidoDAO {
                     if (pedido == null) {
                         pedido = new Pedido();
                         pedido.setId(id);
+                        pedido.setNumeroDoComprador(rs.getInt("numero_comprador"));
                         pedido.setStatus(StatusPedido.valueOf(rs.getString("status")));
                         pedido.setCriadoEm(rs.getTimestamp("criado_em").toLocalDateTime());
                         pedido.setTotal(rs.getBigDecimal("total"));
