@@ -51,11 +51,11 @@
                         <button type="button" class="btn btn-secundario btn-pequeno js-demo"
                                 data-prontuario="<c:out value='${applicationScope.demoComprador}'/>"
                                 data-senha="<c:out value='${applicationScope.demoSenha}'/>">Usar esta conta</button></li>
-                    <li><span>Vendedor (Cantina Central): <code><c:out value="${applicationScope.demoVendedor}"/></code></span>
+                    <li><span>Vendedor <b>Cantina Central</b>
                         <button type="button" class="btn btn-secundario btn-pequeno js-demo"
                                 data-prontuario="<c:out value='${applicationScope.demoVendedor}'/>"
                                 data-senha="<c:out value='${applicationScope.demoSenha}'/>">Usar esta conta</button></li>
-                    <li><span>Vendedor (Lanchonete do Bloco B): <code><c:out value="${applicationScope.demoVendedor2}"/></code></span>
+                    <li><span>Vendedor <b>Lanchonete do Bloco B</b>
                         <button type="button" class="btn btn-secundario btn-pequeno js-demo"
                                 data-prontuario="<c:out value='${applicationScope.demoVendedor2}'/>"
                                 data-senha="<c:out value='${applicationScope.demoSenha}'/>">Usar esta conta</button></li>
