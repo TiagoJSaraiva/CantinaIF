@@ -100,9 +100,8 @@ function criarCartao(produto) {
 
 function adicionarAoCarrinho(produto, campo) {
 	const quantidade = parseInt(campo.value, 10);
-	const mensagem = document.getElementById('mensagem');
 	if (!Number.isInteger(quantidade) || quantidade < 1 || quantidade > produto.estoque) {
-		mostrarMensagem(mensagem, 'Informe uma quantidade entre 1 e ' + produto.estoque + '.', true);
+		notificar('Informe uma quantidade entre 1 e ' + produto.estoque + '.', 'erro');
 		campo.focus();
 		return;
 	}
@@ -112,11 +111,11 @@ function adicionarAoCarrinho(produto, campo) {
 		body: JSON.stringify({ produtoId: produto.id, quantidade: quantidade })
 	})
 		.then(({ ok, corpo }) => {
-			mostrarMensagem(mensagem, ok ? produto.nome + ' adicionado ao carrinho.' : (corpo.message || 'Erro ao adicionar produto.'), !ok);
+			notificar(ok ? produto.nome + ' adicionado ao carrinho.' : (corpo.message || 'Erro ao adicionar produto.'), ok ? 'ok' : 'erro');
 			if (ok) atualizarBadgeCarrinho();
 			else if (corpo.message && corpo.message.indexOf('esgotado') >= 0) carregarProdutosUser(catalogo.categoria);
 		})
-		.catch(() => mostrarMensagem(mensagem, 'Erro de comunicação com o servidor.', true));
+		.catch(() => notificar('Erro de comunicação com o servidor.', 'erro'));
 }
 
 document.addEventListener('DOMContentLoaded', function() {

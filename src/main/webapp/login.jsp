@@ -1,5 +1,6 @@
 <%@ page language="java" contentType="text/html; charset=UTF-8" pageEncoding="UTF-8" session="false"%>
 <%@ taglib uri="jakarta.tags.core" prefix="c" %>
+<%@ taglib tagdir="/WEB-INF/tags" prefix="cif" %>
 <!DOCTYPE html>
 <html lang="pt-br">
 <head>
@@ -13,26 +14,28 @@
         <div class="brand-grande"><img src="img/marca-if.png" alt="" width="33" height="44"><span>CantinaIF</span></div>
         <h1 id="titulo">Entrar</h1>
 
-        <c:if test="${param.restaurada == '1'}">
-            <div class="alerta alerta-aviso" role="status"><p>A demonstração foi restaurada; entre novamente.</p></div>
-        </c:if>
-        <c:if test="${param.cadastro == 'ok' and empty param.vinculo}">
-            <div class="alerta alerta-ok" role="status"><p>Cadastro realizado. Faça login para continuar.</p></div>
-        </c:if>
-        <c:if test="${param.cadastro == 'ok' and param.vinculo == 'ok'}">
-            <div class="alerta alerta-ok" role="status"><p>Cadastro realizado e conta vinculada à cantina. Faça login para ver os produtos.</p></div>
-        </c:if>
-        <c:if test="${param.cadastro == 'ok' and param.vinculo == 'falhou'}">
-            <div class="alerta alerta-aviso" role="status"><p>Conta criada, mas o código do vendedor era inválido ou expirou.
-                Entre e peça um novo código para se vincular.</p></div>
-        </c:if>
-        <c:if test="${param.cadastro == 'vendedor'}">
-            <div class="alerta alerta-ok" role="status"><p>Conta de vendedor criada. Entre para cadastrar seus produtos
-                e gerar códigos de vínculo para os seus compradores.</p></div>
-        </c:if>
-        <c:if test="${not empty requestScope.error}">
-            <div class="alerta alerta-erro" role="alert"><p><c:out value="${requestScope.error}"/></p></div>
-        </c:if>
+        <div class="notificacoes" id="notificacoes" aria-live="polite">
+            <c:if test="${param.restaurada == '1'}">
+                <cif:notificacao tipo="aviso">A demonstração foi restaurada; entre novamente.</cif:notificacao>
+            </c:if>
+            <c:if test="${param.cadastro == 'ok' and empty param.vinculo}">
+                <cif:notificacao tipo="ok">Cadastro realizado. Faça login para continuar.</cif:notificacao>
+            </c:if>
+            <c:if test="${param.cadastro == 'ok' and param.vinculo == 'ok'}">
+                <cif:notificacao tipo="ok">Cadastro realizado e conta vinculada à cantina. Faça login para ver os produtos.</cif:notificacao>
+            </c:if>
+            <c:if test="${param.cadastro == 'ok' and param.vinculo == 'falhou'}">
+                <cif:notificacao tipo="aviso">Conta criada, mas o código do vendedor era inválido ou expirou.
+                    Entre e peça um novo código para se vincular.</cif:notificacao>
+            </c:if>
+            <c:if test="${param.cadastro == 'vendedor'}">
+                <cif:notificacao tipo="ok">Conta de vendedor criada. Entre para cadastrar seus produtos
+                    e gerar códigos de vínculo para os seus compradores.</cif:notificacao>
+            </c:if>
+            <c:if test="${not empty requestScope.error}">
+                <cif:notificacao tipo="erro"><c:out value="${requestScope.error}"/></cif:notificacao>
+            </c:if>
+        </div>
 
         <c:if test="${applicationScope.demoMode}">
             <section class="demo-box" aria-labelledby="demo-titulo">

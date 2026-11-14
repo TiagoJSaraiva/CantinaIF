@@ -3,7 +3,6 @@
 document.addEventListener('DOMContentLoaded', function() {
 	const estado = document.getElementById('estado');
 	const lista = document.getElementById('lista');
-	const mensagem = document.getElementById('mensagem');
 	const filtros = document.getElementById('filtros-status');
 
 	const ANDAMENTO = ['PENDENTE', 'EM_PREPARO', 'PRONTO'];
@@ -118,12 +117,12 @@ document.addEventListener('DOMContentLoaded', function() {
 			body: new URLSearchParams(dados).toString()
 		}).then(r => {
 			if (r.ok || !motivo) {
-				mostrarMensagem(mensagem, r.corpo.message || (r.ok ? 'Pedido atualizado.' : 'Não foi possível atualizar o pedido.'), !r.ok);
+				notificar(r.corpo.message || (r.ok ? 'Pedido atualizado.' : 'Não foi possível atualizar o pedido.'), r.ok ? 'ok' : 'erro');
 				carregar(true);
 			}
 			return r;
 		}, e => {
-			mostrarMensagem(mensagem, 'Erro de comunicação com o servidor.', true);
+			notificar('Erro de comunicação com o servidor.', 'erro');
 			throw e;
 		});
 	}

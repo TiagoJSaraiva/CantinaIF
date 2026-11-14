@@ -2,34 +2,34 @@
 document.addEventListener('DOMContentLoaded', function() {
 	document.querySelectorAll('form.js-vinculo').forEach(form => {
 		const campo = form.querySelector('input[name="codigo"]');
-		const msg = form.querySelector('[data-vinculo-msg]');
 		const botao = form.querySelector('button[type="submit"]');
 
 		form.addEventListener('submit', evento => {
 			evento.preventDefault();
 			const codigo = campo.value.replace(/[\s-]/g, '').toUpperCase();
 			if (codigo.length !== 6) {
-				mostrarMensagem(msg, 'O código tem 6 caracteres.', true);
+				marcarErro(campo, 'O código tem 6 caracteres.');
 				campo.focus();
 				return;
 			}
+			marcarErro(campo, '');
 			botao.disabled = true;
 			requisitar('apiUser/vinculo', {
 				method: 'POST',
 				headers: cabecalhosCsrf({ 'Content-Type': 'application/x-www-form-urlencoded' }),
 				body: new URLSearchParams({ codigo: codigo }).toString()
 			}).then(({ ok, corpo }) => {
-				mostrarMensagem(msg, corpo.message || (ok ? 'Conta vinculada.' : 'Não foi possível vincular.'), !ok);
 				if (ok) {
-					// a pagina inteira depende do vinculo (catalogo, cabecalho): recarrega mostrando a confirmacao
-					try { sessionStorage.setItem('vinculo-msg', corpo.message || ''); } catch (e) { /* sem armazenamento */ }
-					setTimeout(() => window.location.reload(), 600);
+					// a pagina inteira depende do vinculo (catalogo, cabecalho): recarrega e mostra a confirmacao em popup
+					try { sessionStorage.setItem('vinculo-msg', corpo.message || 'Conta vinculada.'); } catch (e) { /* sem armazenamento */ }
+					window.location.reload();
 				} else {
+					marcarErro(campo, corpo.message || 'Não foi possível vincular.');
 					botao.disabled = false;
 					campo.select();
 				}
 			}).catch(() => {
-				mostrarMensagem(msg, 'Erro de comunicação com o servidor.', true);
+				notificar('Erro de comunicação com o servidor.', 'erro');
 				botao.disabled = false;
 			});
 		});
@@ -41,6 +41,5 @@ document.addEventListener('DOMContentLoaded', function() {
 		pendente = sessionStorage.getItem('vinculo-msg');
 		sessionStorage.removeItem('vinculo-msg');
 	} catch (e) { /* sem armazenamento */ }
-	const destino = document.getElementById('mensagem');
-	if (pendente && destino) mostrarMensagem(destino, pendente, false);
+	if (pendente) notificar(pendente);
 });

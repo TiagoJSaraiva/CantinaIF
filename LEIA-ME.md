@@ -39,7 +39,7 @@ O projeto foi depois modernizado (segurança, domínio de pedidos, dados de demo
 **Aluno (comprador)**
 - Cadastro com prontuário, nome, e-mail e senha; login e logout.
 - **Vínculo com uma cantina por código do vendedor.** O vendedor gera um código de 6 caracteres que vale por 1 minuto e para um único aluno. O aluno digita o código no cadastro (opcional) ou depois, em "Minha conta"; até lá o catálogo não mostra produtos, só o formulário do código. Cada conta fica vinculada a uma cantina por vez; um código novo troca de cantina (o carrinho é esvaziado e os pedidos antigos continuam no histórico).
-- Advertências enviadas pelo vendedor aparecem numa faixa no catálogo, num contador no menu e numa lista em "Minha conta" (marcar como lidas). Uma conta desativada ainda entra, mas só vê o aviso e as advertências: sem produtos, carrinho, pedidos nem troca de cantina, inclusive em sessões que já estavam abertas.
+- Advertências enviadas pelo vendedor aparecem num popup no catálogo, num contador no menu e numa lista em "Minha conta" (marcar como lidas). Uma conta desativada ainda entra, mas só vê o aviso e as advertências: sem produtos, carrinho, pedidos nem troca de cantina, inclusive em sessões que já estavam abertas.
 - Pedidos cancelados pela cantina mostram o motivo informado pelo vendedor.
 - Catálogo com busca por texto e filtro por categoria (salgados, lanches, doces, bebidas). Produtos esgotados aparecem, mas não podem ser comprados; selo "Última unidade" quando o estoque é 1.
 - Carrinho com alteração de quantidade, remoção de itens, subtotal e total (até 99 unidades por item); o estoque é conferido considerando o que já está no carrinho.

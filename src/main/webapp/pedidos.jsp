@@ -19,7 +19,6 @@
         <div class="chips" role="group" aria-label="Filtrar por status" id="filtros-status"></div>
     </div>
 
-    <div id="mensagem" role="status" aria-live="polite" hidden></div>
     <div id="estado" class="estado carregando" role="status">Carregando pedidos...</div>
     <div id="lista" class="lista-pedidos" hidden></div>
 </main>

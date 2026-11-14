@@ -1,5 +1,6 @@
 <%@ page language="java" contentType="text/html; charset=UTF-8" pageEncoding="UTF-8"%>
 <%@ taglib uri="jakarta.tags.core" prefix="c" %>
+<%@ taglib tagdir="/WEB-INF/tags" prefix="cif" %>
 <c:set var="pagina" value="home"/>
 <c:set var="estado" value="${requestScope.estadoComprador}"/>
 <!DOCTYPE html>
@@ -11,7 +12,13 @@
 <body>
 <%@ include file="/WEB-INF/jspf/navbar.jspf" %>
 <main class="container" id="conteudo">
-    <div id="mensagem" role="status" aria-live="polite" hidden></div>
+    <div class="notificacoes" id="notificacoes" aria-live="polite">
+        <c:if test="${estado.vinculado and estado.naoLidas > 0}">
+            <cif:notificacao tipo="aviso" chave="adv-${estado.naoLidas}">Você tem <strong><c:out value="${estado.naoLidas}"/></strong>
+                <c:out value="${estado.naoLidas == 1 ? 'advertência nova' : 'advertências novas'}"/> da cantina.
+                <a href="conta.jsp#advertencias">Ler agora</a></cif:notificacao>
+        </c:if>
+    </div>
     <c:choose>
         <c:when test="${not estado.vinculado}">
             <div class="page-head"><h1>Catálogo</h1></div>
@@ -24,13 +31,6 @@
         </c:when>
         <c:otherwise>
             <div class="page-head"><h1>Catálogo</h1></div>
-            <c:if test="${estado.naoLidas > 0}">
-                <div class="alerta alerta-aviso js-faixa-advertencias" role="status">
-                    <p>Você tem <strong><c:out value="${estado.naoLidas}"/></strong>
-                        <c:out value="${estado.naoLidas == 1 ? 'advertência nova' : 'advertências novas'}"/> da cantina.
-                        <a href="conta.jsp#advertencias">Ler agora</a></p>
-                </div>
-            </c:if>
 
             <div class="toolbar">
                 <div class="busca">

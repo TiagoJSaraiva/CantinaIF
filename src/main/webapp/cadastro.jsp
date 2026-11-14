@@ -1,5 +1,6 @@
 <%@ page language="java" contentType="text/html; charset=UTF-8" pageEncoding="UTF-8" session="false"%>
 <%@ taglib uri="jakarta.tags.core" prefix="c" %>
+<%@ taglib tagdir="/WEB-INF/tags" prefix="cif" %>
 <c:set var="vendedor" value="${requestScope.perfil == 'vendedor' or (empty requestScope.perfil and param.perfil == 'vendedor')}"/>
 <!DOCTYPE html>
 <html lang="pt-br">
@@ -14,9 +15,11 @@
         <div class="brand-grande"><img src="img/marca-if.png" alt="" width="33" height="44"><span>CantinaIF</span></div>
         <h1 id="titulo">Criar conta</h1>
 
-        <c:if test="${not empty requestScope.error}">
-            <div class="alerta alerta-erro" role="alert"><p><c:out value="${requestScope.error}"/></p></div>
-        </c:if>
+        <div class="notificacoes" id="notificacoes" aria-live="polite">
+            <c:if test="${not empty requestScope.error}">
+                <cif:notificacao tipo="erro"><c:out value="${requestScope.error}"/></cif:notificacao>
+            </c:if>
+        </div>
 
         <form action="register" method="post" novalidate data-validar id="form-cadastro">
             <input type="hidden" name="_csrf" value="<c:out value='${requestScope.csrfForm}'/>">

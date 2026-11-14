@@ -66,14 +66,95 @@ function debounce(fn, ms) {
 	return (...args) => { clearTimeout(t); t = setTimeout(() => fn(...args), ms); };
 }
 
-// Mensagem de sucesso/erro (regiao aria-live), sem alert().
-function mostrarMensagem(elemento, texto, erro) {
-	if (!elemento) return;
-	elemento.textContent = texto || '';
-	elemento.className = 'alerta ' + (erro ? 'alerta-erro' : 'alerta-ok');
-	elemento.setAttribute('role', erro ? 'alert' : 'status');
-	elemento.hidden = !texto;
+// ---------- notificacoes (popups no canto superior direito) ----------
+// tipo: 'ok' (some sozinho apos alguns segundos), 'erro' ou 'aviso' (ficam ate o X).
+// opcoes.link = { texto, href } acrescenta um link; opcoes.persistente forca ficar/sumir.
+const DURACAO_NOTIFICACAO = 5000;
+const MAX_NOTIFICACOES = 4;
+
+function containerNotificacoes() {
+	let c = document.getElementById('notificacoes');
+	if (!c) {
+		c = criar('div', { classe: 'notificacoes', attrs: { id: 'notificacoes', 'aria-live': 'polite' } });
+		document.body.appendChild(c);
+	}
+	return c;
 }
+
+function notificar(texto, tipo = 'ok', opcoes = {}) {
+	if (!texto) return null;
+	const corpo = criar('p', { classe: 'notificacao-texto', texto: texto });
+	if (opcoes.link) {
+		corpo.appendChild(document.createTextNode(' '));
+		corpo.appendChild(criar('a', { texto: opcoes.link.texto, attrs: { href: opcoes.link.href } }));
+	}
+	const ns = 'http://www.w3.org/2000/svg';
+	const icone = document.createElementNS(ns, 'svg');
+	icone.setAttribute('viewBox', '0 0 24 24');
+	icone.setAttribute('aria-hidden', 'true');
+	icone.setAttribute('focusable', 'false');
+	const traco = document.createElementNS(ns, 'path');
+	traco.setAttribute('d', 'M6 6l12 12M18 6L6 18');
+	icone.appendChild(traco);
+	const fechar = criar('button', {
+		classe: 'notificacao-fechar js-fechar-notificacao',
+		attrs: { type: 'button', 'aria-label': 'Fechar notificação', title: 'Fechar' }
+	}, [icone]);
+	const n = criar('div', { classe: 'notificacao notificacao-' + tipo, attrs: { role: tipo === 'erro' ? 'alert' : 'status' } }, [corpo, fechar]);
+	const some = opcoes.persistente === undefined ? tipo === 'ok' : !opcoes.persistente;
+	if (some) n.dataset.some = '';
+	const c = containerNotificacoes();
+	c.prepend(n);
+	while (c.children.length > MAX_NOTIFICACOES) c.lastElementChild.remove();
+	prepararNotificacao(n);
+	return n;
+}
+
+function prepararNotificacao(n) {
+	if (!('some' in n.dataset)) return;
+	const agendar = () => { clearTimeout(n.temporizador); n.temporizador = setTimeout(() => fecharNotificacao(n), DURACAO_NOTIFICACAO); };
+	const pausar = () => clearTimeout(n.temporizador);
+	n.addEventListener('mouseenter', pausar);
+	n.addEventListener('focusin', pausar);
+	n.addEventListener('mouseleave', agendar);
+	n.addEventListener('focusout', agendar);
+	agendar();
+}
+
+function fecharNotificacao(n, manual) {
+	if (!n || n.classList.contains('saindo')) return;
+	clearTimeout(n.temporizador);
+	if (manual && n.dataset.chave) {
+		try { sessionStorage.setItem('notificacao-fechada:' + n.dataset.chave, '1'); } catch (e) { /* sem armazenamento */ }
+	}
+	n.classList.add('saindo');
+	setTimeout(() => n.remove(), 200);
+}
+
+// popups vindos do servidor, botao X e posicao (logo abaixo do cabecalho; no topo da tela depois de rolar)
+(function iniciarNotificacoes() {
+	const c = containerNotificacoes();
+	c.querySelectorAll('.notificacao').forEach(n => {
+		let fechada = false;
+		try { fechada = !!n.dataset.chave && sessionStorage.getItem('notificacao-fechada:' + n.dataset.chave) === '1'; } catch (e) { /* sem armazenamento */ }
+		if (fechada) n.remove(); else prepararNotificacao(n);
+	});
+	document.addEventListener('click', evento => {
+		const botao = evento.target.closest('.js-fechar-notificacao');
+		if (botao) fecharNotificacao(botao.closest('.notificacao'), true);
+	});
+	const cabecalho = document.querySelector('.topbar');
+	if (!cabecalho) return;
+	let pendente = false;
+	const posicionar = () => {
+		pendente = false;
+		c.style.top = (Math.max(cabecalho.getBoundingClientRect().bottom, 0) + 12) + 'px';
+	};
+	const agendar = () => { if (!pendente) { pendente = true; requestAnimationFrame(posicionar); } };
+	window.addEventListener('scroll', agendar, { passive: true });
+	window.addEventListener('resize', agendar);
+	posicionar();
+})();
 
 // Area de estado (carregando / vazio / erro). Passe texto vazio para esconder.
 function mostrarEstado(elemento, texto, tipo, acao) {

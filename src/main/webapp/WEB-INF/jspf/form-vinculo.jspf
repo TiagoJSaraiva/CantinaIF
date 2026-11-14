@@ -9,6 +9,6 @@
             <button type="submit" class="btn">Vincular</button>
         </div>
         <span class="dica" id="dica-codigo">Peça o código à cantina. Ele vale por 1 minuto e só pode ser usado uma vez.</span>
+        <span class="campo-erro" id="erro-codigo" role="alert"></span>
     </div>
-    <div data-vinculo-msg role="status" aria-live="polite" hidden></div>
 </form>

@@ -39,7 +39,7 @@ The project was later modernized (security, order domain, demo data, responsive 
 **Student (buyer)**
 - Sign up with institutional ID (*prontuário*), name, e-mail and password; login/logout.
 - **Link to a canteen with a seller code.** The seller generates a 6-character code that is valid for 1 minute and for a single student. The student types it at sign-up (optional) or later in "My account"; until then the catalog shows no products, only the code form. Each account is linked to one canteen at a time; a new code switches canteens (the cart is emptied, old orders stay in the history).
-- Warnings sent by the seller appear as a banner on the catalog, a counter in the menu and a list in "My account" (mark as read). A deactivated account can still sign in but only sees a notice and the warnings: no products, cart, orders or canteen switching, including sessions that were already open.
+- Warnings sent by the seller appear as a pop-up on the catalog, a counter in the menu and a list in "My account" (mark as read). A deactivated account can still sign in but only sees a notice and the warnings: no products, cart, orders or canteen switching, including sessions that were already open.
 - Orders canceled by the canteen show the reason the seller gave.
 - Catalog with text search and category filter (savory, snacks, sweets, drinks). Sold-out products are shown but cannot be bought; "last unit" badge when stock is 1.
 - Cart with quantity change, item removal, subtotal and total (up to 99 units per item); stock is checked against what is already in the cart.

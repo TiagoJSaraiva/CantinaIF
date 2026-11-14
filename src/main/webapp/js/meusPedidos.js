@@ -2,7 +2,6 @@
 document.addEventListener('DOMContentLoaded', function() {
 	const estado = document.getElementById('estado');
 	const lista = document.getElementById('lista');
-	const mensagem = document.getElementById('mensagem');
 	const novo = document.getElementById('conteudo').dataset.novo;
 
 	function carregar() {
@@ -32,6 +31,16 @@ document.addEventListener('DOMContentLoaded', function() {
 		pedidos.forEach(p => lista.appendChild(criarCartao(p)));
 		lista.hidden = false;
 		ajustarRolagemDosItens(lista);
+		confirmarPedidoNovo(pedidos);
+	}
+
+	// popup "pedido realizado" depois de finalizar a compra (?novo=<id>), so na primeira carga
+	let confirmacaoMostrada = false;
+	function confirmarPedidoNovo(pedidos) {
+		if (confirmacaoMostrada || !novo) return;
+		confirmacaoMostrada = true;
+		const p = pedidos.find(x => String(x.id) === novo);
+		if (p) notificar('Pedido #' + p.id + ' realizado! Acompanhe o status abaixo e retire no balcão quando estiver pronto.');
 	}
 
 	function criarCartao(p) {
@@ -69,10 +78,10 @@ document.addEventListener('DOMContentLoaded', function() {
 			headers: cabecalhosCsrf({ 'Content-Type': 'application/x-www-form-urlencoded' }),
 			body: new URLSearchParams({ id: p.id }).toString()
 		}).then(({ ok, corpo }) => {
-			mostrarMensagem(mensagem, corpo.message || (ok ? 'Pedido cancelado.' : 'Não foi possível cancelar.'), !ok);
+			notificar(corpo.message || (ok ? 'Pedido cancelado.' : 'Não foi possível cancelar.'), ok ? 'ok' : 'erro');
 			carregar();
 		}).catch(() => {
-			mostrarMensagem(mensagem, 'Erro de comunicação com o servidor.', true);
+			notificar('Erro de comunicação com o servidor.', 'erro');
 			botao.disabled = false;
 		});
 	}

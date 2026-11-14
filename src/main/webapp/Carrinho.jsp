@@ -1,5 +1,6 @@
 <%@ page language="java" contentType="text/html; charset=UTF-8" pageEncoding="UTF-8"%>
 <%@ taglib uri="jakarta.tags.core" prefix="c" %>
+<%@ taglib tagdir="/WEB-INF/tags" prefix="cif" %>
 <c:set var="pagina" value="carrinho"/>
 <!DOCTYPE html>
 <html lang="pt-br">
@@ -12,10 +13,11 @@
 <main class="container" id="conteudo">
     <div class="page-head"><h1>Seu carrinho</h1></div>
 
-    <c:if test="${not empty requestScope.errorMessage}">
-        <div class="alerta alerta-erro" role="alert"><p><c:out value="${requestScope.errorMessage}"/></p></div>
-    </c:if>
-    <div id="mensagem" role="status" aria-live="polite" hidden></div>
+    <div class="notificacoes" id="notificacoes" aria-live="polite">
+        <c:if test="${not empty requestScope.errorMessage}">
+            <cif:notificacao tipo="erro"><c:out value="${requestScope.errorMessage}"/></cif:notificacao>
+        </c:if>
+    </div>
 
     <div class="carrinho-layout">
         <section aria-label="Itens do carrinho">

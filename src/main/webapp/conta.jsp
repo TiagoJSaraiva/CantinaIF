@@ -12,7 +12,6 @@
 <%@ include file="/WEB-INF/jspf/navbar.jspf" %>
 <main class="container container-estreito" id="conteudo">
     <div class="page-head"><h1>Minha conta</h1></div>
-    <div id="mensagem" role="status" aria-live="polite" hidden></div>
 
     <div class="painel painel-conta">
         <section class="conta-secao" aria-labelledby="titulo-dados">

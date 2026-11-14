@@ -4,7 +4,6 @@ document.addEventListener('DOMContentLoaded', function() {
 	const container = document.getElementById('carrinho-container');
 	const resumo = document.getElementById('resumo');
 	const total = document.getElementById('display-total');
-	const mensagem = document.getElementById('mensagem');
 	const badge = document.getElementById('badge-carrinho');
 
 	function carregar() {
@@ -56,9 +55,9 @@ document.addEventListener('DOMContentLoaded', function() {
 				headers: cabecalhosCsrf({ 'Content-Type': 'application/json' }),
 				body: JSON.stringify({ produtoId: item.id, quantidade: quantidade })
 			}).then(({ ok, corpo }) => {
-				if (ok) { mostrarMensagem(mensagem, '', false); carregar(); }
-				else { mostrarMensagem(mensagem, corpo.message || 'Não foi possível alterar a quantidade.', true); campo.value = String(item.quantidade); }
-			}).catch(() => mostrarMensagem(mensagem, 'Erro de comunicação com o servidor.', true));
+				if (ok) carregar();
+				else { notificar(corpo.message || 'Não foi possível alterar a quantidade.', 'erro'); campo.value = String(item.quantidade); }
+			}).catch(() => notificar('Erro de comunicação com o servidor.', 'erro'));
 		};
 		const menos = criar('button', { texto: '−', attrs: { type: 'button', 'aria-label': 'Diminuir quantidade de ' + item.nome } });
 		const mais = criar('button', { texto: '+', attrs: { type: 'button', 'aria-label': 'Aumentar quantidade de ' + item.nome } });
@@ -71,10 +70,10 @@ document.addEventListener('DOMContentLoaded', function() {
 		remover.addEventListener('click', () => {
 			requisitar('carrinho?produtoId=' + encodeURIComponent(item.id), { method: 'DELETE', headers: cabecalhosCsrf() })
 				.then(({ ok, corpo }) => {
-					if (ok) { mostrarMensagem(mensagem, item.nome + ' removido do carrinho.', false); carregar(); }
-					else mostrarMensagem(mensagem, corpo.message || 'Não foi possível remover o item.', true);
+					if (ok) { notificar(item.nome + ' removido do carrinho.'); carregar(); }
+					else notificar(corpo.message || 'Não foi possível remover o item.', 'erro');
 				})
-				.catch(() => mostrarMensagem(mensagem, 'Erro de comunicação com o servidor.', true));
+				.catch(() => notificar('Erro de comunicação com o servidor.', 'erro'));
 		});
 
 		const cartao = criar('article', { classe: 'item-carrinho' }, [

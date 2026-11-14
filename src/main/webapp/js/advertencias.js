@@ -46,7 +46,6 @@ document.addEventListener('DOMContentLoaded', function() {
 				.then(({ ok }) => {
 					if (ok) {
 						document.querySelectorAll('.badge-avisos').forEach(b => b.remove());
-						document.querySelectorAll('.js-faixa-advertencias').forEach(b => b.remove());
 						carregar();
 					}
 				})

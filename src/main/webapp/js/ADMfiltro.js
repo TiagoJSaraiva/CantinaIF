@@ -8,7 +8,6 @@ const painel = { produtos: [], categoria: 'todos', busca: '' };
 document.addEventListener('DOMContentLoaded', function() {
 	const estado = document.getElementById('estado');
 	const container = document.getElementById('productContainer');
-	const mensagem = document.getElementById('mensagem');
 	const dialogo = document.getElementById('dlg-produto');
 	const form = document.getElementById('form-produto');
 	const erroGeral = document.getElementById('erro-geral');
@@ -65,9 +64,9 @@ document.addEventListener('DOMContentLoaded', function() {
 				headers: cabecalhosCsrf({ 'Content-Type': 'application/x-www-form-urlencoded' }),
 				body: new URLSearchParams({ id: produto.id, estoque: valor, esperado: produto.estoque }).toString()
 			}).then(({ ok, status, corpo }) => {
-				mostrarMensagem(mensagem, ok ? 'Estoque de ' + produto.nome + ' atualizado para ' + valor + '.' : (corpo.message || 'Erro ao atualizar o estoque.'), !ok);
+				notificar(ok ? 'Estoque de ' + produto.nome + ' atualizado para ' + valor + '.' : (corpo.message || 'Erro ao atualizar o estoque.'), ok ? 'ok' : 'erro');
 				if (ok) { produto.estoque = valor; carregar(); } else { campoEstoque.value = String(produto.estoque); if (status === 409) carregar(); }
-			}).catch(() => mostrarMensagem(mensagem, 'Erro de comunicação com o servidor.', true));
+			}).catch(() => notificar('Erro de comunicação com o servidor.', 'erro'));
 		};
 		const menos = criar('button', { texto: '−', attrs: { type: 'button', 'aria-label': 'Diminuir estoque de ' + produto.nome } });
 		const mais = criar('button', { texto: '+', attrs: { type: 'button', 'aria-label': 'Aumentar estoque de ' + produto.nome } });
@@ -134,7 +133,7 @@ document.addEventListener('DOMContentLoaded', function() {
 			.then(({ ok, corpo }) => {
 				if (ok) {
 					dialogo.close();
-					mostrarMensagem(mensagem, corpo.message || 'Produto salvo.', false);
+					notificar(corpo.message || 'Produto salvo.');
 					carregar();
 				} else if (corpo.erros) {
 					mostrarErrosServidor(form, corpo.erros);

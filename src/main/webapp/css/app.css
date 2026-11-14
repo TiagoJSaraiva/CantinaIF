@@ -738,3 +738,32 @@ fieldset.modelos .chip { text-align: left; border-radius: 8px; white-space: norm
 @media (prefers-color-scheme: dark) {
 	:root:not([data-tema="claro"]) .produto-img img[src$="placeholder.svg"] { filter: brightness(.35) saturate(.8); }
 }
+
+/* ---------- notificacoes (popups no canto superior direito, acompanham a rolagem) ---------- */
+.notificacoes {
+	position: fixed; top: .75rem; right: 1rem; z-index: 50; width: min(24rem, calc(100vw - 2rem));
+	display: flex; flex-direction: column; gap: .5rem; pointer-events: none;
+}
+.notificacao {
+	display: flex; align-items: flex-start; gap: .5rem; padding: .7rem .5rem .7rem .9rem; pointer-events: auto;
+	border: 1px solid; border-left-width: 4px; border-radius: var(--raio); box-shadow: var(--sombra-forte);
+	animation: notificacao-entra .18s ease-out;
+	transition: opacity .18s ease-in, transform .18s ease-in;
+}
+.notificacao.saindo { opacity: 0; transform: translateX(1rem); }
+@keyframes notificacao-entra { from { opacity: 0; transform: translateX(1rem); } }
+.notificacao-ok { background: var(--ok-bg); color: var(--ok); border-color: var(--ok-borda); border-left-color: var(--ok); }
+.notificacao-erro { background: var(--erro-bg); color: var(--erro); border-color: var(--erro-borda); border-left-color: var(--erro); }
+.notificacao-aviso { background: var(--aviso-bg); color: var(--aviso); border-color: var(--aviso-borda); border-left-color: var(--aviso); }
+.notificacao-texto { flex: 1 1 auto; min-width: 0; margin: .1rem 0 0; overflow-wrap: anywhere; }
+.notificacao-texto a { color: var(--link); font-weight: 600; }
+.notificacao-fechar {
+	flex: none; display: inline-flex; align-items: center; justify-content: center; width: 1.75rem; height: 1.75rem;
+	margin: -.2rem 0 -.2rem 0; padding: 0; border: 0; border-radius: 6px; background: transparent; color: inherit;
+	cursor: pointer; opacity: .75;
+}
+.notificacao-fechar:hover { opacity: 1; background: rgba(127, 127, 127, .15); }
+.notificacao-fechar svg { width: 1.1rem; height: 1.1rem; fill: none; stroke: currentColor; stroke-width: 2.2; stroke-linecap: round; }
+@media (prefers-reduced-motion: reduce) {
+	.notificacao { animation: none; transition: none; }
+}

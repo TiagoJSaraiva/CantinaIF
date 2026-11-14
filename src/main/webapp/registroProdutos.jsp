@@ -29,7 +29,6 @@
         </div>
     </div>
 
-    <div id="mensagem" role="status" aria-live="polite" hidden></div>
     <div id="estado" class="estado carregando" role="status">Carregando produtos...</div>
     <div id="productContainer" class="grade" hidden></div>
 </main>

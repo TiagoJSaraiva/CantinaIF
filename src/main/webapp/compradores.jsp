@@ -11,7 +11,6 @@
 <%@ include file="/WEB-INF/jspf/navbar.jspf" %>
 <main class="container" id="conteudo">
     <div class="page-head"><h1>Compradores</h1></div>
-    <div id="mensagem" role="status" aria-live="polite" hidden></div>
 
     <section class="painel painel-codigo" aria-labelledby="titulo-codigo">
         <div>

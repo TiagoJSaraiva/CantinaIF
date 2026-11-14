@@ -1,7 +1,6 @@
 // Painel do vendedor - compradores: codigo de vinculo, tabela de compradores, desativar/reativar e advertencias.
 // Depende de util.js.
 document.addEventListener('DOMContentLoaded', function() {
-	const mensagem = document.getElementById('mensagem');
 
 	// ---------- codigo de vinculo (60 s, uso unico) ----------
 	const saidaCodigo = document.getElementById('codigo');
@@ -45,7 +44,7 @@ document.addEventListener('DOMContentLoaded', function() {
 				mostrarCodigo(corpo.codigo, Number(corpo.segundos) || 60);
 				carregar(true); // quem acabou de se vincular aparece na tabela na proxima atualizacao
 			})
-			.catch(e => mostrarMensagem(mensagem, (e && e.message !== 'erro' && e.message) || 'Não foi possível gerar o código.', true))
+			.catch(e => notificar((e && e.message !== 'erro' && e.message) || 'Não foi possível gerar o código.', 'erro'))
 			.finally(() => { botaoGerar.disabled = false; });
 	});
 
@@ -138,10 +137,10 @@ document.addEventListener('DOMContentLoaded', function() {
 			headers: cabecalhosCsrf({ 'Content-Type': 'application/x-www-form-urlencoded' }),
 			body: new URLSearchParams({ prontuario: c.prontuario, ativo: String(ativar) }).toString()
 		}).then(({ ok, corpo }) => {
-			mostrarMensagem(mensagem, corpo.message || (ok ? 'Situação atualizada.' : 'Não foi possível atualizar.'), !ok);
+			notificar(corpo.message || (ok ? 'Situação atualizada.' : 'Não foi possível atualizar.'), ok ? 'ok' : 'erro');
 			carregar(true);
 		}).catch(() => {
-			mostrarMensagem(mensagem, 'Erro de comunicação com o servidor.', true);
+			notificar('Erro de comunicação com o servidor.', 'erro');
 			botao.disabled = false;
 		});
 	}
@@ -184,7 +183,7 @@ document.addEventListener('DOMContentLoaded', function() {
 		}).then(({ ok, corpo }) => {
 			if (ok) {
 				dialogo.close();
-				mostrarMensagem(mensagem, corpo.message || 'Advertência enviada.', false);
+				notificar(corpo.message || 'Advertência enviada.');
 				carregar(true);
 			} else {
 				marcarErro(campo, corpo.message || 'Não foi possível enviar.');
