@@ -37,7 +37,7 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Construir a imagem
-        run: docker build -t cantinaif .
+        run: docker build --build-arg RENDER_GIT_COMMIT=${{ github.sha }} -t cantinaif .
 
       - name: Subir atras de proxy HTTPS simulado
         run: |
@@ -56,6 +56,25 @@ jobs:
       - name: Usuario nao-root
         run: test "$(docker exec cantinaif id -u)" != "0"
 
+      - name: Commit da imagem no /health
+        run: sh tools/check-render-deploy.sh http://127.0.0.1:18080 ${{ github.sha }} 0
+
       - name: Logs do contêiner (em caso de falha)
         if: failure()
         run: docker logs cantinaif
+
+  render:
+    name: deploy no Render
+    runs-on: ubuntu-latest
+    # o Render faz o deploy sozinho a cada push na main; este job so confere se o commit chegou ao ar
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    # um push mais novo substitui o deploy em andamento, entao a checagem anterior e cancelada
+    concurrency:
+      group: render-deploy
+      cancel-in-progress: true
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Esperar o Render servir este commit
+        run: sh tools/check-render-deploy.sh https://cantinaif-ubt0.onrender.com ${{ github.sha }} 900
