@@ -47,15 +47,15 @@
                     </c:choose>
                 </p>
                 <ul>
-                    <li><span>Aluno: <code><c:out value="${applicationScope.demoComprador}"/></code></span>
+                    <li><span>Aluno <b>Aluno Demonstração</b></span>
                         <button type="button" class="btn btn-secundario btn-pequeno js-demo"
                                 data-prontuario="<c:out value='${applicationScope.demoComprador}'/>"
                                 data-senha="<c:out value='${applicationScope.demoSenha}'/>">Usar esta conta</button></li>
-                    <li><span>Vendedor <b>Cantina Central</b>
+                    <li><span>Vendedor <b>Cantina Central</b></span>
                         <button type="button" class="btn btn-secundario btn-pequeno js-demo"
                                 data-prontuario="<c:out value='${applicationScope.demoVendedor}'/>"
                                 data-senha="<c:out value='${applicationScope.demoSenha}'/>">Usar esta conta</button></li>
-                    <li><span>Vendedor <b>Lanchonete do Bloco B</b>
+                    <li><span>Vendedor <b>Lanchonete do Bloco B</b></span>
                         <button type="button" class="btn btn-secundario btn-pequeno js-demo"
                                 data-prontuario="<c:out value='${applicationScope.demoVendedor2}'/>"
                                 data-senha="<c:out value='${applicationScope.demoSenha}'/>">Usar esta conta</button></li>

@@ -581,7 +581,7 @@ fieldset.perfil-campos { border: 0; margin: 0; padding: 0; min-width: 0; }
 }
 .demo-box h2 { font-size: 1rem; }
 .demo-box ul { list-style: none; margin: .5rem 0 0; padding: 0; display: grid; gap: .5rem; }
-.demo-box li { display: flex; align-items: center; justify-content: space-between; gap: .5rem; flex-wrap: wrap; }
+.demo-box li { display: flex; flex-direction: column; align-items: flex-start; gap: .35rem; }
 .demo-box code { background: var(--superficie); padding: .1rem .35rem; border-radius: 4px; }
 
 /* ---------- dialogo de produto ---------- */
